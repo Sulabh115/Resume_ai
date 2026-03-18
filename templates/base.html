@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}ResumeAI{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --accent: #3B82F6;
+      --accent-light: #60A5FA;
+      --accent-glow: rgba(59, 130, 246, 0.25);
+      --glass-bg: rgba(15, 23, 42, 0.6);
+      --glass-border: rgba(59, 130, 246, 0.18);
+      --surface: rgba(30, 41, 59, 0.5);
+    }
+
+    * { font-family: 'DM Sans', sans-serif; }
+    h1, h2, h3, .display { font-family: 'Syne', sans-serif; }
+
+    body {
+      background: #060d1b;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated mesh background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(59,130,246,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(99,102,241,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 60% 40%, rgba(14,165,233,0.07) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Subtle grid overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glass card */
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+
+    /* Input field glass */
+    .glass-input {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(59,130,246,0.2);
+      color: #e2e8f0;
+      transition: all 0.2s ease;
+    }
+    .glass-input::placeholder { color: #475569; }
+    .glass-input:focus {
+      outline: none;
+      border-color: #3B82F6;
+      background: rgba(15, 23, 42, 0.7);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12), 0 0 20px rgba(59,130,246,0.08);
+    }
+
+    /* Primary button */
+    .btn-primary {
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+      border: 1px solid rgba(59,130,246,0.4);
+      box-shadow: 0 4px 20px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+      transition: all 0.2s ease;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 30px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+      background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+    }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* Secondary/outline button */
+    .btn-outline {
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: #93C5FD;
+      transition: all 0.2s ease;
+      font-family: 'Syne', sans-serif;
+      font-weight: 500;
+    }
+    .btn-outline:hover {
+      background: rgba(59,130,246,0.15);
+      border-color: rgba(59,130,246,0.5);
+      color: #BFDBFE;
+    }
+
+    /* Floating label pill */
+    .pill {
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.25);
+      color: #93C5FD;
+    }
+
+    /* Fade-in animation */
+    .fade-up {
+      animation: fadeUp 0.5s ease forwards;
+      opacity: 0;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .delay-1 { animation-delay: 0.08s; }
+    .delay-2 { animation-delay: 0.16s; }
+    .delay-3 { animation-delay: 0.24s; }
+    .delay-4 { animation-delay: 0.32s; }
+
+    /* Alert styles */
+    .alert-error {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #FCA5A5;
+    }
+    .alert-success {
+      background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.3);
+      color: #86EFAC;
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="relative">
+  <div class="relative z-10">
+    {% block navbar %}{% endblock %}
+    {% block content %}{% endblock %}
+  </div>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

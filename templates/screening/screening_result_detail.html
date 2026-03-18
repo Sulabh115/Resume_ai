@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% block title %}Screening — {{ application.candidate.user.get_full_name|default:application.candidate.user.username }} — ResumeAI{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Score ring animation */
+  .score-ring-circle {
+    transition: stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .skill-tag-matched {
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.25);
+    color: #86efac;
+  }
+  .skill-tag-missing {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: #fca5a5;
+  }
+  .skill-tag-neutral {
+    background: rgba(30,41,59,0.6);
+    border: 1px solid rgba(71,85,105,0.35);
+    color: #94a3b8;
+  }
+
+  .section-surface {
+    background: rgba(15,23,42,0.4);
+    border: 1px solid rgba(59,130,246,0.1);
+  }
+
+  .ai-badge {
+    background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.15));
+    border: 1px solid rgba(99,102,241,0.3);
+    color: #a5b4fc;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Skill match progress bar */
+  .match-bar-track {
+    height: 6px;
+    background: rgba(30,41,59,0.6);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .match-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1) 0.3s;
+  }
+
+  .not-screened-state {
+    background: rgba(15,23,42,0.4);
+    border: 2px dashed rgba(59,130,246,0.15);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Nav -->
+<nav class="sticky top-0 z-50 border-b border-blue-900/30" style="background: rgba(6,13,27,0.85); backdrop-filter: blur(16px);">
+  <div class="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+    <a href="{% url 'screening_dashboard' job.id %}" class="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Screening Dashboard
+    </a>
+    <span class="ai-badge rounded-full px-3 py-1">AI Result</span>
+  </div>
+</nav>
+
+<div class="max-w-6xl mx-auto px-6 py-12">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left: Main content -->
+    <div class="lg:col-span-2 space-y-5">
+
+      <!-- Candidate header -->
+      <div class="glass rounded-2xl p-7 fade-up">
+        <div class="flex items-start gap-4">
+          <div class="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center font-bold text-xl"
+               style="background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25); color: #93C5FD; font-family:'Syne',sans-serif;">
+            {{ application.candidate.user.first_name|first|default:application.candidate.user.username|first|upper }}
+          </div>
+          <div class="flex-1">
+            <h1 class="text-2xl font-bold text-white mb-0.5" style="font-family:'Syne',sans-serif;">
+              {{ application.candidate.user.get_full_name|default:application.candidate.user.username }}
+            </h1>
+            <p class="text-slate-400 text-sm mb-3">Applied for <span class="text-blue-400">{{ job.title }}</span> · {{ application.applied_at|timesince }} ago</p>
+            <div class="flex flex-wrap gap-2">
+              <span class="text-xs px-3 py-1 rounded-lg font-medium"
+                    style="font-family:'Syne',sans-serif; background:rgba(30,41,59,0.5); border:1px solid rgba(71,85,105,0.3); color:#94a3b8;">
+                {{ application.get_status_display }}
+              </span>
+              {% if application.candidate.experience %}
+              <span class="skill-tag-neutral rounded-lg px-3 py-1 text-xs">
+                {{ application.candidate.experience }} yr{{ application.candidate.experience|pluralize }} exp.
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% if result and result.status == "done" %}
+
+      <!-- Skill breakdown -->
+      <div class="glass rounded-2xl p-7 fade-up delay-1">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-white font-semibold text-base" style="font-family:'Syne',sans-serif;">Skill Analysis</h2>
+          {% if result.matched_skills_list|length > 0 %}
+          <span class="text-xs text-slate-500">
+            {{ result.matched_skills_list|length }} of
+            {{ result.extracted_skills_list|length }} matched
+          </span>
+          {% endif %}
+        </div>
+
+        <!-- Match ratio bar -->
+        {% if result.extracted_skills_list %}
+        <div class="mb-6">
+          <div class="flex items-center justify-between text-xs mb-2">
+            <span class="text-slate-400">Skill match ratio</span>
+            <span class="text-white font-semibold" style="font-family:'Syne',sans-serif;">
+              {{ result.match_percentage }}%
+            </span>
+          </div>
+          <div class="match-bar-track">
+            <div class="match-bar-fill {% if result.match_percentage >= 75 %}bg-green-500{% elif result.match_percentage >= 50 %}bg-yellow-500{% else %}bg-red-500{% endif %}"
+                 style="width: {{ result.match_percentage }}%;"></div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Matched skills -->
+        {% if result.matched_skills_list %}
+        <div class="mb-5">
+          <p class="text-slate-500 text-xs font-medium uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+            Matched ({{ result.matched_skills_list|length }})
+          </p>
+          <div class="flex flex-wrap gap-2">
+            {% for skill in result.matched_skills_list %}
+            <span class="skill-tag-matched rounded-xl px-3 py-1.5 text-xs font-medium">{{ skill }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Missing skills -->
+        {% if result.missing_skills_list %}
+        <div class="mb-5">
+          <p class="text-slate-500 text-xs font-medium uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            Missing ({{ result.missing_skills_list|length }})
+          </p>
+          <div class="flex flex-wrap gap-2">
+            {% for skill in result.missing_skills_list %}
+            <span class="skill-tag-missing rounded-xl px-3 py-1.5 text-xs font-medium">{{ skill }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- All extracted skills -->
+        {% if result.extracted_skills_list %}
+        <div>
+          <p class="text-slate-500 text-xs font-medium uppercase tracking-widest mb-2.5">All Extracted Skills</p>
+          <div class="flex flex-wrap gap-2">
+            {% for skill in result.extracted_skills_list %}
+            {% if skill in result.matched_skills %}
+            <span class="skill-tag-matched rounded-xl px-3 py-1.5 text-xs">{{ skill }}</span>
+            {% else %}
+            <span class="skill-tag-neutral rounded-xl px-3 py-1.5 text-xs">{{ skill }}</span>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- AI Summary -->
+      {% if result.summary %}
+      <div class="fade-up delay-2" style="background: rgba(59,130,246,0.05); border: 1px solid rgba(99,102,241,0.2); border-radius: 1rem; padding: 1.75rem;">
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+          <p class="text-indigo-300 text-xs font-semibold uppercase tracking-widest" style="font-family:'Syne',sans-serif;">AI Summary</p>
+        </div>
+        <p class="text-slate-300 text-sm leading-relaxed">{{ result.summary }}</p>
+      </div>
+      {% endif %}
+
+      {% elif result and result.status == "failed" %}
+      <!-- Failed state -->
+      <div class="section-surface rounded-2xl p-8 text-center fade-up delay-1">
+        <div class="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center"
+             style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);">
+          <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <p class="text-white font-semibold mb-1" style="font-family:'Syne',sans-serif;">Screening Failed</p>
+        <p class="text-slate-500 text-sm mb-1">An error occurred during AI analysis.</p>
+        {% if result.error_message %}
+        <p class="text-red-400 text-xs font-mono mt-2 p-3 rounded-lg text-left" style="background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15);">
+          {{ result.error_message }}
+        </p>
+        {% endif %}
+        <form method="post" action="{% url 'run_screening' job.id %}?force=1" class="mt-4">
+          {% csrf_token %}
+          <input type="hidden" name="application_id" value="{{ application.id }}">
+          <button type="submit" class="btn-outline rounded-xl px-5 py-2.5 text-sm">Retry Screening</button>
+        </form>
+      </div>
+
+      {% elif result and result.status == "processing" %}
+      <!-- Processing state -->
+      <div class="section-surface rounded-2xl p-8 text-center fade-up delay-1">
+        <div class="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center"
+             style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2);">
+          <svg class="w-6 h-6 text-blue-400 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </div>
+        <p class="text-white font-semibold mb-1" style="font-family:'Syne',sans-serif;">Processing…</p>
+        <p class="text-slate-500 text-sm">AI is analysing this resume. Refresh in a moment.</p>
+      </div>
+
+      {% else %}
+      <!-- Not screened yet -->
+      <div class="not-screened-state rounded-2xl p-10 text-center fade-up delay-1">
+        <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center"
+             style="background: rgba(59,130,246,0.07); border: 1px solid rgba(59,130,246,0.12);">
+          <svg class="w-7 h-7 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+        </div>
+        <h3 class="text-white font-semibold text-lg mb-2" style="font-family:'Syne',sans-serif;">Not screened yet</h3>
+        <p class="text-slate-500 text-sm mb-6">Run AI screening to get a match score, skill analysis, and summary for this candidate.</p>
+        <form method="post" action="{% url 'run_screening' job.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-primary text-white rounded-xl px-6 py-2.5 text-sm inline-flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+            Run AI Screening
+          </button>
+        </form>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Right: Score sidebar -->
+    <div class="space-y-5">
+
+      <!-- Score ring card -->
+      <div class="glass rounded-2xl p-6 text-center fade-up delay-1">
+        <p class="text-slate-400 text-xs font-medium uppercase tracking-widest mb-5">Match Score</p>
+
+        {% if result and result.status == "done" %}
+        <!-- SVG ring -->
+        <div class="relative w-32 h-32 mx-auto mb-4">
+          <svg viewBox="0 0 120 120" width="128" height="128" style="transform: rotate(-90deg);">
+            <!-- Track -->
+            <circle cx="60" cy="60" r="50" fill="none"
+                    stroke="rgba(30,41,59,0.8)" stroke-width="10"/>
+            <!-- Fill -->
+            <circle cx="60" cy="60" r="50" fill="none"
+                    stroke="{% if result.score_band == 'green' %}#22c55e{% elif result.score_band == 'yellow' %}#eab308{% else %}#ef4444{% endif %}"
+                    stroke-width="10"
+                    stroke-linecap="round"
+                    stroke-dasharray="314.16"
+                    stroke-dashoffset="{{ 314.16|add:0 }}"
+                    id="score-ring-fill"
+                    data-score="{{ result.similarity_score }}"/>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="text-3xl font-bold text-white" style="font-family:'Syne',sans-serif;">
+              {{ result.similarity_score|floatformat:0 }}%
+            </span>
+            <span class="text-xs
+              {% if result.score_band == 'green' %}text-green-400
+              {% elif result.score_band == 'yellow' %}text-yellow-400
+              {% else %}text-red-400{% endif %}">
+              {{ result.score_label }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Score sub-stats -->
+        <div class="grid grid-cols-2 gap-3 mt-4">
+          <div class="rounded-xl p-3" style="background: rgba(15,23,42,0.4); border: 1px solid rgba(59,130,246,0.1);">
+            <p class="text-white font-bold text-base" style="font-family:'Syne',sans-serif;">{{ result.matched_skills_list|length }}</p>
+            <p class="text-slate-500 text-xs">Matched</p>
+          </div>
+          <div class="rounded-xl p-3" style="background: rgba(15,23,42,0.4); border: 1px solid rgba(59,130,246,0.1);">
+            <p class="text-white font-bold text-base" style="font-family:'Syne',sans-serif;">{{ result.missing_skills_list|length }}</p>
+            <p class="text-slate-500 text-xs">Missing</p>
+          </div>
+        </div>
+
+        <p class="text-slate-600 text-xs mt-4">Screened {{ result.screened_at|timesince }} ago</p>
+
+        {% else %}
+        <div class="w-32 h-32 mx-auto mb-4 rounded-full flex items-center justify-center"
+             style="background: rgba(15,23,42,0.4); border: 2px dashed rgba(59,130,246,0.15);">
+          <span class="text-slate-600 text-3xl font-bold" style="font-family:'Syne',sans-serif;">—</span>
+        </div>
+        <p class="text-slate-600 text-sm">Score pending</p>
+        {% endif %}
+      </div>
+
+      <!-- Links to full application -->
+      <div class="glass rounded-2xl p-5 fade-up delay-2">
+        <p class="text-slate-400 text-xs font-medium uppercase tracking-widest mb-3">Actions</p>
+        <div class="space-y-2">
+          <a href="{% url 'application_detail' application.id %}"
+             class="w-full btn-outline rounded-xl py-2.5 text-sm block text-center">
+            View Full Application
+          </a>
+          {% if application.resume %}
+          <a href="{{ application.resume.file.url }}" target="_blank"
+             class="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-blue-400 transition-colors text-sm py-2.5 rounded-xl hover:bg-blue-500/05 border border-transparent hover:border-blue-500/15">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Download Resume
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Screened at metadata -->
+      {% if result %}
+      <div class="fade-up delay-3" style="background: rgba(15,23,42,0.3); border: 1px solid rgba(59,130,246,0.08); border-radius:1rem; padding:1.25rem;">
+        <p class="text-slate-500 text-xs font-medium uppercase tracking-widest mb-3">Screening Info</p>
+        <div class="space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-600">Status</span>
+            <span class="text-slate-300 font-medium">{{ result.get_status_display }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-600">Screened</span>
+            <span class="text-slate-300">{{ result.screened_at|date:"M d, Y" }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-600">Updated</span>
+            <span class="text-slate-300">{{ result.updated_at|timesince }} ago</span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Animate the SVG score ring on load
+document.addEventListener('DOMContentLoaded', function() {
+  const ring = document.getElementById('score-ring-fill');
+  if (!ring) return;
+  const score = parseFloat(ring.dataset.score) || 0;
+  const circumference = 314.16;
+  const offset = circumference - (score / 100) * circumference;
+  // Start at full offset (empty), animate to correct fill
+  ring.style.strokeDashoffset = circumference;
+  requestAnimationFrame(() => {
+    ring.style.transition = 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1) 0.2s';
+    ring.style.strokeDashoffset = offset;
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}AI Screening — {{ job.title }} — ResumeAI{% endblock %}
+
+{% block extra_head %}
+<style>
+  .score-bar-track {
+    height: 4px;
+    background: rgba(30,41,59,0.6);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+  .score-green  { background: linear-gradient(90deg, #22c55e, #4ade80); }
+  .score-yellow { background: linear-gradient(90deg, #eab308, #facc15); }
+  .score-red    { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+  .stat-card {
+    background: rgba(15,23,42,0.5);
+    border: 1px solid rgba(59,130,246,0.12);
+  }
+
+  .skill-tag-matched {
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.25);
+    color: #86efac;
+  }
+  .skill-tag-missing {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: #fca5a5;
+  }
+  .skill-tag-neutral {
+    background: rgba(30,41,59,0.6);
+    border: 1px solid rgba(71,85,105,0.35);
+    color: #94a3b8;
+  }
+
+  .applicant-row { transition: background 0.15s ease; }
+  .applicant-row:hover { background: rgba(59,130,246,0.04); }
+
+  .pending-pulse {
+    animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  .ai-badge {
+    background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.15));
+    border: 1px solid rgba(99,102,241,0.3);
+    color: #a5b4fc;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Nav -->
+<nav class="sticky top-0 z-50 border-b border-blue-900/30" style="background: rgba(6,13,27,0.85); backdrop-filter: blur(16px);">
+  <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+    <a href="{% url 'view_applicants' job.id %}" class="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Applicants
+    </a>
+    <div class="flex items-center gap-3">
+      <span class="ai-badge rounded-full px-3 py-1">AI Screening</span>
+      <!-- Re-screen all -->
+      <form method="post" action="{% url 'run_screening' job.id %}?force=1">
+        {% csrf_token %}
+        <button type="submit"
+                class="btn-outline rounded-xl px-4 py-2 text-xs"
+                onclick="return confirm('Re-screen all applications? This will overwrite existing scores.')">
+          Re-screen All
+        </button>
+      </form>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-6 py-12">
+
+  <!-- Header -->
+  <div class="mb-8 fade-up">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <h1 class="text-3xl font-bold text-white mb-1" style="font-family:'Syne',sans-serif;">AI Screening Results</h1>
+        <p class="text-slate-400 text-sm">{{ job.title }} · {{ job.company.company_name }}</p>
+      </div>
+
+      <!-- Run screening CTA (if unscreened exist) -->
+      {% if pending > 0 %}
+      <form method="post" action="{% url 'run_screening' job.id %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary text-white rounded-xl px-5 py-2.5 text-sm flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+          Screen {{ pending }} New Application{{ pending|pluralize }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+  {% for message in messages %}
+  <div class="{% if 'error' in message.tags %}alert-error{% elif 'warning' in message.tags %}rounded-xl px-4 py-3 mb-5 text-sm flex items-center gap-2 fade-up" style="background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.25);color:#fde68a;{% else %}alert-success{% endif %} rounded-xl px-4 py-3 mb-5 text-sm flex items-center gap-2 fade-up">
+    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    {{ message }}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Summary stats row -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 fade-up delay-1">
+    <div class="stat-card rounded-2xl p-5 text-center">
+      <p class="text-3xl font-bold text-white mb-1" style="font-family:'Syne',sans-serif;">{{ total }}</p>
+      <p class="text-slate-500 text-xs">Total Applicants</p>
+    </div>
+    <div class="stat-card rounded-2xl p-5 text-center">
+      <p class="text-3xl font-bold text-blue-400 mb-1" style="font-family:'Syne',sans-serif;">{{ screened }}</p>
+      <p class="text-slate-500 text-xs">Screened</p>
+    </div>
+    <div class="stat-card rounded-2xl p-5 text-center">
+      <p class="text-3xl font-bold text-green-400 mb-1" style="font-family:'Syne',sans-serif;">{{ strong }}</p>
+      <p class="text-slate-500 text-xs">Strong Matches</p>
+    </div>
+    <div class="stat-card rounded-2xl p-5 text-center">
+      <p class="text-3xl font-bold {% if pending > 0 %}text-yellow-400{% else %}text-slate-600{% endif %} mb-1" style="font-family:'Syne',sans-serif;">{{ pending }}</p>
+      <p class="text-slate-500 text-xs">Awaiting Screen</p>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  {% if applications %}
+  <div class="glass rounded-2xl overflow-hidden fade-up delay-2">
+    <table class="w-full">
+      <thead>
+        <tr class="border-b border-slate-700/50">
+          <th class="text-left px-6 py-4 text-slate-500 text-xs font-medium uppercase tracking-wider">Candidate</th>
+          <th class="text-left px-4 py-4 text-slate-500 text-xs font-medium uppercase tracking-wider">AI Score</th>
+          <th class="text-left px-4 py-4 text-slate-500 text-xs font-medium uppercase tracking-wider hidden lg:table-cell">Matched Skills</th>
+          <th class="text-left px-4 py-4 text-slate-500 text-xs font-medium uppercase tracking-wider hidden xl:table-cell">Missing Skills</th>
+          <th class="text-left px-4 py-4 text-slate-500 text-xs font-medium uppercase tracking-wider hidden md:table-cell">Status</th>
+          <th class="text-right px-6 py-4 text-slate-500 text-xs font-medium uppercase tracking-wider">Detail</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-700/30">
+        {% for app in applications %}
+        {% with result=app.screening_result %}
+        <tr class="applicant-row">
+
+          <!-- Candidate -->
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center font-bold text-sm"
+                   style="background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.2); color: #93C5FD; font-family:'Syne',sans-serif;">
+                {{ app.candidate.user.first_name|first|default:app.candidate.user.username|first|upper }}
+              </div>
+              <div>
+                <p class="text-white text-sm font-medium">
+                  {{ app.candidate.user.get_full_name|default:app.candidate.user.username }}
+                </p>
+                <p class="text-slate-600 text-xs">{{ app.applied_at|timesince }} ago</p>
+              </div>
+            </div>
+          </td>
+
+          <!-- Score -->
+          <td class="px-4 py-4">
+            {% if result and result.status == "done" %}
+            <div class="flex items-center gap-2.5 min-w-32">
+              <span class="font-bold text-sm w-10 flex-shrink-0
+                {% if result.score_band == 'green' %}text-green-400
+                {% elif result.score_band == 'yellow' %}text-yellow-400
+                {% else %}text-red-400{% endif %}"
+                style="font-family:'Syne',sans-serif;">
+                {{ result.similarity_score|floatformat:0 }}%
+              </span>
+              <div class="score-bar-track flex-1">
+                <div class="score-bar-fill score-{{ result.score_band }}"
+                     style="width: {{ result.similarity_score }}%;"></div>
+              </div>
+            </div>
+            <p class="text-xs mt-1 ml-0
+              {% if result.score_band == 'green' %}text-green-500
+              {% elif result.score_band == 'yellow' %}text-yellow-500
+              {% else %}text-red-500{% endif %}">
+              {{ result.score_label }}
+            </p>
+            {% elif result and result.status == "failed" %}
+            <span class="text-red-400 text-xs flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Failed
+            </span>
+            {% elif result and result.status == "processing" %}
+            <span class="text-blue-400 text-xs flex items-center gap-1.5 pending-pulse">
+              <svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Processing…
+            </span>
+            {% else %}
+            <span class="text-slate-600 text-xs">Not screened</span>
+            {% endif %}
+          </td>
+
+          <!-- Matched skills -->
+          <td class="px-4 py-4 hidden lg:table-cell">
+            {% if result and result.matched_skills %}
+            <div class="flex flex-wrap gap-1">
+              {% for skill in result.matched_skills_list|slice:":3" %}
+              <span class="skill-tag-matched rounded-lg px-2 py-0.5 text-xs">{{ skill }}</span>
+              {% endfor %}
+              {% if result.matched_skills_list|length > 3 %}
+              <span class="text-slate-600 text-xs self-center">+{{ result.matched_skills_list|length|add:"-3" }}</span>
+              {% endif %}
+            </div>
+            {% else %}
+            <span class="text-slate-700 text-xs">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Missing skills -->
+          <td class="px-4 py-4 hidden xl:table-cell">
+            {% if result and result.missing_skills %}
+            <div class="flex flex-wrap gap-1">
+              {% for skill in result.missing_skills_list|slice:":3" %}
+              <span class="skill-tag-missing rounded-lg px-2 py-0.5 text-xs">{{ skill }}</span>
+              {% endfor %}
+              {% if result.missing_skills_list|length > 3 %}
+              <span class="text-slate-600 text-xs self-center">+{{ result.missing_skills_list|length|add:"-3" }}</span>
+              {% endif %}
+            </div>
+            {% else %}
+            <span class="text-slate-700 text-xs">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Application status -->
+          <td class="px-4 py-4 hidden md:table-cell">
+            <span class="text-xs px-2.5 py-1 rounded-lg font-medium"
+                  style="font-family:'Syne',sans-serif; background:rgba(30,41,59,0.5); border:1px solid rgba(71,85,105,0.3); color:#94a3b8;">
+              {{ app.get_status_display }}
+            </span>
+          </td>
+
+          <!-- Detail link -->
+          <td class="px-6 py-4 text-right">
+            <a href="{% url 'screening_result_detail' app.id %}"
+               class="text-slate-400 hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-blue-500/10 inline-block"
+               title="View screening detail">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </a>
+          </td>
+
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <!-- Empty state -->
+  <div class="glass rounded-2xl p-16 text-center fade-up delay-2">
+    <div class="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center"
+         style="background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15);">
+      <svg class="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+    </div>
+    <h3 class="text-white font-semibold text-lg mb-2" style="font-family:'Syne',sans-serif;">No applications yet</h3>
+    <p class="text-slate-500 text-sm">Screening results will appear here once candidates apply.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

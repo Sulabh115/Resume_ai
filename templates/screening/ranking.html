@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Candidate Ranking</h2>
+
+{% for result in results %}
+
+<div>
+
+    <p>Applicant: {{ result.application.applicant.username }}</p>
+
+    <p>Job: {{ result.application.job.title }}</p>
+
+    <p>Score: {{ result.similarity_score }}</p>
+
+</div>
+
+<hr>
+
+{% endfor %}
+
+{% endblock %}

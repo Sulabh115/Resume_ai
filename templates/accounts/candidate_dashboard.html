@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — ResumeAI{% endblock %}
+
+{% block extra_head %}
+<style>
+  .stat-card {
+    background: rgba(15,23,42,0.5);
+    border: 1px solid rgba(59,130,246,0.12);
+    transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .stat-card:hover { border-color: rgba(59,130,246,0.3); transform: translateY(-2px); }
+
+  .status-badge {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 8px;
+    padding: 2px 8px;
+  }
+  .status-pending   { background: rgba(100,116,139,0.15); border: 1px solid rgba(100,116,139,0.3); color: #94a3b8; }
+  .status-reviewing { background: rgba(59,130,246,0.15);  border: 1px solid rgba(59,130,246,0.3);  color: #93C5FD; }
+  .status-shortlist { background: rgba(168,85,247,0.15);  border: 1px solid rgba(168,85,247,0.3);  color: #d8b4fe; }
+  .status-interview { background: rgba(14,165,233,0.15);  border: 1px solid rgba(14,165,233,0.3);  color: #7dd3fc; }
+  .status-offered   { background: rgba(34,197,94,0.15);   border: 1px solid rgba(34,197,94,0.3);   color: #86efac; }
+  .status-rejected  { background: rgba(239,68,68,0.15);   border: 1px solid rgba(239,68,68,0.3);   color: #fca5a5; }
+  .status-withdrawn { background: rgba(249,115,22,0.15);  border: 1px solid rgba(249,115,22,0.3);  color: #fdba74; }
+
+  .app-row { transition: background 0.15s ease; }
+  .app-row:hover { background: rgba(59,130,246,0.04); }
+
+  .job-card {
+    background: rgba(15,23,42,0.4);
+    border: 1px solid rgba(59,130,246,0.1);
+    transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .job-card:hover { border-color: rgba(59,130,246,0.3); transform: translateY(-2px); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Nav -->
+<nav class="sticky top-0 z-50 border-b border-blue-900/30" style="background: rgba(6,13,27,0.85); backdrop-filter: blur(16px);">
+  <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+    <span class="text-white font-semibold text-sm" style="font-family:'Syne',sans-serif;">Dashboard</span>
+    <div class="flex items-center gap-3">
+      {% if not has_resumes %}
+      <a href="{% url 'resume_manager' %}" class="text-yellow-400 hover:text-yellow-300 text-xs flex items-center gap-1.5 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Upload a resume to apply
+      </a>
+      {% endif %}
+      <a href="{% url 'job_list' %}" class="btn-primary text-white rounded-xl px-4 py-2 text-xs">Browse Jobs</a>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-6 py-12">
+
+  <!-- Welcome -->
+  <div class="mb-8 fade-up">
+    <h1 class="text-3xl font-bold text-white mb-1" style="font-family:'Syne',sans-serif;">
+      Welcome back, {{ candidate.user.first_name|default:candidate.user.username }} 👋
+    </h1>
+    <p class="text-slate-400 text-sm">Here's your job search overview.</p>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10 fade-up delay-1">
+    <div class="stat-card rounded-2xl p-5 text-center">
+      <p class="text-3xl font-bold text-white mb-1" style="font-family:'Syne',sans-serif;">{{ total }}</p>
+      <p class="text-slate-500 text-xs">Applied</p>
+    </div>
+    <div class="stat-card rounded-2xl p-5 text-center">
+      <p class="text-3xl font-bold text-slate-400 mb-1" style="font-family:'Syne',sans-serif;">{{ pending }}</p>
+      <p class="text-slate-500 text-xs">Pending</p>
+    </div>
+    <div class="stat-card rounded-2xl p-5 text-center">
+      <p class="text-3xl font-bold text-purple-400 mb-1" style="font-family:'Syne',sans-serif;">{{ shortlisted }}</p>
+      <p class="text-slate-500 text-xs">Shortlisted</p>
+    </div>
+    <div class="stat-card rounded-2xl p-5 text-center">
+      <p class="text-3xl font-bold text-sky-400 mb-1" style="font-family:'Syne',sans-serif;">{{ interviews }}</p>
+      <p class="text-slate-500 text-xs">Interviews</p>
+    </div>
+    <div class="stat-card rounded-2xl p-5 text-center">
+      <p class="text-3xl font-bold text-green-400 mb-1" style="font-family:'Syne',sans-serif;">{{ offered }}</p>
+      <p class="text-slate-500 text-xs">Offers</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Recent applications -->
+    <div class="lg:col-span-2 fade-up delay-2">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-white font-semibold text-base" style="font-family:'Syne',sans-serif;">Recent Applications</h2>
+        <a href="{% url 'resume_manager' %}" class="text-slate-400 hover:text-blue-400 transition-colors text-xs flex items-center gap-1">
+          Manage Resumes
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+
+      {% if recent_applications %}
+      <div class="glass rounded-2xl overflow-hidden">
+        <table class="w-full">
+          <tbody class="divide-y divide-slate-700/30">
+            {% for app in recent_applications %}
+            <tr class="app-row">
+              <td class="px-5 py-4">
+                <p class="text-white text-sm font-medium mb-0.5">{{ app.job.title }}</p>
+                <p class="text-slate-500 text-xs">{{ app.job.company.company_name }} · {{ app.applied_at|timesince }} ago</p>
+              </td>
+              <td class="px-4 py-4 text-right">
+                <span class="status-badge status-{{ app.status }}">{{ app.get_status_display }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if total > 5 %}
+        <div class="px-5 py-3 border-t border-slate-700/30 text-center">
+          <a href="{% url 'job_list' %}" class="text-slate-500 hover:text-blue-400 transition-colors text-xs">
+            View all {{ total }} applications
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+      {% else %}
+      <div class="glass rounded-2xl p-10 text-center">
+        <div class="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center"
+             style="background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15);">
+          <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <p class="text-white font-semibold text-sm mb-1" style="font-family:'Syne',sans-serif;">No applications yet</p>
+        <p class="text-slate-500 text-xs mb-4">Start applying to jobs below.</p>
+        <a href="{% url 'job_list' %}" class="btn-primary text-white rounded-xl px-5 py-2.5 text-xs inline-block">Browse Jobs</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Quick links sidebar -->
+    <div class="space-y-4 fade-up delay-3">
+
+      <!-- Profile quick info -->
+      <div class="glass rounded-2xl p-5">
+        <p class="text-slate-400 text-xs font-medium uppercase tracking-widest mb-4">Your Profile</p>
+        <div class="space-y-3">
+          {% if candidate.skills %}
+          <div>
+            <p class="text-slate-600 text-xs mb-1.5">Skills</p>
+            <div class="flex flex-wrap gap-1.5">
+              {% for skill in candidate.skills.split|slice:":5" %}
+              <span class="text-xs px-2.5 py-1 rounded-lg"
+                    style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.2); color:#93C5FD;">
+                {{ skill }}
+              </span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          {% if candidate.experience %}
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-600">Experience</span>
+            <span class="text-slate-300">{{ candidate.experience }} yr{{ candidate.experience|pluralize }}</span>
+          </div>
+          {% endif %}
+          {% if candidate.education %}
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-600">Education</span>
+            <span class="text-slate-300 text-right max-w-32 truncate">{{ candidate.education }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="glass rounded-2xl p-5">
+        <p class="text-slate-400 text-xs font-medium uppercase tracking-widest mb-3">Quick Actions</p>
+        <div class="space-y-2">
+          <a href="{% url 'job_list' %}"
+             class="w-full flex items-center gap-2.5 text-slate-300 hover:text-white text-sm py-2 px-3 rounded-xl hover:bg-blue-500/08 transition-colors">
+            <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            Browse Jobs
+          </a>
+          <a href="{% url 'resume_manager' %}"
+             class="w-full flex items-center gap-2.5 text-slate-300 hover:text-white text-sm py-2 px-3 rounded-xl hover:bg-blue-500/08 transition-colors">
+            <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Manage Resumes
+          </a>
+          <a href="{% url 'logout' %}"
+             class="w-full flex items-center gap-2.5 text-slate-500 hover:text-red-400 text-sm py-2 px-3 rounded-xl hover:bg-red-500/05 transition-colors">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            Sign Out
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Recent jobs to browse -->
+  {% if recent_jobs %}
+  <div class="mt-10 fade-up">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-white font-semibold text-base" style="font-family:'Syne',sans-serif;">Latest Open Positions</h2>
+      <a href="{% url 'job_list' %}" class="text-slate-400 hover:text-blue-400 transition-colors text-xs flex items-center gap-1">
+        View all
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for job in recent_jobs %}
+      <a href="{% url 'job_detail' job.id %}" class="job-card rounded-2xl p-5 block">
+        <div class="flex items-start justify-between gap-2 mb-3">
+          <div>
+            <p class="text-white font-semibold text-sm mb-0.5" style="font-family:'Syne',sans-serif;">{{ job.title }}</p>
+            <p class="text-slate-500 text-xs">{{ job.company.company_name }}</p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded-lg flex-shrink-0"
+                style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); color:#86efac; font-family:'Syne',sans-serif; font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;">
+            Open
+          </span>
+        </div>
+        {% if job.location %}
+        <p class="text-slate-600 text-xs mb-3 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+          </svg>
+          {{ job.location }}
+        </p>
+        {% endif %}
+        {% if job.skills.exists %}
+        <div class="flex flex-wrap gap-1.5">
+          {% for skill in job.skills.all|slice:":3" %}
+          <span class="text-xs px-2 py-0.5 rounded-lg"
+                style="background:rgba(30,41,59,0.6); border:1px solid rgba(71,85,105,0.35); color:#94a3b8;">
+            {{ skill.name }}
+          </span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

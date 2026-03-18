@@ -1,3 +1,100 @@
 from django.db import models
+from applications.models import Application
 
-# Create your models here.
+
+class ScreeningResult(models.Model):
+
+    class Status(models.TextChoices):
+        PENDING    = "pending",    "Pending"
+        PROCESSING = "processing", "Processing"
+        DONE       = "done",       "Done"
+        FAILED     = "failed",     "Failed"
+
+    application      = models.OneToOneField(
+                         Application,
+                         on_delete=models.CASCADE,
+                         related_name="screening_result"
+                       )
+
+    # Core scores
+    similarity_score = models.FloatField(
+                         default=0,
+                         help_text="Cosine similarity score between resume and job description (0–100)"
+                       )
+
+    # Skill analysis — stored as comma-separated strings for simplicity
+    # e.g. "Python,Django,PostgreSQL"
+    extracted_skills = models.TextField(
+                         blank=True,
+                         help_text="Skills extracted from the candidate's resume"
+                       )
+    matched_skills   = models.TextField(
+                         blank=True,
+                         help_text="Skills that matched the job requirements"
+                       )
+    missing_skills   = models.TextField(
+                         blank=True,
+                         help_text="Required job skills not found in the resume"
+                       )
+
+    # Human-readable AI summary
+    summary          = models.TextField(
+                         blank=True,
+                         help_text="AI-generated summary of the candidate's fit"
+                       )
+
+    # Processing metadata
+    status           = models.CharField(
+                         max_length=12,
+                         choices=Status.choices,
+                         default=Status.PENDING
+                       )
+    error_message    = models.TextField(
+                         blank=True,
+                         help_text="Error detail if screening failed"
+                       )
+    screened_at      = models.DateTimeField(auto_now_add=True)
+    updated_at       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-screened_at"]
+
+    def __str__(self):
+        return f"Screening for {self.application} — {self.similarity_score:.0f}%"
+
+    # ── Convenience helpers ───────────────────────────────────────────────
+
+    def extracted_skills_list(self):
+        return [s.strip() for s in self.extracted_skills.split(",") if s.strip()]
+
+    def matched_skills_list(self):
+        return [s.strip() for s in self.matched_skills.split(",") if s.strip()]
+
+    def missing_skills_list(self):
+        return [s.strip() for s in self.missing_skills.split(",") if s.strip()]
+
+    @property
+    def score_band(self):
+        """Returns 'green', 'yellow', or 'red' based on score."""
+        if self.similarity_score >= 75:
+            return "green"
+        elif self.similarity_score >= 50:
+            return "yellow"
+        return "red"
+
+    @property
+    def score_label(self):
+        if self.similarity_score >= 75:
+            return "Strong Match"
+        elif self.similarity_score >= 50:
+            return "Moderate Match"
+        return "Weak Match"
+
+    @property
+    def match_percentage(self):
+        """What % of required skills were matched."""
+        matched = len(self.matched_skills_list())
+        extracted = len(self.extracted_skills_list())
+        if extracted == 0:
+            return 0
+        return round((matched / extracted) * 100)

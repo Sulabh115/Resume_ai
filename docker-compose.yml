@@ -1,3 +1,4 @@
+version: "3.9"
 
 services:
 
@@ -6,10 +7,10 @@ services:
     container_name: mariadb
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: recruitment_db
-      MYSQL_USER: django
-      MYSQL_PASSWORD: djangopassword
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
@@ -18,19 +19,24 @@ services:
   web:
     build: .
     container_name: django_app
-    # command: gunicorn resume_ai.wsgi:application --bind 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file:
+      - .env
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     depends_on:
       - db
-    environment:
-      DB_NAME: recruitment_db
-      DB_USER: django
-      DB_PASSWORD: djangopassword
-      DB_HOST: db
-      DB_PORT: 3306
 
   adminer:
     image: adminer

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Register as Candidate — ResumeAI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center px-4 py-16">
+  <div class="w-full max-w-lg">
+
+    <!-- Header -->
+    <div class="text-center mb-8 fade-up">
+      <div class="inline-flex items-center gap-2 mb-4">
+        <div class="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <span class="text-white font-bold text-xl" style="font-family:'Syne',sans-serif;">ResumeAI</span>
+      </div>
+      <div class="inline-flex items-center gap-2 pill rounded-full px-3 py-1 text-xs font-medium mb-3">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+        </svg>
+        Candidate Account
+      </div>
+      <h1 class="text-3xl font-bold text-white mb-1" style="font-family:'Syne',sans-serif;">Create your profile</h1>
+      <p class="text-slate-400 text-sm">Find your next opportunity with AI-powered matching</p>
+    </div>
+
+    <!-- Card -->
+    <div class="glass rounded-2xl p-8 fade-up delay-1">
+      <form method="post" action="{% url 'candidate_register' %}">
+        {% csrf_token %}
+
+        <!-- Form errors -->
+        {% if form.non_field_errors %}
+        <div class="alert-error rounded-xl px-4 py-3 mb-6 text-sm">
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Name row -->
+        <div class="grid grid-cols-2 gap-4 mb-5">
+          <div>
+            <label class="block text-slate-300 text-sm font-medium mb-2">First Name</label>
+            <input
+              type="text" name="first_name" value="{{ form.first_name.value|default:'' }}"
+              class="glass-input w-full rounded-xl px-4 py-3 text-sm"
+              placeholder="John"
+            />
+            {% if form.first_name.errors %}<p class="text-red-400 text-xs mt-1">{{ form.first_name.errors.0 }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block text-slate-300 text-sm font-medium mb-2">Last Name</label>
+            <input
+              type="text" name="last_name" value="{{ form.last_name.value|default:'' }}"
+              class="glass-input w-full rounded-xl px-4 py-3 text-sm"
+              placeholder="Doe"
+            />
+            {% if form.last_name.errors %}<p class="text-red-400 text-xs mt-1">{{ form.last_name.errors.0 }}</p>{% endif %}
+          </div>
+        </div>
+
+        <!-- Username -->
+        <div class="mb-5">
+          <label class="block text-slate-300 text-sm font-medium mb-2">Username</label>
+          <input
+            type="text" name="username" value="{{ form.username.value|default:'' }}" required
+            class="glass-input w-full rounded-xl px-4 py-3 text-sm"
+            placeholder="johndoe"
+          />
+          {% if form.username.errors %}<p class="text-red-400 text-xs mt-1">{{ form.username.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Email -->
+        <div class="mb-5">
+          <label class="block text-slate-300 text-sm font-medium mb-2">Email</label>
+          <input
+            type="email" name="email" value="{{ form.email.value|default:'' }}"
+            class="glass-input w-full rounded-xl px-4 py-3 text-sm"
+            placeholder="john@example.com"
+          />
+          {% if form.email.errors %}<p class="text-red-400 text-xs mt-1">{{ form.email.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Password row -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <label class="block text-slate-300 text-sm font-medium mb-2">Password</label>
+            <div class="relative">
+              <input
+                type="password" id="password1" name="password1" required
+                class="glass-input w-full rounded-xl px-4 py-3 text-sm pr-10"
+                placeholder="Min. 8 characters"
+              />
+              <button type="button" onclick="togglePassword('password1', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+              </button>
+            </div>
+            {% if form.password1.errors %}<p class="text-red-400 text-xs mt-1">{{ form.password1.errors.0 }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block text-slate-300 text-sm font-medium mb-2">Confirm</label>
+            <div class="relative">
+              <input
+                type="password" id="password2" name="password2" required
+                class="glass-input w-full rounded-xl px-4 py-3 text-sm pr-10"
+                placeholder="Repeat password"
+              />
+              <button type="button" onclick="togglePassword('password2', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+              </button>
+            </div>
+            {% if form.password2.errors %}<p class="text-red-400 text-xs mt-1">{{ form.password2.errors.0 }}</p>{% endif %}
+          </div>
+        </div>
+
+        <!-- Divider with optional profile fields note -->
+        <div class="flex items-center gap-3 mb-5">
+          <div class="flex-1 h-px bg-slate-700/60"></div>
+          <span class="text-slate-500 text-xs">Profile details (optional)</span>
+          <div class="flex-1 h-px bg-slate-700/60"></div>
+        </div>
+
+        <!-- Phone -->
+        <div class="mb-5">
+          <label class="block text-slate-300 text-sm font-medium mb-2">Phone</label>
+          <input
+            type="tel" name="phone"
+            class="glass-input w-full rounded-xl px-4 py-3 text-sm"
+            placeholder="+977 98XXXXXXXX"
+          />
+        </div>
+
+        <!-- Skills + Experience row -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <label class="block text-slate-300 text-sm font-medium mb-2">Skills</label>
+            <input
+              type="text" name="skills"
+              class="glass-input w-full rounded-xl px-4 py-3 text-sm"
+              placeholder="Python, Django..."
+            />
+          </div>
+          <div>
+            <label class="block text-slate-300 text-sm font-medium mb-2">Years of Exp.</label>
+            <input
+              type="number" name="experience" min="0"
+              class="glass-input w-full rounded-xl px-4 py-3 text-sm"
+              placeholder="0"
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary w-full text-white rounded-xl py-3 text-sm">
+          Create Candidate Account
+        </button>
+      </form>
+    </div>
+
+    <!-- Footer links -->
+    <div class="text-center mt-6 fade-up delay-2">
+      <p class="text-slate-500 text-sm">
+        Already have an account?
+        <a href="{% url 'login' %}" class="text-blue-400 hover:text-blue-300 transition-colors ml-1">Sign in</a>
+      </p>
+      <p class="text-slate-600 text-xs mt-2">
+        Registering as a company?
+        <a href="{% url 'company_register' %}" class="text-slate-400 hover:text-slate-300 transition-colors ml-1">Company signup →</a>
+      </p>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function togglePassword(id, btn) {
+  const input = document.getElementById(id);
+  input.type = input.type === 'password' ? 'text' : 'password';
+  btn.style.opacity = input.type === 'text' ? '0.4' : '1';
+}
+</script>
+{% endblock %}
