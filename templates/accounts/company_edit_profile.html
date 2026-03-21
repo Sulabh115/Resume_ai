@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% block title %}Company Profile — ResumeAI{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Page-specific only — glass, bg-canvas, shapes, nav-link from base.html */
+
+  .form-input {
+    width: 100%; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 12px; padding: 11px 14px; font-size: 14px; color: #fff; outline: none;
+    transition: all 0.15s ease;
+  }
+  .form-input::placeholder { color: rgba(255,255,255,0.28); }
+  .form-input:focus { border-color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.16); }
+  textarea.form-input { resize: vertical; min-height: 100px; line-height: 1.6; }
+  select.form-input   { color-scheme: dark; cursor: pointer; }
+  select.form-input option { background: #0e4f5f; }
+
+  .form-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.45); font-weight: 500; display: block; margin-bottom: 6px;
+  }
+  .section-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.30); font-weight: 500;
+    padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 18px;
+  }
+
+  /* Strength bar */
+  .strength-bar  { height: 3px; border-radius: 999px; background: rgba(255,255,255,0.10); overflow: hidden; margin-top: 6px; }
+  .strength-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease, background 0.3s ease; width: 0; }
+
+  /* Buttons */
+  .btn-teal   { background: rgba(255,255,255,0.90); color: #0e7490; font-weight: 600; transition: all 0.15s ease; }
+  .btn-teal:hover   { background: #fff; box-shadow: 0 4px 20px rgba(255,255,255,0.25); }
+  .btn-ghost  { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.70); transition: all 0.15s ease; }
+  .btn-ghost:hover  { background: rgba(255,255,255,0.20); color: #fff; }
+  .btn-danger { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.30); color: #fca5a5; transition: all 0.15s ease; }
+  .btn-danger:hover { background: rgba(239,68,68,0.28); }
+
+  /* Stat strip */
+  .stat-pill {
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);
+    border-radius: 16px; padding: 14px 18px; text-align: center; flex: 1;
+  }
+
+  /* Sticky save bar */
+  .save-bar {
+    position: fixed; bottom: 0; left: 0; width: 100%; z-index: 50;
+    background: rgba(5,30,40,0.85); backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255,255,255,0.15);
+    padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    transform: translateY(100%); transition: transform 0.3s ease;
+  }
+  .save-bar.visible { transform: translateY(0); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# Background — company teal theme #}
+<div class="bg-canvas company">
+  <div class="shape-bl-teal"></div>
+  <div class="shape-tr-teal"></div>
+  <div class="shape-mid-teal"></div>
+</div>
+
+{# Sticky save bar #}
+<div class="save-bar" id="save-bar">
+  <p class="text-white/55 text-sm">You have unsaved changes</p>
+  <div class="flex items-center gap-3">
+    <a href="{% url 'company_dashboard' %}" class="btn-ghost px-5 py-2.5 rounded-full text-sm">Discard</a>
+    <button type="submit" form="company-form" class="btn-teal px-6 py-2.5 rounded-full text-sm">Save Changes</button>
+  </div>
+</div>
+
+{# ══════════════ NAVBAR ══════════════ #}
+<header class="fixed top-0 left-0 w-full z-40">
+  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
+    <div class="flex items-center gap-2 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-3 md:px-4 py-2 shadow-sm">
+      <span class="text-xl md:text-2xl text-white tracking-tight font-bold">ResumeAI</span>
+      <span class="hidden sm:block text-sm text-white/45 font-light">/&nbsp;hr</span>
+    </div>
+
+    <nav class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-3 py-2 shadow-md">
+      <a href="{% url 'company_dashboard' %}"
+         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
+        Dashboard
+      </a>
+      <a href="{% url 'company_job_list' %}"
+         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
+        Active Jobs
+      </a>
+      <a href="{% url 'create_job' %}"
+         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
+        Post a Job
+      </a>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <button id="menu-toggle"
+              class="md:hidden p-2 rounded-full bg-white/15 border border-white/25 text-white hover:bg-white/25 transition-all">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+      <div class="h-10 w-10 flex items-center justify-center rounded-full bg-white/15 border border-white/25 font-bold text-white text-sm select-none">
+        {{ company.company_name|first|upper }}
+      </div>
+    </div>
+  </div>
+
+  <div id="mobile-menu" class="hidden md:hidden px-4 pb-3">
+    <div class="backdrop-blur-sm bg-white/15 border border-white/25 rounded-2xl p-2 flex flex-col gap-0.5 text-sm">
+      <a href="{% url 'company_dashboard' %}"  class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15">Dashboard</a>
+      <a href="{% url 'company_job_list' %}"   class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15">Active Jobs</a>
+      <a href="{% url 'create_job' %}"         class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15">Post a Job</a>
+      <a href="{% url 'logout' %}"             class="px-4 py-2.5 rounded-xl font-medium text-red-300 hover:bg-red-500/10">Sign Out</a>
+    </div>
+  </div>
+</header>
+
+{# ══════════════ MAIN ══════════════ #}
+<main class="relative z-10 max-w-3xl mx-auto px-4 md:px-6 pt-[12vh] pb-28">
+
+  <a href="{% url 'company_dashboard' %}"
+     class="inline-flex items-center gap-2 text-white/55 hover:text-white text-sm mb-6 transition-colors group">
+    <svg class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Back to Dashboard
+  </a>
+
+  <div class="mb-7">
+    <h1 class="text-2xl text-white font-bold">Company Profile</h1>
+    <p class="text-white/45 text-sm mt-1">This information appears on all your job postings and is visible to candidates.</p>
+  </div>
+
+  {# Flash messages #}
+  {% if messages %}
+  <div class="mb-5 space-y-2">
+    {% for message in messages %}
+    <div class="{% if message.tags == 'error' %}bg-red-500/15 border-red-400/30 text-red-300{% else %}bg-emerald-500/15 border-emerald-400/30 text-emerald-300{% endif %} border rounded-2xl px-4 py-3 text-sm flex items-center gap-2">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Stats strip #}
+  <div class="flex gap-3 mb-6 overflow-x-auto pb-1">
+    <div class="stat-pill min-w-[90px]">
+      <p class="text-xl font-bold text-white">{{ total_jobs }}</p>
+      <p class="text-[10px] text-white/40 uppercase tracking-wide mt-0.5">Jobs Posted</p>
+    </div>
+    <div class="stat-pill min-w-[90px]">
+      <p class="text-xl font-bold text-white">{{ total_applicants }}</p>
+      <p class="text-[10px] text-white/40 uppercase tracking-wide mt-0.5">Applications</p>
+    </div>
+    <div class="stat-pill min-w-[90px]">
+      <p class="text-xl font-bold text-emerald-300">{{ total_hired }}</p>
+      <p class="text-[10px] text-white/40 uppercase tracking-wide mt-0.5">Total Hired</p>
+    </div>
+    <div class="stat-pill min-w-[90px]">
+      <p class="text-xl font-bold text-cyan-300">{{ open_jobs }}</p>
+      <p class="text-[10px] text-white/40 uppercase tracking-wide mt-0.5">Active Jobs</p>
+    </div>
+  </div>
+
+  <form id="company-form" method="post" action="{% url 'company_edit_profile' %}" novalidate class="flex flex-col gap-5">
+    {% csrf_token %}
+
+    {# ── COMPANY DETAILS ── #}
+    <div class="glass rounded-3xl p-6">
+      <p class="section-title">Company Details</p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="form-label">Company Name <span class="text-red-400">*</span></label>
+          <input type="text" name="company_name"
+                 value="{{ company.company_name }}"
+                 class="form-input" placeholder="Leapfrog Technology"
+                 required oninput="markDirty()"/>
+        </div>
+        <div>
+          <label class="form-label">Location</label>
+          <input type="text" name="location"
+                 value="{{ company.location|default:'' }}"
+                 class="form-input" placeholder="Kathmandu, Nepal" oninput="markDirty()"/>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">Company Description <span class="text-red-400">*</span></label>
+        <textarea name="description" id="description"
+                  class="form-input" required oninput="markDirty(); charCount()">{{ company.description|default:'' }}</textarea>
+        <p id="desc-count" class="text-[10px] text-white/30 text-right mt-1">
+          {{ company.description|length|default:0 }} / 1000
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Phone</label>
+          <input type="tel" name="phone"
+                 value="{{ company.phone|default:'' }}"
+                 class="form-input" placeholder="+977 01-XXXXXXX" oninput="markDirty()"/>
+        </div>
+        <div>
+          <label class="form-label">
+            Website URL
+            <span class="normal-case tracking-normal text-white/25 text-[9px] font-normal ml-1">optional</span>
+          </label>
+          <input type="url" name="website"
+                 value="{{ company.website|default:'' }}"
+                 class="form-input" placeholder="https://company.com" oninput="markDirty()"/>
+        </div>
+      </div>
+    </div>
+
+    {# ── YOUR ACCOUNT DETAILS ── #}
+    <div class="glass rounded-3xl p-6">
+      <p class="section-title">Your Account Details</p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="form-label">First Name</label>
+          <input type="text" name="first_name"
+                 value="{{ request.user.first_name }}"
+                 class="form-input" placeholder="Riya" oninput="markDirty()"/>
+        </div>
+        <div>
+          <label class="form-label">Last Name</label>
+          <input type="text" name="last_name"
+                 value="{{ request.user.last_name }}"
+                 class="form-input" placeholder="Sharma" oninput="markDirty()"/>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Email Address</label>
+          <input type="email" name="email"
+                 value="{{ request.user.email }}"
+                 class="form-input" placeholder="hr@company.com" oninput="markDirty()"/>
+        </div>
+        <div>
+          <label class="form-label">Phone</label>
+          <input type="tel" name="hr_phone"
+                 value="{{ request.user.companyprofile.phone|default:'' }}"
+                 class="form-input" placeholder="+977 98XXXXXXXX" oninput="markDirty()"/>
+        </div>
+      </div>
+    </div>
+
+    {# ── CHANGE PASSWORD ── #}
+    <div class="glass rounded-3xl p-6">
+      <p class="section-title">
+        Change Password
+        <span class="normal-case tracking-normal text-white/25 text-[10px] font-normal ml-2">— leave blank to keep current</span>
+      </p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="form-label">Current Password</label>
+          <div class="relative">
+            <input type="password" name="current_password" id="curr-pw"
+                   class="form-input pr-10" placeholder="Enter current password" oninput="markDirty()"/>
+            <button type="button" onclick="togglePwd('curr-pw')"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+          {% if password_error %}<p class="text-xs text-red-300 mt-1">{{ password_error }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">New Password</label>
+          <div class="relative">
+            <input type="password" name="new_password" id="new-pw"
+                   class="form-input pr-10" placeholder="Min. 8 characters"
+                   oninput="checkStrength(); markDirty()"/>
+            <button type="button" onclick="togglePwd('new-pw')"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+          <div class="strength-bar"><div id="strength-fill" class="strength-fill"></div></div>
+          <p id="strength-label" class="text-[10px] text-white/35 mt-1 h-4"></p>
+        </div>
+        <div>
+          <label class="form-label">Confirm New Password</label>
+          <div class="relative">
+            <input type="password" name="confirm_password" id="confirm-pw"
+                   class="form-input pr-10" placeholder="Repeat new password" oninput="markDirty()"/>
+            <button type="button" onclick="togglePwd('confirm-pw')"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── DANGER ZONE ── #}
+    <div class="glass rounded-3xl p-6" style="border-color: rgba(239,68,68,0.22);">
+      <p class="section-title" style="color:rgba(252,165,165,0.5); border-color:rgba(239,68,68,0.18);">Danger Zone</p>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-white/70">Delete Company Account</p>
+          <p class="text-xs text-white/35 mt-0.5 leading-relaxed">
+            Permanently deletes your account, all job posts, and all application data.<br class="hidden sm:block"/> This cannot be undone.
+          </p>
+        </div>
+        <a href="{% url 'delete_company_account' %}"
+           class="btn-danger px-5 py-2.5 rounded-xl text-sm flex-shrink-0 text-center"
+           onclick="return confirm('Are you sure? This permanently deletes everything and cannot be undone.')">
+          Delete Account
+        </a>
+      </div>
+    </div>
+
+    {# Inline save row #}
+    <div class="flex gap-3 pb-2">
+      <button type="submit" class="btn-teal flex-1 py-3.5 rounded-2xl text-sm">Save All Changes</button>
+      <a href="{% url 'company_dashboard' %}" class="btn-ghost flex items-center justify-center px-6 py-3.5 rounded-2xl text-sm">Cancel</a>
+    </div>
+
+  </form>
+</main>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  /* ── Dirty tracking ── */
+  let isDirty = false;
+  function markDirty() {
+    isDirty = true;
+    document.getElementById('save-bar').classList.add('visible');
+  }
+
+  /* ── Password show/hide ── */
+  function togglePwd(id) {
+    const el = document.getElementById(id);
+    el.type = el.type === 'password' ? 'text' : 'password';
+  }
+
+  /* ── Password strength ── */
+  function checkStrength() {
+    const val   = document.getElementById('new-pw').value;
+    const fill  = document.getElementById('strength-fill');
+    const label = document.getElementById('strength-label');
+    if (!val) { fill.style.width = '0'; label.textContent = ''; return; }
+    let score = 0;
+    if (val.length >= 8)          score++;
+    if (/[A-Z]/.test(val))        score++;
+    if (/[0-9]/.test(val))        score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const levels = [
+      { w: '0%',   bg: 'transparent', txt: '' },
+      { w: '25%',  bg: '#f87171',     txt: 'Weak' },
+      { w: '50%',  bg: '#fcd34d',     txt: 'Fair' },
+      { w: '75%',  bg: '#60a5fa',     txt: 'Good' },
+      { w: '100%', bg: '#34d399',     txt: 'Strong' },
+    ];
+    fill.style.width = levels[score].w; fill.style.background = levels[score].bg;
+    label.textContent = levels[score].txt; label.style.color = levels[score].bg;
+  }
+
+  /* ── Description char count ── */
+  function charCount() {
+    const len = document.getElementById('description').value.length;
+    const el  = document.getElementById('desc-count');
+    el.textContent  = `${len} / 1000`;
+    el.style.color  = len > 1000 ? '#f87171' : len > 850 ? '#fcd34d' : 'rgba(255,255,255,0.30)';
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    charCount();
+    {% if messages %}isDirty = true; document.getElementById('save-bar').classList.add('visible');{% endif %}
+  });
+</script>
+{% endblock %}
