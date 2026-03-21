@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI — Intelligent Resume Screening{% endblock %}
+
+{% block extra_head %}
+{#
+  VIEW — accounts/views.py
+  ─────────────────────────────────────────────────────────────────────────
+  def home(request):
+      if request.user.is_authenticated:
+          if hasattr(request.user, "candidateprofile"):
+              return redirect("candidate_dashboard")
+          if hasattr(request.user, "companyprofile"):
+              return redirect("company_dashboard")
+      # Pass error=None on GET so template doesn't crash on {{ error }} check
+      # The login form POSTs to accounts/login, which re-renders with error
+      # if credentials are wrong. To show that error on the landing page
+      # instead of a separate login page, you can either:
+      #   A) keep it as-is — failed logins redirect to /accounts/login/
+      #   B) handle POST here too and pass error back — your call later
+      return render(request, "accounts/home.html")
+
+  URL — accounts/urls.py
+  ─────────────────────────────────────────────────────────────────────────
+  path("", views.home, name="home"),
+
+  resume_ai/urls.py
+  ─────────────────────────────────────────────────────────────────────────
+  path("", include("accounts.urls")),   ← serves home at /
+  path("accounts/", include("accounts.urls")),
+#}
+<style>
+  /* Landing page only.
+     .glass, .bg-canvas, .bg-canvas.candidate, shapes, .nav-link → base.html */
+
+  /* Stronger glass variant for the login card */
+  .glass-strong {
+    background: rgba(255,255,255,0.22);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.40);
+    box-shadow: 0 8px 40px rgba(0,0,80,0.18), inset 0 1px 0 rgba(255,255,255,0.55);
+  }
+
+  /* Role toggle inside login card */
+  .role-toggle { display:flex; background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.22); border-radius:999px; padding:4px; gap:4px; }
+  .role-opt { flex:1; text-align:center; padding:8px 20px; border-radius:999px; font-size:14px; font-weight:500; cursor:pointer; color:rgba(255,255,255,0.55); transition:all 0.2s ease; user-select:none; }
+  .role-opt.active { background:rgba(255,255,255,0.22); color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,0.3); }
+
+  /* Login form input */
+  .form-input {
+    width:100%; background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.25);
+    border-radius:14px; padding:12px 16px; font-size:14px; color:#fff; outline:none;
+    transition:all 0.15s ease;
+  }
+  .form-input::placeholder { color:rgba(255,255,255,0.35); }
+  .form-input:focus { border-color:rgba(255,255,255,0.55); background:rgba(255,255,255,0.16); }
+
+  /* Buttons */
+  .btn-white { background:#fff; color:#2136f3; font-weight:600; transition:all 0.15s ease; }
+  .btn-white:hover { background:rgba(255,255,255,0.92); box-shadow:0 4px 20px rgba(255,255,255,0.3); transform:translateY(-1px); }
+  .btn-ghost { background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.28); color:#fff; font-weight:500; transition:all 0.15s ease; }
+  .btn-ghost:hover { background:rgba(255,255,255,0.24); border-color:rgba(255,255,255,0.45); }
+
+  /* Stat strip */
+  .stat-card { background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.20); border-radius:20px; text-align:center; padding:20px 16px; }
+
+  /* Feature cards (How it works + Features sections) */
+  .feature-card {
+    background:rgba(255,255,255,0.12);
+    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,0.25); border-radius:24px;
+    transition:all 0.2s ease;
+  }
+  .feature-card:hover { background:rgba(255,255,255,0.20); transform:translateY(-3px); box-shadow:0 12px 40px rgba(0,0,80,0.18); }
+
+  /* Step number circle */
+  .step-num {
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:15px; color:#fff; flex-shrink:0;
+  }
+  .step-num-pink { background:rgba(232,121,249,0.25); border-color:rgba(232,121,249,0.4); }
+
+  /* Scroll bounce */
+  @keyframes bounce-slow { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(6px)} }
+  .bounce-slow { animation:bounce-slow 2s ease-in-out infinite; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# Background — candidate purple #}
+<div class="bg-canvas candidate">
+  <div class="shape-bl"></div>
+  <div class="shape-tr"></div>
+  <div class="shape-mid"></div>
+</div>
+
+{# ══════════════ NAVBAR ══════════════ #}
+<nav class="fixed top-0 left-0 w-full z-50">
+  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
+
+    <a href="{% url 'index' %}" class="flex items-center gap-2 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-4 py-2">
+      <span class="text-2xl text-white tracking-tight font-bold">ResumeAI</span>
+    </a>
+
+    <div class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-3 py-2 shadow-md">
+      <a href="#how"      class="nav-link px-5 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">How it works</a>
+      <a href="#features" class="nav-link px-5 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Features</a>
+      <a href="#login"    class="nav-link px-5 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Sign in</a>
+    </div>
+
+    <a href="#login" class="btn-white px-5 py-2.5 rounded-full text-sm shadow-sm">Get Started →</a>
+  </div>
+</nav>
+
+{# ══════════════ HERO ══════════════ #}
+<section class="relative min-h-screen flex items-center justify-center px-4 md:px-6 pt-[10vh]">
+  <div class="max-w-6xl w-full mx-auto flex flex-col lg:flex-row items-center gap-12">
+
+    {# Left: headline #}
+    <div class="flex-1 text-center lg:text-left">
+      <p class="text-[10px] uppercase tracking-widest text-white/50 mb-4">AI-Powered Resume Screening</p>
+      <h1 class="text-4xl md:text-5xl text-white font-bold leading-tight mb-6">
+        Hire smarter.<br/>
+        <em class="opacity-75 not-italic" style="font-family:'DM Serif Display',serif;">Rank faster.</em>
+      </h1>
+      <p class="text-white/60 text-lg leading-relaxed mb-8 max-w-md mx-auto lg:mx-0">
+        ResumeAI automatically screens resumes, ranks candidates by match score,
+        and surfaces the best fit — so you spend time interviewing, not reading PDFs.
+      </p>
+
+      {# Stats #}
+      <div class="flex gap-4 mb-8 justify-center lg:justify-start">
+        <div class="stat-card flex-1">
+          <p class="text-2xl font-bold text-white">94%</p>
+          <p class="text-xs text-white/45 mt-1">Screening accuracy</p>
+        </div>
+        <div class="stat-card flex-1">
+          <p class="text-2xl font-bold text-white">10×</p>
+          <p class="text-xs text-white/45 mt-1">Faster shortlisting</p>
+        </div>
+        <div class="stat-card flex-1">
+          <p class="text-2xl font-bold text-emerald-300">100%</p>
+          <p class="text-xs text-white/45 mt-1">Bias-free ranking</p>
+        </div>
+      </div>
+
+      <div class="flex gap-3 justify-center lg:justify-start">
+        <a href="{% url 'register' %}"              class="btn-white px-6 py-3 rounded-2xl text-sm">Start as Candidate</a>
+        <a href="{% url 'register' %}?role=company" class="btn-ghost  px-6 py-3 rounded-2xl text-sm">Post a Job as HR</a>
+      </div>
+    </div>
+
+    {# Right: login card #}
+    <div id="login" class="w-full max-w-sm lg:w-96 shrink-0">
+      <div class="glass-strong rounded-3xl p-7">
+
+        <p class="text-[10px] uppercase tracking-widest text-white/50 mb-4 text-center">Sign in to ResumeAI</p>
+
+        {# Role toggle — visual only.
+           Django's user_login view redirects based on which profile
+           the authenticated user has, regardless of this toggle. #}
+        <div class="role-toggle mb-2">
+          <div class="role-opt active" id="role-candidate" onclick="setRole('candidate')">
+            <svg class="w-3.5 h-3.5 inline mr-1.5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            Candidate
+          </div>
+          <div class="role-opt" id="role-hr" onclick="setRole('hr')">
+            <svg class="w-3.5 h-3.5 inline mr-1.5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            HR / Recruiter
+          </div>
+        </div>
+        <p id="role-hint" class="text-xs text-white/40 text-center mb-5">
+          Sign in to browse jobs and track your applications
+        </p>
+
+        {# Login error — shown when user_login view passes error back.
+           This only shows if you decide to handle POST in home() too.
+           For now, failed logins land on /accounts/login/ with the error. #}
+        {% if error %}
+        <div class="bg-red-500/15 border border-red-400/30 text-red-300 rounded-2xl px-4 py-3 text-sm flex items-center gap-2 mb-4">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ error }}
+        </div>
+        {% endif %}
+
+        {# Django messages — e.g. "Account created! Please sign in." #}
+        {% if messages %}
+          {% for message in messages %}
+          <div class="bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 rounded-2xl px-4 py-3 text-sm flex items-center gap-2 mb-4">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            {{ message }}
+          </div>
+          {% endfor %}
+        {% endif %}
+
+        {# Login form — POSTs to accounts/login view #}
+        <form method="post" action="{% url 'login' %}" class="space-y-3" novalidate>
+          {% csrf_token %}
+
+          <div>
+            <label class="text-[10px] uppercase tracking-widest text-white/45 block mb-1.5">Username</label>
+            <input type="text" name="username"
+                   value="{{ request.POST.username|default:'' }}"
+                   class="form-input" placeholder="your_username"
+                   autocomplete="username" required autofocus/>
+          </div>
+
+          <div>
+            <label class="text-[10px] uppercase tracking-widest text-white/45 block mb-1.5">Password</label>
+            <div class="relative">
+              <input type="password" name="password" id="home-pwd"
+                     class="form-input pr-10" placeholder="••••••••"
+                     autocomplete="current-password" required/>
+              <button type="button" onclick="togglePwd()"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-xs text-white/35">Auto-redirects to your dashboard</span>
+            <a href="{% url 'forgot_password' %}"
+               class="text-xs text-white/50 hover:text-white transition-colors underline underline-offset-2">
+              Forgot password?
+            </a>
+          </div>
+
+          <button type="submit" id="login-btn" class="btn-white w-full py-3 rounded-2xl text-sm mt-2">
+            Sign in as Candidate
+          </button>
+        </form>
+
+        <div class="flex items-center gap-3 my-4">
+          <div class="flex-1 h-px bg-white/15"></div>
+          <span class="text-xs text-white/35">or</span>
+          <div class="flex-1 h-px bg-white/15"></div>
+        </div>
+
+        <p class="text-center text-xs text-white/45">
+          Don't have an account?
+          <a href="{% url 'register' %}" class="text-white font-medium underline underline-offset-2 hover:text-white/80 transition-colors ml-1">
+            Register
+          </a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  {# Scroll hint #}
+  <div class="bounce-slow absolute bottom-8 left-1/2 flex flex-col items-center gap-2">
+    <span class="text-xs text-white/30">Scroll to explore</span>
+    <svg class="w-4 h-4 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+    </svg>
+  </div>
+</section>
+
+{# ══════════════ HOW IT WORKS ══════════════ #}
+<section id="how" class="py-24 px-4 md:px-6">
+  <div class="max-w-5xl mx-auto">
+
+    <div class="text-center mb-14">
+      <p class="text-[10px] uppercase tracking-widest text-white/50 mb-3">Process</p>
+      <h2 class="text-3xl text-white font-bold">How ResumeAI works</h2>
+      <p class="text-white/50 mt-3 max-w-lg mx-auto text-sm">
+        Three steps from job post to shortlist — fully automated, no manual screening.
+      </p>
+    </div>
+
+    {# Candidate flow #}
+    <div class="mb-12">
+      <p class="text-xs text-white/40 uppercase tracking-widest mb-6 text-center">For Candidates</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+
+        <div class="feature-card p-6">
+          <div class="step-num mb-4">1</div>
+          <p class="text-white font-semibold mb-2">Browse & Apply</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Find open positions that match your skills. Upload your resume — PDF only, text-based for best results.
+          </p>
+        </div>
+
+        <div class="feature-card p-6">
+          <div class="step-num mb-4">2</div>
+          <p class="text-white font-semibold mb-2">Get Scored Instantly</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Our NLP engine compares your resume against the job description, required skills, experience, and qualifications.
+          </p>
+        </div>
+
+        <div class="feature-card p-6">
+          <div class="step-num mb-4">3</div>
+          <p class="text-white font-semibold mb-2">Track Your Result</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            See your rank and score in the candidate list once the deadline passes. Know exactly where you stand.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    {# HR flow #}
+    <div>
+      <p class="text-xs text-white/40 uppercase tracking-widest mb-6 text-center">For HR / Recruiters</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+
+        <div class="feature-card p-6">
+          <div class="step-num step-num-pink mb-4">1</div>
+          <p class="text-white font-semibold mb-2">Post a Job</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Create a listing with description, required skills, experience level, qualifications, and a deadline.
+          </p>
+        </div>
+
+        <div class="feature-card p-6">
+          <div class="step-num step-num-pink mb-4">2</div>
+          <p class="text-white font-semibold mb-2">Resumes Auto-Screened</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Every application is scored automatically. No manual reading — the system ranks all candidates by match quality.
+          </p>
+        </div>
+
+        <div class="feature-card p-6">
+          <div class="step-num step-num-pink mb-4">3</div>
+          <p class="text-white font-semibold mb-2">Shortlist & Interview</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Review the ranked list after the deadline. Approve or reject — top scorers are pre-highlighted for you.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+{# ══════════════ FEATURES ══════════════ #}
+<section id="features" class="py-24 px-4 md:px-6">
+  <div class="max-w-5xl mx-auto">
+
+    <div class="text-center mb-14">
+      <p class="text-[10px] uppercase tracking-widest text-white/50 mb-3">Features</p>
+      <h2 class="text-3xl text-white font-bold">Built for precision hiring</h2>
+      <p class="text-white/50 mt-3 max-w-lg mx-auto text-sm">
+        Every feature is designed around one goal — the right candidate in front of the right employer, faster.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+      <div class="feature-card p-6 flex gap-4">
+        <div class="w-10 h-10 rounded-2xl bg-blue-500/25 border border-blue-400/35 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold mb-1.5">Weighted Scoring Algorithm</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Skills (35%), experience (25%), qualifications (20%), and content relevance via cosine similarity (20%) — transparent and explainable.
+          </p>
+        </div>
+      </div>
+
+      <div class="feature-card p-6 flex gap-4">
+        <div class="w-10 h-10 rounded-2xl bg-violet-500/25 border border-violet-400/35 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-violet-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold mb-1.5">PDF Resume Extraction</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Text is extracted directly from uploaded PDFs — skills, experience, and qualifications parsed automatically using NLP.
+          </p>
+        </div>
+      </div>
+
+      <div class="feature-card p-6 flex gap-4">
+        <div class="w-10 h-10 rounded-2xl bg-fuchsia-500/25 border border-fuchsia-400/35 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-fuchsia-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold mb-1.5">Ranked Candidate List</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            All applicants ranked by score after the deadline. HR sees a clean sorted list — candidates can view their own standing too.
+          </p>
+        </div>
+      </div>
+
+      <div class="feature-card p-6 flex gap-4">
+        <div class="w-10 h-10 rounded-2xl bg-emerald-500/25 border border-emerald-400/35 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold mb-1.5">Deadline-Based Pipeline</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Applications are active until the deadline. After it passes, the job moves to history automatically — no manual status management.
+          </p>
+        </div>
+      </div>
+
+      <div class="feature-card p-6 flex gap-4">
+        <div class="w-10 h-10 rounded-2xl bg-amber-500/25 border border-amber-400/35 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold mb-1.5">Instant Pre-Submission Score</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Candidates see their match score before submitting — encouraging resume improvement and reducing low-quality applications.
+          </p>
+        </div>
+      </div>
+
+      <div class="feature-card p-6 flex gap-4">
+        <div class="w-10 h-10 rounded-2xl bg-sky-500/25 border border-sky-400/35 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold mb-1.5">Role-Based Access</p>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Candidates and HR have separate dashboards — candidates cannot see other resumes, HR manages all jobs and results.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+{# ══════════════ FOOTER ══════════════ #}
+<footer class="py-10 px-4 md:px-6 border-t border-white/10">
+  <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-2">
+      <span class="text-xl text-white font-bold">ResumeAI</span>
+      <span class="text-sm text-white/35 font-light">/ intelligent resume screening</span>
+    </div>
+    <p class="text-xs text-white/30">© 2026 ResumeAI. Built with Django + NLP.</p>
+  </div>
+</footer>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  /* ── Role toggle — visual only ── */
+  function setRole(role) {
+    document.getElementById('role-candidate').classList.toggle('active', role === 'candidate');
+    document.getElementById('role-hr').classList.toggle('active', role === 'hr');
+    document.getElementById('role-hint').textContent = role === 'candidate'
+      ? 'Sign in to browse jobs and track your applications'
+      : 'Sign in to post jobs, manage applications and view ranked results';
+    document.getElementById('login-btn').textContent =
+      role === 'candidate' ? 'Sign in as Candidate' : 'Sign in as HR / Recruiter';
+  }
+
+  /* ── Password show/hide ── */
+  function togglePwd() {
+    const input = document.getElementById('home-pwd');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  }
+
+  /* ── Smooth scroll for anchor links ── */
+  document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+    });
+  });
+</script>
+{% endblock %}

@@ -39,7 +39,13 @@ from .forms import CandidateRegistrationForm, CompanyRegistrationForm, ForgotPas
 from applications.models import Application
 from jobs.models import Job
 
-
+def index(request):
+    if request.user.is_authenticated:
+        if hasattr(request.user, "candidateprofile"):
+            return redirect("candidate_dashboard")
+        if hasattr(request.user, "companyprofile"):
+            return redirect("company_dashboard")
+    return render(request, "accounts/index.html")
 # ═══════════════════════════════════════════════════════════════
 #  REGISTRATION
 # ═══════════════════════════════════════════════════════════════
@@ -405,31 +411,3 @@ def company_edit_profile(request):
         "company": company,
         **_stats(),
     })
-
-
-# ═══════════════════════════════════════════════════════════════
-#  ACCOUNT DELETION
-# ═══════════════════════════════════════════════════════════════
-
-@login_required
-def delete_company_account(request):
-    """
-    Deletes the company account and all related data via CASCADE.
-    Only accepts POST to prevent accidental GET-triggered deletion.
-    The confirmation dialog is handled in the template with JS confirm().
-
-    TODO (future): before deleting, also clean up:
-      - any uploaded media files (logos, resumes) from MEDIA_ROOT
-      - send a goodbye/confirmation email to the user
-    """
-    company = getattr(request.user, "companyprofile", None)
-    if not company:
-        return redirect("candidate_dashboard")
-
-    if request.method == "POST":
-        request.user.delete()  # CASCADE deletes CompanyProfile + Jobs + Applications
-        messages.success(request, "Your account has been permanently deleted.")
-        return redirect("login")
-
-    # GET request — redirect back rather than showing a blank page
-    return redirect("company_edit_profile")
