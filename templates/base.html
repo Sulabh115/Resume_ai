@@ -1,152 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="ResumeAI — AI-powered job portal"/>
+
   <title>{% block title %}ResumeAI{% endblock %}</title>
+
+  {# ── Tailwind CSS (CDN) ── #}
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+
+  {# ── Google Fonts: DM Sans + DM Serif Display ── #}
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"/>
+
   <style>
-    :root {
-      --accent: #3B82F6;
-      --accent-light: #60A5FA;
-      --accent-glow: rgba(59, 130, 246, 0.25);
-      --glass-bg: rgba(15, 23, 42, 0.6);
-      --glass-border: rgba(59, 130, 246, 0.18);
-      --surface: rgba(30, 41, 59, 0.5);
-    }
-
+    /* ── Global resets & typography ── */
+    *, *::before, *::after { box-sizing: border-box; }
     * { font-family: 'DM Sans', sans-serif; }
-    h1, h2, h3, .display { font-family: 'Syne', sans-serif; }
+    body { font-size: 16px; min-height: 100vh; overflow-x: hidden; }
 
-    body {
-      background: #060d1b;
-      min-height: 100vh;
-      overflow-x: hidden;
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+
+    /* ── Serif utility (use on headings where needed) ── */
+    .font-serif-display { font-family: 'DM Serif Display', serif; }
+
+    /* ── Candidate background ── */
+    .bg-candidate {
+      background: linear-gradient(135deg, #2136f3 0%, #5a64f7 30%, #6664f8 65%, #c4b5fd 100%);
     }
-
-    /* Animated mesh background */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(59,130,246,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(99,102,241,0.10) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 60% 40%, rgba(14,165,233,0.07) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: 0;
+    /* ── HR / Company background ── */
+    .bg-company {
+      background: linear-gradient(135deg, #0f4c5c 0%, #0e7490 30%, #0891b2 65%, #a5f3fc 100%);
     }
 
-    /* Subtle grid overlay */
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
-      background-size: 60px 60px;
-      pointer-events: none;
-      z-index: 0;
+    /* ── Glassmorphism card ── */
+    .glass-card {
+      background: rgba(255,255,255,0.18);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.35);
+      box-shadow: 0 4px 28px rgba(0,0,80,0.12), inset 0 1px 0 rgba(255,255,255,0.5);
     }
 
-    /* Glass card */
-    .glass {
-      background: var(--glass-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--glass-border);
-      box-shadow: 0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+    /* ── Background canvas (shared across all pages) ── */
+    .bg-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      pointer-events: none; overflow: hidden;
+    }
+    /* Candidate shapes */
+    .bg-canvas.candidate {
+      background: linear-gradient(135deg, #2136f3 0%, #5a64f7 30%, #6664f8 65%, #c4b5fd 100%);
+    }
+    /* Company / HR shapes */
+    .bg-canvas.company {
+      background: linear-gradient(135deg, #0f4c5c 0%, #0e7490 30%, #0891b2 65%, #a5f3fc 100%);
     }
 
-    /* Input field glass */
-    .glass-input {
-      background: rgba(15, 23, 42, 0.5);
-      border: 1px solid rgba(59,130,246,0.2);
-      color: #e2e8f0;
-      transition: all 0.2s ease;
-    }
-    .glass-input::placeholder { color: #475569; }
-    .glass-input:focus {
-      outline: none;
-      border-color: #3B82F6;
-      background: rgba(15, 23, 42, 0.7);
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.12), 0 0 20px rgba(59,130,246,0.08);
-    }
+    /* ── Decorative shapes ── */
+    /* Candidate purple shapes */
+    .shape-bl  { position:absolute; bottom:-90px; left:-90px; width:480px; height:480px; border-radius:50%; background:#ad02f6; opacity:0.55; }
+    .shape-tr  { position:absolute; top:-60px; right:-60px; width:400px; height:400px; border-radius:40px; transform:rotate(18deg); background:#7c3aed; opacity:0.55; }
+    .shape-mid { position:absolute; top:38%; left:8%; width:200px; height:300px; border-radius:999px; transform:rotate(-28deg); background:#e879f9; opacity:0.28; }
+    /* Company teal shapes */
+    .shape-bl-teal  { position:absolute; bottom:-90px; left:-90px; width:480px; height:480px; border-radius:50%; background:#06b6d4; opacity:0.35; }
+    .shape-tr-teal  { position:absolute; top:-60px; right:-60px; width:400px; height:400px; border-radius:40px; transform:rotate(18deg); background:#0e7490; opacity:0.45; }
+    .shape-mid-teal { position:absolute; top:38%; left:8%; width:200px; height:300px; border-radius:999px; transform:rotate(-28deg); background:#67e8f9; opacity:0.18; }
 
-    /* Primary button */
-    .btn-primary {
-      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-      border: 1px solid rgba(59,130,246,0.4);
-      box-shadow: 0 4px 20px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
-      transition: all 0.2s ease;
-      font-family: 'Syne', sans-serif;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 30px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
-      background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
-    }
-    .btn-primary:active { transform: translateY(0); }
+    /* ── Django messages ── */
+    .msg-success { background:rgba(16,185,129,0.15); border:1px solid rgba(52,211,153,0.3); color:#6ee7b7; }
+    .msg-error   { background:rgba(239,68,68,0.15);  border:1px solid rgba(248,113,113,0.3); color:#fca5a5; }
+    .msg-info    { background:rgba(99,102,241,0.15); border:1px solid rgba(165,180,252,0.3); color:#c7d2fe; }
+    .msg-warning { background:rgba(245,158,11,0.15); border:1px solid rgba(252,211,77,0.3);  color:#fde68a; }
 
-    /* Secondary/outline button */
-    .btn-outline {
-      background: rgba(59,130,246,0.08);
-      border: 1px solid rgba(59,130,246,0.3);
-      color: #93C5FD;
-      transition: all 0.2s ease;
-      font-family: 'Syne', sans-serif;
-      font-weight: 500;
-    }
-    .btn-outline:hover {
-      background: rgba(59,130,246,0.15);
-      border-color: rgba(59,130,246,0.5);
-      color: #BFDBFE;
-    }
+    /* ── Badge variants (application status) ── */
+    .badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:500; }
+    .badge-pending     { background:rgba(251,191,36,0.15);  color:#fcd34d; border:1px solid rgba(251,191,36,0.25); }
+    .badge-reviewed    { background:rgba(99,102,241,0.15);  color:#a5b4fc; border:1px solid rgba(99,102,241,0.25); }
+    .badge-shortlisted { background:rgba(16,185,129,0.15);  color:#6ee7b7; border:1px solid rgba(16,185,129,0.25); }
+    .badge-rejected    { background:rgba(239,68,68,0.15);   color:#fca5a5; border:1px solid rgba(239,68,68,0.25); }
+    .badge-hired       { background:rgba(52,211,153,0.20);  color:#34d399; border:1px solid rgba(52,211,153,0.35); }
+    .badge-withdrawn   { background:rgba(156,163,175,0.15); color:#d1d5db; border:1px solid rgba(156,163,175,0.25); }
 
-    /* Floating label pill */
-    .pill {
-      background: rgba(59,130,246,0.12);
-      border: 1px solid rgba(59,130,246,0.25);
-      color: #93C5FD;
-    }
-
-    /* Fade-in animation */
-    .fade-up {
-      animation: fadeUp 0.5s ease forwards;
-      opacity: 0;
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .delay-1 { animation-delay: 0.08s; }
-    .delay-2 { animation-delay: 0.16s; }
-    .delay-3 { animation-delay: 0.24s; }
-    .delay-4 { animation-delay: 0.32s; }
-
-    /* Alert styles */
-    .alert-error {
-      background: rgba(239,68,68,0.1);
-      border: 1px solid rgba(239,68,68,0.3);
-      color: #FCA5A5;
-    }
-    .alert-success {
-      background: rgba(34,197,94,0.1);
-      border: 1px solid rgba(34,197,94,0.3);
-      color: #86EFAC;
-    }
+    /* ── Nav link active indicator ── */
+    .nav-link { position:relative; }
+    .nav-link::after { content:''; position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:0; height:2px; background:#fff; border-radius:2px; transition:width 0.2s; }
+    .nav-link:hover::after, .nav-link.active::after { width:50%; }
   </style>
+
+  {# ── Per-page head additions (extra CSS, meta tags, etc.) ── #}
   {% block extra_head %}{% endblock %}
 </head>
-<body class="relative">
-  <div class="relative z-10">
-    {% block navbar %}{% endblock %}
-    {% block content %}{% endblock %}
+
+<body class="min-h-screen">
+
+  {# ── Django messages — available globally, rendered per-page if needed ──
+     Most pages render messages inline within {% block content %}.
+     This global slot is a fallback for pages that don't have their own
+     message rendering area (e.g. simple redirects that flash a message).
+  #}
+  {% if messages %}
+  <div id="global-messages"
+       class="fixed top-4 right-4 z-[999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    {% for message in messages %}
+    <div class="msg-{{ message.tags|default:'info' }} rounded-2xl px-4 py-3 text-sm flex items-center gap-2 shadow-lg pointer-events-auto transition-all duration-300"
+         data-autohide="true">
+      {% if message.tags == 'error' %}
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      {% else %}
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      {% endif %}
+      {{ message }}
+    </div>
+    {% endfor %}
   </div>
+  {% endif %}
+
+  {# ── Main page content ── #}
+  {% block content %}{% endblock %}
+
+  {# ── Per-page scripts ── #}
   {% block extra_scripts %}{% endblock %}
+
+  {# ── Global JS: auto-hide flash messages, mobile menu toggle ── #}
+  <script>
+    // Auto-hide global toast messages after 4s
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('[data-autohide="true"]').forEach(function (el) {
+        setTimeout(function () {
+          el.style.opacity = '0';
+          el.style.transform = 'translateX(20px)';
+          setTimeout(function () { el.remove(); }, 300);
+        }, 4000);
+      });
+
+      // Mobile menu toggle (used on dashboard pages)
+      const toggle = document.getElementById('menu-toggle');
+      const mobileMenu = document.getElementById('mobile-menu');
+      if (toggle && mobileMenu) {
+        toggle.addEventListener('click', function () {
+          mobileMenu.classList.toggle('hidden');
+        });
+        // Close menu when a link inside it is clicked
+        mobileMenu.querySelectorAll('a').forEach(function (link) {
+          link.addEventListener('click', function () {
+            mobileMenu.classList.add('hidden');
+          });
+        });
+        // Close menu on outside click
+        document.addEventListener('click', function (e) {
+          if (!toggle.contains(e.target) && !mobileMenu.contains(e.target)) {
+            mobileMenu.classList.add('hidden');
+          }
+        });
+      }
+    });
+  </script>
+
 </body>
 </html>
