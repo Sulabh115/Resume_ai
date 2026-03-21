@@ -14,31 +14,31 @@ from .forms import CandidateRegistrationForm, CompanyRegistrationForm, ForgotPas
 
 
 # ---------- Registration Views ----------
+def register(request):
+    candidate_form = CandidateRegistrationForm()
+    company_form   = CompanyRegistrationForm()
 
-def candidate_register(request):
     if request.method == "POST":
-        form = CandidateRegistrationForm(request.POST)
-        if form.is_valid():
-            form.save()  # Creates User + CandidateProfile via form.save()
-            messages.success(request, "Account created! Please sign in.")
-            return redirect("login")
-    else:
-        form = CandidateRegistrationForm()
-    return render(request, "accounts/candidate_register.html", {"form": form})
+        role = request.POST.get("role")  # hidden input in each form
 
+        if role == "candidate":
+            candidate_form = CandidateRegistrationForm(request.POST)
+            if candidate_form.is_valid():
+                candidate_form.save()
+                messages.success(request, "Account created! Please sign in.")
+                return redirect("login")
 
-def company_register(request):
-    if request.method == "POST":
-        form = CompanyRegistrationForm(request.POST)
-        if form.is_valid():
-            form.save()  # Creates User + CompanyProfile via form.save()
-            messages.success(request, "Company account created! Please sign in.")
-            return redirect("login")
-    else:
-        form = CompanyRegistrationForm()
-    return render(request, "accounts/company_register.html", {"form": form})
+        elif role == "company":
+            company_form = CompanyRegistrationForm(request.POST)
+            if company_form.is_valid():
+                company_form.save()
+                messages.success(request, "Company account created! Please sign in.")
+                return redirect("login")
 
-
+    return render(request, "accounts/register.html", {
+        "candidate_form": candidate_form,
+        "company_form":   company_form,
+    })
 # ---------- Authentication ----------
 
 def user_login(request):
@@ -67,36 +67,60 @@ def user_logout(request):
 # ---------- Forgot Password ----------
 
 def forgot_password(request):
+    """
+    Step 1 of password reset — collect email.
+    EMAIL SENDING: currently just sets email_sent=True.
+    When you're ready to send emails, uncomment the send_reset_email() block.
+    """
+    from .forms import ForgotPasswordForm
+
     if request.method == "POST":
         form = ForgotPasswordForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data["email"]
-            user = User.objects.get(email=email)
 
-            # Generate token + uid
-            token = default_token_generator.make_token(user)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            # ── EMAIL SENDING (implement later) ────────────────────────
+            # from django.contrib.auth.tokens import default_token_generator
+            # from django.utils.http import urlsafe_base64_encode
+            # from django.utils.encoding import force_bytes
+            # from django.core.mail import send_mail
+            # from django.contrib.auth.models import User
+            #
+            # try:
+            #     user = User.objects.get(email=email)
+            #     uid   = urlsafe_base64_encode(force_bytes(user.pk))
+            #     token = default_token_generator.make_token(user)
+            #     reset_url = request.build_absolute_uri(
+            #         reverse("password_reset_confirm", kwargs={"uidb64": uid, "token": token})
+            #     )
+            #     send_mail(
+            #         subject="Reset your ResumeAI password",
+            #         message=f"Click here to reset your password:\n{reset_url}",
+            #         from_email="noreply@resumeai.com",
+            #         recipient_list=[email],
+            #         fail_silently=False,
+            #     )
+            # except User.DoesNotExist:
+            #     pass  # Don't reveal whether email is registered
+            # ────────────────────────────────────────────────────────────
 
-            # Build reset URL
-            reset_url = request.build_absolute_uri(
-                f"/accounts/reset-password/{uid}/{token}/"
-            )
-
-            # Send email
-            send_mail(
-                subject="Password Reset — ResumeAI",
-                message=f"Hi {user.username},\n\nClick the link below to reset your password:\n\n{reset_url}\n\nThis link expires in 30 minutes.\n\nIf you didn't request this, you can safely ignore this email.",
-                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@resumeai.com"),
-                recipient_list=[email],
-            )
-            messages.success(request, f"A reset link has been sent to {email}.")
-            return redirect("forgot_password")
+            return render(request, "accounts/forgot_password.html", {
+                "form": form,
+                "email_sent": True,
+                "submitted_email": email,
+                "steps": [
+                    "Open your email inbox.",
+                    "Look for an email from ResumeAI.",
+                    "Click the reset link inside — it's valid for 24 hours.",
+                    "Choose a new password and sign in.",
+                ],
+            })
         # Form invalid — re-render with errors
         return render(request, "accounts/forgot_password.html", {"form": form})
 
-    form = ForgotPasswordForm()
-    return render(request, "accounts/forgot_password.html", {"form": form})
-
+    return render(request, "accounts/forgot_password.html", {
+        "form": ForgotPasswordForm()
+    })
 
 # ---------- Dashboards ----------
 
@@ -217,3 +241,21 @@ def company_dashboard(request):
         "recent_applicants": recent_applicants,
         "active_jobs":       active_jobs,
     })
+@login_required
+def candidate_edit_profile(request):
+    candidate = getattr(request.user, "candidateprofile", None)
+    if not candidate:
+        return redirect("company_dashboard")
+    if request.method == "POST":
+        request.user.first_name = request.POST.get("first_name", "")
+        request.user.last_name  = request.POST.get("last_name", "")
+        request.user.email      = request.POST.get("email", "")
+        request.user.save(update_fields=["first_name", "last_name", "email"])
+        candidate.phone      = request.POST.get("phone", "")
+        candidate.skills     = request.POST.get("skills", "")
+        candidate.experience = int(request.POST.get("experience") or 0)
+        candidate.education  = request.POST.get("education", "")
+        candidate.save()
+        messages.success(request, "Profile updated.")
+        return redirect("candidate_dashboard")
+    return render(request, "accounts/candidate_edit_profile.html", {"candidate": candidate})

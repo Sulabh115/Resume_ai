@@ -43,10 +43,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    #custom apps
+    ### custom apps
     'accounts',
     'applications',
-    'dashboard',
+    # 'dashboard',
     'jobs',
     'screening',
 ]

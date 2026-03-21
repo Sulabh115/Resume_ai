@@ -2,266 +2,454 @@
 {% block title %}Dashboard — ResumeAI{% endblock %}
 
 {% block extra_head %}
+{#
+═══════════════════════════════════════════════════════════
+  DJANGO WIRING NOTES
+  ─────────────────────────────────────────────────────────
+  CONTEXT (already provided by accounts/views.py candidate_dashboard):
+    candidate          → CandidateProfile instance
+    total              → int (total applications)
+    pending            → int
+    shortlisted        → int
+    offered            → int
+    recent_applications → queryset[:5] with select_related("job__company")
+    recent_jobs        → queryset[:6] open jobs
+    has_resumes        → bool
+
+  URLS TO ADD:
+  ── accounts/urls.py ──────────────────────────────────────
+    path("profile/edit/",
+         views.candidate_edit_profile,
+         name="candidate_edit_profile"),
+
+  ── applications/urls.py ─────────────────────────────────
+    (already wired) resume_manager, job_list etc.
+
+  VIEW TO ADD — accounts/views.py:
+  ──────────────────────────────────────────────────────────
+  @login_required
+  def candidate_edit_profile(request):
+      candidate = getattr(request.user, "candidateprofile", None)
+      if not candidate:
+          return redirect("company_dashboard")
+      if request.method == "POST":
+          request.user.first_name = request.POST.get("first_name", "")
+          request.user.last_name  = request.POST.get("last_name", "")
+          request.user.email      = request.POST.get("email", "")
+          request.user.save(update_fields=["first_name","last_name","email"])
+          candidate.phone      = request.POST.get("phone", "")
+          candidate.skills     = request.POST.get("skills", "")
+          candidate.experience = int(request.POST.get("experience") or 0)
+          candidate.education  = request.POST.get("education", "")
+          candidate.save()
+          messages.success(request, "Profile updated.")
+          return redirect("candidate_dashboard")
+      return render(request, "accounts/candidate_edit_profile.html", {"candidate": candidate})
+
+═══════════════════════════════════════════════════════════
+#}
 <style>
-  .stat-card {
-    background: rgba(15,23,42,0.5);
-    border: 1px solid rgba(59,130,246,0.12);
-    transition: border-color 0.2s ease, transform 0.2s ease;
+  /* Background decorative shapes — need fixed positioning + custom border-radius combos
+     that can't be fully expressed with Tailwind utilities alone */
+  .bg-canvas {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    background: linear-gradient(135deg, #2136f3 0%, #5a64f7 30%, #6664f8 65%, #c4b5fd 100%);
   }
-  .stat-card:hover { border-color: rgba(59,130,246,0.3); transform: translateY(-2px); }
+  .shape-bl { position: absolute; bottom: -90px; left: -90px; width: 420px; height: 420px; border-radius: 50%; background: #ad02f6; opacity: 0.55; }
+  .shape-tr { position: absolute; top: -60px; right: -60px; width: 340px; height: 340px; border-radius: 40px; transform: rotate(18deg); background: #7c3aed; opacity: 0.55; }
+  .shape-mid { position: absolute; top: 38%; left: 10%; width: 180px; height: 260px; border-radius: 999px; transform: rotate(-28deg); background: #e879f9; opacity: 0.28; }
 
-  .status-badge {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    border-radius: 8px;
-    padding: 2px 8px;
+  /* Glass card */
+  .glass {
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.35);
+    box-shadow: 0 4px 28px rgba(0,0,80,0.12), inset 0 1px 0 rgba(255,255,255,0.5);
   }
-  .status-pending   { background: rgba(100,116,139,0.15); border: 1px solid rgba(100,116,139,0.3); color: #94a3b8; }
-  .status-reviewing { background: rgba(59,130,246,0.15);  border: 1px solid rgba(59,130,246,0.3);  color: #93C5FD; }
-  .status-shortlist { background: rgba(168,85,247,0.15);  border: 1px solid rgba(168,85,247,0.3);  color: #d8b4fe; }
-  .status-interview { background: rgba(14,165,233,0.15);  border: 1px solid rgba(14,165,233,0.3);  color: #7dd3fc; }
-  .status-offered   { background: rgba(34,197,94,0.15);   border: 1px solid rgba(34,197,94,0.3);   color: #86efac; }
-  .status-rejected  { background: rgba(239,68,68,0.15);   border: 1px solid rgba(239,68,68,0.3);   color: #fca5a5; }
-  .status-withdrawn { background: rgba(249,115,22,0.15);  border: 1px solid rgba(249,115,22,0.3);  color: #fdba74; }
 
-  .app-row { transition: background 0.15s ease; }
-  .app-row:hover { background: rgba(59,130,246,0.04); }
+  /* Shared micro-interaction classes */
+  .nav-link { position: relative; }
+  .nav-link::after { content:''; position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:0; height:2px; background:#fff; border-radius:2px; transition:width 0.2s; }
+  .nav-link:hover::after, .nav-link.active::after { width:50%; }
 
-  .job-card {
-    background: rgba(15,23,42,0.4);
-    border: 1px solid rgba(59,130,246,0.1);
-    transition: border-color 0.2s ease, transform 0.2s ease;
-  }
-  .job-card:hover { border-color: rgba(59,130,246,0.3); transform: translateY(-2px); }
+  .action-btn { background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35); color:#fff; transition:all 0.15s ease; }
+  .action-btn:hover { background:rgba(255,255,255,0.88); color:#2136f3; }
+
+  .signout-btn { background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35); color:rgba(255,255,255,0.6); transition:all 0.15s ease; }
+  .signout-btn:hover { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
+
+  .skill-tag { background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35); color:#fff; transition:all 0.15s ease; }
+  .skill-tag:hover { background:rgba(255,255,255,0.88); color:#2136f3; }
+
+  .upload-zone { border:1.5px dashed rgba(255,255,255,0.4); background:rgba(255,255,255,0.10); backdrop-filter:blur(8px); transition:all 0.2s ease; }
+  .upload-zone:hover { border-color:rgba(255,255,255,0.75); background:rgba(255,255,255,0.20); }
+
+  /* Application status badges */
+  .badge-pending     { background:rgba(251,191,36,0.15);  border:1px solid rgba(251,191,36,0.35);  color:#fcd34d; }
+  .badge-reviewed    { background:rgba(59,130,246,0.15);  border:1px solid rgba(59,130,246,0.3);   color:#93c5fd; }
+  .badge-shortlisted { background:rgba(52,211,153,0.18);  border:1px solid rgba(52,211,153,0.38);  color:#6ee7b7; }
+  .badge-rejected    { background:rgba(239,68,68,0.15);   border:1px solid rgba(239,68,68,0.3);    color:#fca5a5; }
+  .badge-hired       { background:rgba(52,211,153,0.25);  border:1px solid rgba(52,211,153,0.5);   color:#34d399; }
+  .badge-withdrawn   { background:rgba(148,163,184,0.15); border:1px solid rgba(148,163,184,0.3);  color:#cbd5e1; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Nav -->
-<nav class="sticky top-0 z-50 border-b border-blue-900/30" style="background: rgba(6,13,27,0.85); backdrop-filter: blur(16px);">
-  <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-    <span class="text-white font-semibold text-sm" style="font-family:'Syne',sans-serif;">Dashboard</span>
-    <div class="flex items-center gap-3">
-      {% if not has_resumes %}
-      <a href="{% url 'resume_manager' %}" class="text-yellow-400 hover:text-yellow-300 text-xs flex items-center gap-1.5 transition-colors">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+{# ── Background shapes ── #}
+<div class="bg-canvas">
+  <div class="shape-bl"></div>
+  <div class="shape-tr"></div>
+  <div class="shape-mid"></div>
+</div>
+
+{# ══════════════════════════════════════════
+   NAVBAR
+══════════════════════════════════════════ #}
+<header class="fixed top-0 left-0 w-full z-50">
+  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
+
+    {# Logo #}
+    <div class="flex items-center gap-2 backdrop-blur-sm bg-white/20 border border-white/25 rounded-full px-3 md:px-4 py-2 shadow-sm">
+      <span class="text-xl md:text-2xl text-white tracking-tight font-bold">ResumeAI</span>
+      <span class="hidden sm:block text-sm text-white/50 font-light">/&nbsp;candidate</span>
+    </div>
+
+    {# Desktop nav — hidden on small screens #}
+    <nav class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/20 border border-white/25 rounded-full px-3 py-2 shadow-md">
+      <a href="{% url 'candidate_dashboard' %}"
+         class="nav-link active px-4 py-2 rounded-full text-sm font-medium text-white bg-white/20 shadow-sm">
+        Dashboard
+      </a>
+      <a href="{% url 'job_list' %}"
+         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
+        Jobs
+      </a>
+      <a href="{% url 'resume_manager' %}"
+         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
+        Resumes
+      </a>
+    </nav>
+
+    {# Right: mobile menu toggle + avatar #}
+    <div class="flex items-center gap-2">
+      <button id="menu-toggle"
+              class="md:hidden p-2 rounded-full bg-white/15 border border-white/25 text-white transition-all hover:bg-white/25"
+              aria-label="Menu">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
-        Upload a resume to apply
-      </a>
-      {% endif %}
-      <a href="{% url 'job_list' %}" class="btn-primary text-white rounded-xl px-4 py-2 text-xs">Browse Jobs</a>
-    </div>
-  </div>
-</nav>
-
-<div class="max-w-7xl mx-auto px-6 py-12">
-
-  <!-- Welcome -->
-  <div class="mb-8 fade-up">
-    <h1 class="text-3xl font-bold text-white mb-1" style="font-family:'Syne',sans-serif;">
-      Welcome back, {{ candidate.user.first_name|default:candidate.user.username }} 👋
-    </h1>
-    <p class="text-slate-400 text-sm">Here's your job search overview.</p>
-  </div>
-
-  <!-- Stats row -->
-  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10 fade-up delay-1">
-    <div class="stat-card rounded-2xl p-5 text-center">
-      <p class="text-3xl font-bold text-white mb-1" style="font-family:'Syne',sans-serif;">{{ total }}</p>
-      <p class="text-slate-500 text-xs">Applied</p>
-    </div>
-    <div class="stat-card rounded-2xl p-5 text-center">
-      <p class="text-3xl font-bold text-slate-400 mb-1" style="font-family:'Syne',sans-serif;">{{ pending }}</p>
-      <p class="text-slate-500 text-xs">Pending</p>
-    </div>
-    <div class="stat-card rounded-2xl p-5 text-center">
-      <p class="text-3xl font-bold text-purple-400 mb-1" style="font-family:'Syne',sans-serif;">{{ shortlisted }}</p>
-      <p class="text-slate-500 text-xs">Shortlisted</p>
-    </div>
-    <div class="stat-card rounded-2xl p-5 text-center">
-      <p class="text-3xl font-bold text-sky-400 mb-1" style="font-family:'Syne',sans-serif;">{{ interviews }}</p>
-      <p class="text-slate-500 text-xs">Interviews</p>
-    </div>
-    <div class="stat-card rounded-2xl p-5 text-center">
-      <p class="text-3xl font-bold text-green-400 mb-1" style="font-family:'Syne',sans-serif;">{{ offered }}</p>
-      <p class="text-slate-500 text-xs">Offers</p>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-    <!-- Recent applications -->
-    <div class="lg:col-span-2 fade-up delay-2">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-white font-semibold text-base" style="font-family:'Syne',sans-serif;">Recent Applications</h2>
-        <a href="{% url 'resume_manager' %}" class="text-slate-400 hover:text-blue-400 transition-colors text-xs flex items-center gap-1">
-          Manage Resumes
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-          </svg>
-        </a>
-      </div>
-
-      {% if recent_applications %}
-      <div class="glass rounded-2xl overflow-hidden">
-        <table class="w-full">
-          <tbody class="divide-y divide-slate-700/30">
-            {% for app in recent_applications %}
-            <tr class="app-row">
-              <td class="px-5 py-4">
-                <p class="text-white text-sm font-medium mb-0.5">{{ app.job.title }}</p>
-                <p class="text-slate-500 text-xs">{{ app.job.company.company_name }} · {{ app.applied_at|timesince }} ago</p>
-              </td>
-              <td class="px-4 py-4 text-right">
-                <span class="status-badge status-{{ app.status }}">{{ app.get_status_display }}</span>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% if total > 5 %}
-        <div class="px-5 py-3 border-t border-slate-700/30 text-center">
-          <a href="{% url 'job_list' %}" class="text-slate-500 hover:text-blue-400 transition-colors text-xs">
-            View all {{ total }} applications
-          </a>
-        </div>
-        {% endif %}
-      </div>
-
-      {% else %}
-      <div class="glass rounded-2xl p-10 text-center">
-        <div class="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center"
-             style="background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15);">
-          <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-          </svg>
-        </div>
-        <p class="text-white font-semibold text-sm mb-1" style="font-family:'Syne',sans-serif;">No applications yet</p>
-        <p class="text-slate-500 text-xs mb-4">Start applying to jobs below.</p>
-        <a href="{% url 'job_list' %}" class="btn-primary text-white rounded-xl px-5 py-2.5 text-xs inline-block">Browse Jobs</a>
-      </div>
-      {% endif %}
-    </div>
-
-    <!-- Quick links sidebar -->
-    <div class="space-y-4 fade-up delay-3">
-
-      <!-- Profile quick info -->
-      <div class="glass rounded-2xl p-5">
-        <p class="text-slate-400 text-xs font-medium uppercase tracking-widest mb-4">Your Profile</p>
-        <div class="space-y-3">
-          {% if candidate.skills %}
-          <div>
-            <p class="text-slate-600 text-xs mb-1.5">Skills</p>
-            <div class="flex flex-wrap gap-1.5">
-              {% for skill in candidate.skills.split|slice:":5" %}
-              <span class="text-xs px-2.5 py-1 rounded-lg"
-                    style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.2); color:#93C5FD;">
-                {{ skill }}
-              </span>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
-          {% if candidate.experience %}
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-slate-600">Experience</span>
-            <span class="text-slate-300">{{ candidate.experience }} yr{{ candidate.experience|pluralize }}</span>
-          </div>
-          {% endif %}
-          {% if candidate.education %}
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-slate-600">Education</span>
-            <span class="text-slate-300 text-right max-w-32 truncate">{{ candidate.education }}</span>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Quick actions -->
-      <div class="glass rounded-2xl p-5">
-        <p class="text-slate-400 text-xs font-medium uppercase tracking-widest mb-3">Quick Actions</p>
-        <div class="space-y-2">
-          <a href="{% url 'job_list' %}"
-             class="w-full flex items-center gap-2.5 text-slate-300 hover:text-white text-sm py-2 px-3 rounded-xl hover:bg-blue-500/08 transition-colors">
-            <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            Browse Jobs
-          </a>
-          <a href="{% url 'resume_manager' %}"
-             class="w-full flex items-center gap-2.5 text-slate-300 hover:text-white text-sm py-2 px-3 rounded-xl hover:bg-blue-500/08 transition-colors">
-            <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-            Manage Resumes
-          </a>
-          <a href="{% url 'logout' %}"
-             class="w-full flex items-center gap-2.5 text-slate-500 hover:text-red-400 text-sm py-2 px-3 rounded-xl hover:bg-red-500/05 transition-colors">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-            </svg>
-            Sign Out
-          </a>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Recent jobs to browse -->
-  {% if recent_jobs %}
-  <div class="mt-10 fade-up">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-white font-semibold text-base" style="font-family:'Syne',sans-serif;">Latest Open Positions</h2>
-      <a href="{% url 'job_list' %}" class="text-slate-400 hover:text-blue-400 transition-colors text-xs flex items-center gap-1">
-        View all
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-        </svg>
+      </button>
+      <a href="{% url 'candidate_edit_profile' %}"
+         title="Edit Profile"
+         class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm">
+        {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
       </a>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {% for job in recent_jobs %}
-      <a href="{% url 'job_detail' job.id %}" class="job-card rounded-2xl p-5 block">
-        <div class="flex items-start justify-between gap-2 mb-3">
-          <div>
-            <p class="text-white font-semibold text-sm mb-0.5" style="font-family:'Syne',sans-serif;">{{ job.title }}</p>
-            <p class="text-slate-500 text-xs">{{ job.company.company_name }}</p>
-          </div>
-          <span class="text-xs px-2.5 py-1 rounded-lg flex-shrink-0"
-                style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); color:#86efac; font-family:'Syne',sans-serif; font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;">
-            Open
-          </span>
-        </div>
-        {% if job.location %}
-        <p class="text-slate-600 text-xs mb-3 flex items-center gap-1">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-          </svg>
-          {{ job.location }}
-        </p>
-        {% endif %}
-        {% if job.skills.exists %}
-        <div class="flex flex-wrap gap-1.5">
-          {% for skill in job.skills.all|slice:":3" %}
-          <span class="text-xs px-2 py-0.5 rounded-lg"
-                style="background:rgba(30,41,59,0.6); border:1px solid rgba(71,85,105,0.35); color:#94a3b8;">
-            {{ skill.name }}
-          </span>
-          {% endfor %}
-        </div>
-        {% endif %}
-      </a>
-      {% endfor %}
+  </div>
+
+  {# Mobile dropdown #}
+  <div id="mobile-menu" class="hidden md:hidden px-4 pb-3">
+    <div class="backdrop-blur-sm bg-white/20 border border-white/25 rounded-2xl p-2 flex flex-col gap-0.5 text-sm">
+      <a href="{% url 'candidate_dashboard' %}" class="px-4 py-2.5 rounded-xl font-medium text-white bg-white/20">Dashboard</a>
+      <a href="{% url 'job_list' %}" class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15">Jobs</a>
+      <a href="{% url 'resume_manager' %}" class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15">Resumes</a>
+      <a href="{% url 'candidate_edit_profile' %}" class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15">Edit Profile</a>
+      <a href="{% url 'logout' %}" class="px-4 py-2.5 rounded-xl font-medium text-red-300 hover:bg-red-500/10">Sign Out</a>
     </div>
+  </div>
+</header>
+
+{# ══════════════════════════════════════════
+   MAIN CONTENT
+══════════════════════════════════════════ #}
+<main class="relative z-10 max-w-7xl mx-auto px-4 md:px-6 pt-[12vh] pb-12">
+
+  {# Flash messages #}
+  {% if messages %}
+  <div class="mb-5 space-y-2">
+    {% for message in messages %}
+    <div class="{% if message.tags == 'error' %}bg-red-500/15 border-red-400/30 text-red-300{% else %}bg-emerald-500/15 border-emerald-400/30 text-emerald-300{% endif %} border rounded-2xl px-4 py-3 text-sm flex items-center gap-2">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      {{ message }}
+    </div>
+    {% endfor %}
   </div>
   {% endif %}
 
-</div>
+  {# ── Two-column layout: sidebar + content ── #}
+  <div class="flex flex-col lg:flex-row gap-5">
+
+    {# ══════════════════════════════════
+       LEFT SIDEBAR
+    ══════════════════════════════════ #}
+    <aside class="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
+
+      {# Identity card #}
+      <div class="glass rounded-3xl p-5 text-center">
+        {# Avatar — initials circle, no external dependency #}
+        <div class="w-20 h-20 mx-auto mb-3 rounded-full bg-white/20 border-4 border-white/30 flex items-center justify-center text-3xl font-bold text-white select-none">
+          {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
+        </div>
+
+        <p class="text-lg text-white font-semibold">
+          {{ request.user.get_full_name|default:request.user.username }}
+        </p>
+
+        {# Experience as subtitle if available #}
+        {% if candidate.experience %}
+        <p class="text-sm text-white/60 font-medium mt-0.5">
+          {{ candidate.experience }} yr{{ candidate.experience|pluralize }} experience
+        </p>
+        {% endif %}
+
+        {# Quick stats #}
+        <div class="mt-4 pt-4 border-t border-white/20 grid grid-cols-3 gap-1 text-center">
+          <div>
+            <p class="text-base font-bold text-white">{{ total }}</p>
+            <p class="text-[10px] text-white/50 uppercase tracking-wide mt-0.5">Applied</p>
+          </div>
+          <div class="border-l border-r border-white/20">
+            <p class="text-base font-bold text-white">{{ shortlisted }}</p>
+            <p class="text-[10px] text-white/50 uppercase tracking-wide mt-0.5">Listed</p>
+          </div>
+          <div>
+            <p class="text-base font-bold text-emerald-300">{{ offered }}</p>
+            <p class="text-[10px] text-white/50 uppercase tracking-wide mt-0.5">Offers</p>
+          </div>
+        </div>
+      </div>
+
+      {# Contact info #}
+      <div class="glass rounded-3xl p-4">
+        <p class="text-[10px] text-white/50 uppercase tracking-widest mb-3">Contact</p>
+        <ul class="space-y-2.5 text-sm text-white/70">
+          {% if request.user.email %}
+          <li class="flex items-center gap-2.5 min-w-0">
+            <svg class="w-3.5 h-3.5 text-white/40 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <span class="truncate text-xs">{{ request.user.email }}</span>
+          </li>
+          {% endif %}
+          {% if candidate.phone %}
+          <li class="flex items-center gap-2.5">
+            <svg class="w-3.5 h-3.5 text-white/40 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+            </svg>
+            <span class="text-xs">{{ candidate.phone }}</span>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+
+      {# Action buttons #}
+      <div class="glass rounded-3xl p-4 flex flex-col gap-2">
+        {# ── URL: candidate_edit_profile — see wiring notes at top #}
+        <a href="{% url 'candidate_edit_profile' %}"
+           class="action-btn flex items-center gap-2 w-full px-4 py-2.5 rounded-2xl text-sm font-medium">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Edit Profile
+        </a>
+        <a href="{% url 'candidate_edit_profile' %}"
+           class="action-btn flex items-center gap-2 w-full px-4 py-2.5 rounded-2xl text-sm font-medium">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          Account Settings
+        </a>
+        <a href="{% url 'logout' %}"
+           class="signout-btn flex items-center gap-2 w-full px-4 py-2.5 rounded-2xl text-sm font-medium">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          Sign Out
+        </a>
+      </div>
+
+    </aside>{# end sidebar #}
+
+    {# ══════════════════════════════════
+       RIGHT CONTENT
+    ══════════════════════════════════ #}
+    <div class="flex-1 flex flex-col gap-5 min-w-0">
+
+      {# No resume warning #}
+      {% if not has_resumes %}
+      <div class="flex items-start gap-3 bg-amber-500/15 border border-amber-400/30 rounded-2xl px-4 py-3">
+        <svg class="w-4 h-4 text-amber-300 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p class="text-amber-300 text-sm flex-1">You haven't uploaded a resume yet — you won't be able to apply.</p>
+        <a href="{% url 'resume_manager' %}" class="text-amber-300 hover:text-white text-sm font-semibold underline underline-offset-2 flex-shrink-0 whitespace-nowrap">Upload →</a>
+      </div>
+      {% endif %}
+
+      {# ── RESUME SECTION ────────────────── #}
+      <div class="glass rounded-3xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-[10px] text-white/50 uppercase tracking-widest">Resume</p>
+          {% if has_resumes %}
+          <span class="text-xs text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 rounded-full font-medium">Uploaded</span>
+          {% endif %}
+        </div>
+
+        {# Show default resume if one exists #}
+        {% if has_resumes %}
+          {% for r in candidate.resumes.all %}
+            {% if r.is_default %}
+            <div class="flex items-center gap-4 bg-white/10 border border-white/25 rounded-2xl px-4 py-3 mb-4">
+              <div class="w-9 h-9 bg-white/20 border border-white/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-white truncate">{{ r.label|default:r.filename }}</p>
+                <p class="text-xs text-white/50">Uploaded {{ r.uploaded_at|timesince }} ago</p>
+              </div>
+              <div class="flex gap-2 flex-shrink-0">
+                <a href="{{ r.file.url }}" target="_blank" class="action-btn text-xs px-3 py-1.5 rounded-xl">View</a>
+                <a href="{% url 'resume_manager' %}" class="action-btn text-xs px-3 py-1.5 rounded-xl">Replace</a>
+              </div>
+            </div>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+
+        {# Upload zone — links to resume manager #}
+        <a href="{% url 'resume_manager' %}" class="upload-zone rounded-2xl p-5 text-center block">
+          <svg class="w-5 h-5 text-white/40 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p class="text-xs text-white/55">Drop a new resume here or <span class="text-white font-medium underline underline-offset-2">browse</span></p>
+          <p class="text-[10px] text-white/35 mt-1">PDF, DOC up to 5MB</p>
+        </a>
+      </div>
+
+      {# ── RECENT APPLICATIONS ───────────── #}
+      <div class="glass rounded-3xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-[10px] text-white/50 uppercase tracking-widest">Recent Applications</p>
+          <a href="{% url 'job_list' %}" class="text-xs text-white/50 hover:text-white transition-colors">Browse jobs →</a>
+        </div>
+
+        {% if recent_applications %}
+        <div class="space-y-2">
+          {% for app in recent_applications %}
+          <div class="flex items-center gap-3 bg-white/8 hover:bg-white/15 rounded-2xl px-4 py-3 transition-all">
+            {# Company initial #}
+            <div class="w-10 h-10 rounded-xl bg-white/20 border border-white/25 flex items-center justify-center font-bold text-white text-sm flex-shrink-0 select-none">
+              {{ app.job.company.company_name|first|upper }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-white truncate">{{ app.job.title }}</p>
+              <p class="text-xs text-white/50 mt-0.5">{{ app.job.company.company_name }} · {{ app.applied_at|timesince }} ago</p>
+            </div>
+            {# Status badge — CSS class matches app.status value exactly #}
+            <span class="badge-{{ app.status }} text-[10px] px-2.5 py-0.5 rounded-full font-semibold uppercase tracking-wide flex-shrink-0">
+              {{ app.get_status_display }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-10">
+          <svg class="w-10 h-10 text-white/20 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <p class="text-white/40 text-sm">No applications yet</p>
+          <a href="{% url 'job_list' %}" class="inline-block mt-3 text-white/60 hover:text-white text-xs underline underline-offset-2 transition-colors">Browse open jobs →</a>
+        </div>
+        {% endif %}
+      </div>
+
+      {# ── SKILLS ────────────────────────── #}
+      {# candidate.skills is a comma-separated TextField in CandidateProfile #}
+      {% if candidate.skills %}
+      <div class="glass rounded-3xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-[10px] text-white/50 uppercase tracking-widest">Skills</p>
+          <a href="{% url 'candidate_edit_profile' %}" class="action-btn text-xs px-3 py-1.5 rounded-xl">Edit</a>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {% for skill in candidate.skills.split %}
+            {% with s=skill|cut:"," %}
+            {% if s.strip %}
+            <span class="skill-tag text-sm px-3.5 py-1.5 rounded-full cursor-default">{{ s|truncatechars:25 }}</span>
+            {% endif %}
+            {% endwith %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# ── EDUCATION / QUALIFICATIONS ────── #}
+      {# candidate.education is a TextField — stored as multiline free text #}
+      {% if candidate.education %}
+      <div class="glass rounded-3xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-[10px] text-white/50 uppercase tracking-widest">Qualifications</p>
+          <a href="{% url 'candidate_edit_profile' %}" class="action-btn text-xs px-3 py-1.5 rounded-xl">Edit</a>
+        </div>
+        <p class="text-sm text-white/70 leading-relaxed whitespace-pre-line">{{ candidate.education }}</p>
+      </div>
+      {% endif %}
+
+      {# ── OPEN POSITIONS TO BROWSE ─────── #}
+      {% if recent_jobs %}
+      <div class="glass rounded-3xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-[10px] text-white/50 uppercase tracking-widest">Open Positions</p>
+          <a href="{% url 'job_list' %}" class="text-xs text-white/50 hover:text-white transition-colors">Browse all →</a>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {% for job in recent_jobs %}
+          <a href="{% url 'job_detail' job.id %}"
+             class="group flex flex-col gap-2 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-2xl px-4 py-3 transition-all">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-white truncate">{{ job.title }}</p>
+                <p class="text-xs text-white/50 mt-0.5">{{ job.company.company_name }}</p>
+              </div>
+              <span class="text-[10px] text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 rounded-full font-semibold flex-shrink-0 uppercase tracking-wide whitespace-nowrap">Open</span>
+            </div>
+            {% if job.location %}
+            <p class="text-xs text-white/40 flex items-center gap-1">
+              <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              </svg>
+              {{ job.location }}
+            </p>
+            {% endif %}
+            {% if job.skills.exists %}
+            <div class="flex flex-wrap gap-1">
+              {% for skill in job.skills.all|slice:":3" %}
+              <span class="text-[10px] px-2 py-0.5 rounded-lg bg-white/10 border border-white/15 text-white/50">{{ skill.name }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>{# end right content #}
+  </div>{# end two-column layout #}
+</main>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Mobile menu toggle
+  document.getElementById('menu-toggle').addEventListener('click', function() {
+    document.getElementById('mobile-menu').classList.toggle('hidden');
+  });
+</script>
 {% endblock %}
