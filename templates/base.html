@@ -97,11 +97,11 @@
 
 <body class="min-h-screen">
 
-  {# ── Django messages — available globally, rendered per-page if needed ──
+  {% comment %} {# ── Django messages — available globally, rendered per-page if needed ──
      Most pages render messages inline within {% block content %}.
      This global slot is a fallback for pages that don't have their own
      message rendering area (e.g. simple redirects that flash a message).
-  #}
+  #} {% endcomment %}
   {% if messages %}
   <div id="global-messages"
        class="fixed top-4 right-4 z-[999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
@@ -124,7 +124,7 @@
   {% endif %}
 
   {# ── Main page content ── #}
-  {% block content %}{% endblock %}
+{% block main_content %}{% endblock %}
 
   {# ── Per-page scripts ── #}
   {% block extra_scripts %}{% endblock %}

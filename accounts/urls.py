@@ -29,5 +29,5 @@ urlpatterns = [
     # Profile edit
     path("profile/edit/",         views.candidate_edit_profile, name="candidate_edit_profile"),
     path("profile/company/edit/", views.company_edit_profile,   name="company_edit_profile"),
-    path("account/delete/",       views.delete_company_account, name="delete_company_account"),
+    # path("account/delete/",       views.delete_company_account, name="delete_company_account"),
 ]
