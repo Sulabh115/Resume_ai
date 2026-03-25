@@ -2,7 +2,7 @@
 {% block title %}Dashboard — ResumeAI{% endblock %}
 
 {% block extra_head %}
-{#
+{% comment %} {#
   CONTEXT from accounts/views.py — candidate_dashboard view:
     candidate           → CandidateProfile instance
     total               → int  (total applications)
@@ -16,7 +16,7 @@
   URLS USED:
     candidate_dashboard, candidate_edit_profile,
     job_list, job_detail, resume_manager, logout
-#}
+#} {% endcomment %}
 <style>
   /* Dashboard-specific only.
      bg-canvas, shapes, .glass, .badge-*, .nav-link  →  all from base.html */

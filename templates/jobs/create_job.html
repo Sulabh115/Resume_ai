@@ -3,307 +3,473 @@
 
 {% block extra_head %}
 <style>
-  .form-section {
-    background: rgba(15,23,42,0.35);
-    border: 1px solid rgba(59,130,246,0.1);
+  .form_input {
+    width: 100%; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 12px; padding: 11px 14px; font-size: 14px; color: #fff; outline: none;
+    transition: all 0.15s ease;
   }
-  .section-label {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #3B82F6;
-  }
-
-  /* Skill tag chip system */
-  .skill-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: rgba(59,130,246,0.12);
-    border: 1px solid rgba(59,130,246,0.25);
-    color: #93C5FD;
-    border-radius: 8px;
-    padding: 3px 10px 3px 10px;
-    font-size: 0.75rem;
-    font-family: 'DM Sans', sans-serif;
-    animation: chipIn 0.15s ease;
-  }
-  @keyframes chipIn {
-    from { opacity:0; transform: scale(0.85); }
-    to   { opacity:1; transform: scale(1); }
-  }
-  .skill-chip button { color: #60A5FA; line-height:1; padding: 0; }
-  .skill-chip button:hover { color: #FCA5A5; }
-
-  .select-glass {
-    background: rgba(15,23,42,0.5);
-    border: 1px solid rgba(59,130,246,0.2);
-    color: #e2e8f0;
-    -webkit-appearance: none;
-    appearance: none;
+  .form_input::placeholder { color: rgba(255,255,255,0.28); }
+  .form_input:focus { border-color: rgba(255,255,255,0.52); background: rgba(255,255,255,0.16); }
+  .form_input.field_error { border-color: rgba(248,113,113,0.70); }
+  textarea.form_input { resize: vertical; min-height: 96px; line-height: 1.6; }
+  select.form_input {
+    color-scheme: dark; cursor: pointer;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 16px;
-    padding-right: 36px;
+    background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;
+    padding-right: 36px; appearance: none; -webkit-appearance: none;
   }
-  .select-glass:focus {
-    outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-  }
-  .select-glass option { background: #0f172a; }
+  select.form_input option { background: #0e4f5f; }
 
-  textarea.glass-input { resize: vertical; min-height: 96px; }
+  .form_label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.45); font-weight: 500; display: block; margin-bottom: 6px;
+  }
+
+  .section_title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.30); font-weight: 500;
+    padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.14); margin-bottom: 18px;
+  }
+
+  .field_error_msg { font-size: 11px; color: #fca5a5; margin-top: 4px; display: none; }
+  .field_error_msg.show { display: block; }
+
+  /* ── Skill chip system ── */
+  .skill_chip_item {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.28);
+    color: #fff; border-radius: 8px; padding: 3px 10px 3px 12px;
+    font-size: 12px; font-weight: 500; animation: chipIn 0.15s ease;
+  }
+  @keyframes chipIn { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
+  .skill_chip_item button { color: rgba(255,255,255,0.45); font-size: 14px; line-height:1; background:none; border:none; cursor:pointer; padding:0; transition:color 0.1s; }
+  .skill_chip_item button:hover { color: #fca5a5; }
+
+  .skills_container {
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 12px; padding: 8px 10px; min-height: 46px;
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center; cursor: text;
+    transition: border-color 0.15s ease;
+  }
+  .skills_container:focus-within { border-color: rgba(255,255,255,0.52); background: rgba(255,255,255,0.14); }
+
+  .skill_bare_input {
+    background: transparent; border: none; outline: none;
+    color: #fff; font-size: 13px; min-width: 140px; flex: 1;
+  }
+  .skill_bare_input::placeholder { color: rgba(255,255,255,0.25); }
+
+  .skill_add_btn {
+    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.26);
+    color: #fff; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s ease; white-space: nowrap; flex-shrink: 0;
+  }
+  .skill_add_btn:hover { background: rgba(255,255,255,0.26); }
+
+  /* Preview card in sidebar */
+  .preview_tag {
+    font-size: 11px; padding: 2px 10px; border-radius: 999px; font-weight: 500;
+  }
+
+  /* Char counter */
+  .char_count { font-size: 10px; color: rgba(255,255,255,0.28); text-align: right; margin-top: 4px; }
+  .char_count.warn { color: #fcd34d; }
+  .char_count.over { color: #f87171; }
+
+  /* Buttons */
+  .btn_teal { background: rgba(255,255,255,0.90); color: #0e7490; font-weight: 600; transition: all 0.15s ease; }
+  .btn_teal:hover { background: #fff; box-shadow: 0 4px 20px rgba(255,255,255,0.25); }
+  .btn_ghost { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.70); transition: all 0.15s ease; }
+  .btn_ghost:hover { background: rgba(255,255,255,0.20); color: #fff; }
 </style>
 {% endblock %}
 
-{% block content %}
 
-<!-- Nav -->
-<nav class="sticky top-0 z-50 border-b border-blue-900/30" style="background: rgba(6,13,27,0.85); backdrop-filter: blur(16px);">
-  <div class="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
-    <a href="{% if editing %}{% url 'job_detail' job.id %}{% else %}{% url 'company_dashboard' %}{% endif %}"
-       class="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-      </svg>
-      {% if editing %}Back to Job{% else %}Dashboard{% endif %}
-    </a>
-    <span class="pill rounded-full px-3 py-1 text-xs">
-      {% if editing %}Editing Posting{% else %}New Posting{% endif %}
-    </span>
+{% block main_content %}
+
+<div class="bg-canvas company">
+  <div class="shape-bl-teal"></div>
+  <div class="shape-tr-teal"></div>
+  <div class="shape-mid-teal"></div>
+</div>
+
+{# ══════════ NAVBAR ══════════ #}
+<header class="fixed top-0 left-0 w-full z-50 bg-transparent">
+  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
+
+    <div class="flex items-center gap-2 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-4 py-2 shadow-sm">
+      <span class="font-serif-display text-2xl text-white tracking-tight">ResumeAI</span>
+      <span class="text-sm text-white/45 font-light mt-1">/ hr</span>
+    </div>
+
+    <nav class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-3 py-2 shadow-md">
+      <a href="{% url 'company_dashboard' %}"  class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Dashboard</a>
+      <a href="{% url 'company_job_list' %}"   class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Manage Jobs</a>
+      <a href="{% url 'create_job' %}"
+         class="nav-link {% if not editing %}active{% endif %} px-4 py-2 rounded-full text-sm font-medium {% if not editing %}text-white bg-white/20 shadow-sm{% else %}text-white/80 hover:text-white hover:bg-white/15{% endif %} transition-all">
+        Post a Job
+      </a>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <button id="menu-toggle" type="button"
+              class="md:hidden w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/15 border border-white/25 hover:bg-white/25 transition-all">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+      <div class="h-10 w-10 flex items-center justify-center rounded-full bg-white/15 border border-white/25 font-bold text-white text-sm select-none">
+        {{ request.user.companyprofile.company_name|first|upper }}
+      </div>
+    </div>
   </div>
-</nav>
 
-<div class="max-w-4xl mx-auto px-6 py-12">
+  <div id="mobile-menu" class="hidden md:hidden mx-4 mb-2 glass-card rounded-2xl p-3 flex flex-col gap-1">
+    <a href="{% url 'company_dashboard' %}"  class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Dashboard</a>
+    <a href="{% url 'company_job_list' %}"   class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Manage Jobs</a>
+    <a href="{% url 'create_job' %}"         class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Post a Job</a>
+    <a href="{% url 'logout' %}"             class="px-4 py-2 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/10 transition-all">Sign Out</a>
+  </div>
+</header>
 
-  <!-- Header -->
-  <div class="mb-8 fade-up">
-    <h1 class="text-3xl font-bold text-white mb-1" style="font-family:'Syne',sans-serif;">
-      {% if editing %}Update job posting{% else %}Post a new job{% endif %}
+{# ══════════ MAIN ══════════ #}
+<main class="max-w-5xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
+
+  {# Back link #}
+  <a href="{% if editing %}{% url 'job_detail' job.id %}{% else %}{% url 'company_job_list' %}{% endif %}"
+     class="inline-flex items-center gap-2 text-white/55 hover:text-white text-sm mb-6 transition-colors group">
+    <svg class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+    </svg>
+    {% if editing %}Back to Job{% else %}Back to Manage Jobs{% endif %}
+  </a>
+
+  <div class="mb-7">
+    <h1 class="font-serif-display text-2xl text-white">
+      {% if editing %}Update Job Posting{% else %}Post a New Job{% endif %}
     </h1>
-    <p class="text-slate-400 text-sm">
-      {% if editing %}Changes will be visible immediately.{% else %}Your listing will go live once published.{% endif %}
+    <p class="text-white/45 text-sm mt-1">
+      {% if editing %}Changes go live immediately.{% else %}Your listing will be visible to all candidates once published.{% endif %}
     </p>
   </div>
 
-  <form method="post">
-    {% csrf_token %}
-
-    {% if form.non_field_errors %}
-    <div class="alert-error rounded-xl px-4 py-3 mb-6 text-sm">
-      {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+  {# Flash messages #}
+  {% if messages %}
+  <div class="flex flex-col gap-2 mb-5">
+    {% for message in messages %}
+    <div class="msg-{{ message.tags|default:'info' }} rounded-2xl px-4 py-3 text-sm flex items-center gap-2">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="{% if message.tags == 'error' %}M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z{% else %}M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z{% endif %}"/>
+      </svg>
+      {{ message }}
     </div>
-    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
 
-    <div class="space-y-5">
+  <div class="flex gap-6 items-start">
 
-      <!-- ── BASICS ── -->
-      <div class="glass rounded-2xl p-7 fade-up delay-1">
-        <p class="section-label mb-5">Basics</p>
-        <div class="space-y-5">
+    {# ── LEFT: Form ── #}
+    <div class="flex-1 min-w-0">
+      <form method="post" action="{% if editing %}{% url 'edit_job' job.id %}{% else %}{% url 'create_job' %}{% endif %}">
+        {% csrf_token %}
 
-          <!-- Title -->
-          <div>
-            <label class="block text-slate-300 text-sm font-medium mb-2">Job Title <span class="text-blue-500">*</span></label>
-            <input type="text" name="title" value="{{ form.title.value|default:'' }}" required
-                   class="glass-input w-full rounded-xl px-4 py-3 text-sm"
-                   placeholder="e.g. Senior Django Developer"/>
-            {% if form.title.errors %}<p class="text-red-400 text-xs mt-1.5">{{ form.title.errors.0 }}</p>{% endif %}
-          </div>
-
-          <!-- Type + Experience + Location row -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-slate-300 text-sm font-medium mb-2">Job Type</label>
-              <select name="job_type" class="select-glass glass-input w-full rounded-xl px-4 py-3 text-sm">
-                {% for val, label in form.fields.job_type.choices %}
-                <option value="{{ val }}" {% if form.job_type.value == val %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div>
-              <label class="block text-slate-300 text-sm font-medium mb-2">Min. Experience (yrs)</label>
-              <input type="number" name="experience_required" value="{{ form.experience_required.value|default:'0' }}" min="0"
-                     class="glass-input w-full rounded-xl px-4 py-3 text-sm" placeholder="2"/>
-            </div>
-            <div>
-              <label class="block text-slate-300 text-sm font-medium mb-2">Location</label>
-              <input type="text" name="location" value="{{ form.location.value|default:'' }}"
-                     class="glass-input w-full rounded-xl px-4 py-3 text-sm" placeholder="Kathmandu or Remote"/>
-            </div>
-          </div>
-
-          <!-- Status + Deadline row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-slate-300 text-sm font-medium mb-2">Status</label>
-              <select name="status" class="select-glass glass-input w-full rounded-xl px-4 py-3 text-sm">
-                {% for val, label in form.fields.status.choices %}
-                <option value="{{ val }}" {% if form.status.value == val %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div>
-              <label class="block text-slate-300 text-sm font-medium mb-2">Application Deadline</label>
-              <input type="date" name="deadline" value="{{ form.deadline.value|default:'' }}"
-                     class="glass-input w-full rounded-xl px-4 py-3 text-sm"
-                     style="color-scheme: dark;"/>
-            </div>
-          </div>
-
+        {# Non-field errors #}
+        {% if form.non_field_errors %}
+        <div class="bg-red-500/15 border border-red-400/25 text-red-300 rounded-2xl px-4 py-3 text-sm mb-5">
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
         </div>
-      </div>
-
-      <!-- ── SALARY ── -->
-      <div class="form-section rounded-2xl p-7 fade-up delay-2">
-        <p class="section-label mb-5">Compensation <span class="text-slate-600 normal-case font-normal text-xs ml-1">(optional)</span></p>
-        <div class="grid grid-cols-3 gap-4">
-          <div>
-            <label class="block text-slate-300 text-sm font-medium mb-2">Currency</label>
-            <input type="text" name="salary_currency" value="{{ form.salary_currency.value|default:'NPR' }}"
-                   class="glass-input w-full rounded-xl px-4 py-3 text-sm" placeholder="NPR"/>
-          </div>
-          <div>
-            <label class="block text-slate-300 text-sm font-medium mb-2">Minimum</label>
-            <input type="number" name="salary_min" value="{{ form.salary_min.value|default:'' }}"
-                   class="glass-input w-full rounded-xl px-4 py-3 text-sm" placeholder="50000"/>
-          </div>
-          <div>
-            <label class="block text-slate-300 text-sm font-medium mb-2">Maximum</label>
-            <input type="number" name="salary_max" value="{{ form.salary_max.value|default:'' }}"
-                   class="glass-input w-full rounded-xl px-4 py-3 text-sm" placeholder="80000"/>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── DESCRIPTION ── -->
-      <div class="glass rounded-2xl p-7 fade-up delay-2">
-        <p class="section-label mb-5">Role Details</p>
-        <div class="space-y-5">
-
-          <div>
-            <label class="block text-slate-300 text-sm font-medium mb-2">Job Description <span class="text-blue-500">*</span></label>
-            <textarea name="description" required
-                      class="glass-input w-full rounded-xl px-4 py-3 text-sm"
-                      rows="5"
-                      placeholder="Describe the role, team, and what makes this opportunity exciting...">{{ form.description.value|default:'' }}</textarea>
-            {% if form.description.errors %}<p class="text-red-400 text-xs mt-1.5">{{ form.description.errors.0 }}</p>{% endif %}
-          </div>
-
-          <div>
-            <label class="block text-slate-300 text-sm font-medium mb-2">Key Responsibilities</label>
-            <textarea name="responsibilities"
-                      class="glass-input w-full rounded-xl px-4 py-3 text-sm"
-                      rows="4"
-                      placeholder="• Design and build scalable REST APIs&#10;• Collaborate with the frontend team&#10;• Conduct code reviews">{{ form.responsibilities.value|default:'' }}</textarea>
-            <p class="text-slate-600 text-xs mt-1">One responsibility per line</p>
-          </div>
-
-          <div>
-            <label class="block text-slate-300 text-sm font-medium mb-2">Requirements</label>
-            <textarea name="requirements"
-                      class="glass-input w-full rounded-xl px-4 py-3 text-sm"
-                      rows="4"
-                      placeholder="• Bachelor's degree in CS or related field&#10;• 3+ years Django experience&#10;• Strong PostgreSQL skills">{{ form.requirements.value|default:'' }}</textarea>
-            <p class="text-slate-600 text-xs mt-1">One requirement per line</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── SKILLS ── -->
-      <div class="form-section rounded-2xl p-7 fade-up delay-3">
-        <p class="section-label mb-2">Skills & Technologies</p>
-        <p class="text-slate-500 text-xs mb-4">Type a skill and press Enter or comma to add it</p>
-
-        <!-- Hidden field that gets submitted -->
-        <input type="hidden" name="skills_input" id="skills_hidden" value="{{ form.skills_input.value|default:'' }}"/>
-
-        <!-- Tag display area + input combined -->
-        <div id="skills-container"
-             class="glass-input w-full rounded-xl px-3 py-2.5 min-h-12 flex flex-wrap gap-2 items-center cursor-text"
-             onclick="document.getElementById('skills-tag-input').focus()">
-          <!-- Tags rendered here by JS -->
-          <input
-            type="text" id="skills-tag-input"
-            class="bg-transparent border-none outline-none text-slate-200 text-sm placeholder-slate-600 flex-1 min-w-24 py-0.5"
-            placeholder="e.g. Python, Django, React..."
-          />
-        </div>
-
-        {% if form.skills_input.errors %}
-        <p class="text-red-400 text-xs mt-1.5">{{ form.skills_input.errors.0 }}</p>
         {% endif %}
+
+        <div class="flex flex-col gap-5">
+
+          {# ── BASICS ── #}
+          <div class="glass-card rounded-3xl p-6">
+            <p class="section_title">Basic Information</p>
+
+            {# Title #}
+            <div class="mb-4">
+              <label class="form_label">Job Title <span class="text-red-400">*</span></label>
+              <input type="text" name="title" value="{{ form.title.value|default:'' }}" required
+                     class="form_input {% if form.title.errors %}field_error{% endif %}"
+                     placeholder="e.g. Senior Django Developer"
+                     oninput="updatePreview()"/>
+              {% if form.title.errors %}<p class="field_error_msg show">{{ form.title.errors.0 }}</p>{% endif %}
+            </div>
+
+            {# Job type + Experience + Location #}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="form_label">Job Type</label>
+                <select name="job_type" class="form_input" onchange="updatePreview()">
+                  {% for val, label in form.fields.job_type.choices %}
+                  <option value="{{ val }}" {% if form.job_type.value == val %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="form_label">Min. Experience (yrs)</label>
+                <input type="number" name="experience_required" min="0"
+                       value="{{ form.experience_required.value|default:'0' }}"
+                       class="form_input" placeholder="2"
+                       oninput="updatePreview()"/>
+              </div>
+              <div>
+                <label class="form_label">Location</label>
+                <input type="text" name="location"
+                       value="{{ form.location.value|default:'' }}"
+                       class="form_input" placeholder="Kathmandu or Remote"
+                       oninput="updatePreview()"/>
+              </div>
+            </div>
+
+            {# Qualification + Status + Deadline #}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="form_label">Qualification Required</label>
+                <select name="qualification_required" class="form_input">
+                  {% for val, label in form.fields.qualification_required.choices %}
+                  <option value="{{ val }}" {% if form.qualification_required.value == val %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="form_label">Status</label>
+                <select name="status" class="form_input">
+                  {% for val, label in form.fields.status.choices %}
+                  <option value="{{ val }}" {% if form.status.value == val %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="form_label">Application Deadline</label>
+                <input type="date" name="deadline"
+                       value="{{ form.deadline.value|default:'' }}"
+                       class="form_input" style="color-scheme: dark;"
+                       oninput="updatePreview()"/>
+              </div>
+            </div>
+          </div>
+
+          {# ── SALARY ── #}
+          <div class="glass-card rounded-3xl p-6">
+            <p class="section_title">Compensation <span style="text-transform:none;letter-spacing:0;font-size:10px;color:rgba(255,255,255,0.25);">— optional</span></p>
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="form_label">Currency</label>
+                <input type="text" name="salary_currency"
+                       value="{{ form.salary_currency.value|default:'NPR' }}"
+                       class="form_input" placeholder="NPR"
+                       oninput="updatePreview()"/>
+              </div>
+              <div>
+                <label class="form_label">Minimum</label>
+                <input type="number" name="salary_min"
+                       value="{{ form.salary_min.value|default:'' }}"
+                       class="form_input" placeholder="50000"/>
+              </div>
+              <div>
+                <label class="form_label">Maximum</label>
+                <input type="number" name="salary_max"
+                       value="{{ form.salary_max.value|default:'' }}"
+                       class="form_input" placeholder="80000"/>
+              </div>
+            </div>
+          </div>
+
+          {# ── ROLE DETAILS ── #}
+          <div class="glass-card rounded-3xl p-6">
+            <p class="section_title">Role Details</p>
+
+            <div class="mb-5">
+              <label class="form_label">Job Description <span class="text-red-400">*</span></label>
+              <textarea name="description" required rows="5"
+                        class="form_input {% if form.description.errors %}field_error{% endif %}"
+                        placeholder="Describe the role, team, and what makes this opportunity exciting…"
+                        oninput="charCount(this, 'desc_count', 1500)">{{ form.description.value|default:'' }}</textarea>
+              <div class="flex justify-between items-start mt-1">
+                {% if form.description.errors %}<p class="field_error_msg show text-xs">{{ form.description.errors.0 }}</p>{% else %}<span></span>{% endif %}
+                <p id="desc_count" class="char_count">{{ form.description.value|default:''|length }} / 1500</p>
+              </div>
+            </div>
+
+            <div class="mb-5">
+              <label class="form_label">Key Responsibilities</label>
+              <textarea name="responsibilities" rows="4"
+                        class="form_input"
+                        placeholder="• Design and build scalable REST APIs&#10;• Collaborate with the frontend team&#10;• Conduct code reviews">{{ form.responsibilities.value|default:'' }}</textarea>
+              <p class="text-white/28 text-xs mt-1">One responsibility per line</p>
+            </div>
+
+            <div>
+              <label class="form_label">Requirements</label>
+              <textarea name="requirements" rows="4"
+                        class="form_input"
+                        placeholder="• Bachelor's degree in CS or related field&#10;• 3+ years Django experience">{{ form.requirements.value|default:'' }}</textarea>
+              <p class="text-white/28 text-xs mt-1">One requirement per line</p>
+            </div>
+          </div>
+
+          {# ── SKILLS ── #}
+          <div class="glass-card rounded-3xl p-6">
+            <p class="section_title">Skills & Technologies</p>
+            <p class="text-white/40 text-xs mb-3">Type a skill and press Enter or comma — these are used by the AI screening engine.</p>
+
+            {# Hidden input submitted with form #}
+            <input type="hidden" name="skills_input" id="skills_hidden"
+                   value="{{ form.skills_input.value|default:'' }}"/>
+
+            {# Visual chip container #}
+            <div id="skills_container" class="skills_container"
+                 onclick="document.getElementById('skill_tag_input').focus()">
+              <div id="skill_chips"></div>
+              <input type="text" id="skill_tag_input"
+                     class="skill_bare_input"
+                     placeholder="e.g. Python, Django, React…"/>
+              <button type="button" class="skill_add_btn" onclick="addSkillChip()">+ Add</button>
+            </div>
+
+            {% if form.skills_input.errors %}
+            <p class="field_error_msg show text-xs mt-1">{{ form.skills_input.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+        </div>
+
+        {# ── Submit row ── #}
+        <div class="flex items-center justify-between mt-6">
+          <a href="{% if editing %}{% url 'job_detail' job.id %}{% else %}{% url 'company_job_list' %}{% endif %}"
+             class="btn_ghost px-6 py-3 rounded-2xl text-sm">Cancel</a>
+
+          <div class="flex items-center gap-3">
+            {% if editing %}
+            <a href="{% url 'delete_job' job.id %}"
+               class="text-red-300 hover:text-red-200 text-sm transition-colors px-4 py-3"
+               onclick="return confirm('Delete this job posting? This cannot be undone.')">
+              Delete Posting
+            </a>
+            {% endif %}
+            <button type="submit" class="btn_teal px-8 py-3 rounded-2xl text-sm">
+              {% if editing %}Save Changes{% else %}Publish Job{% endif %}
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    {# ── RIGHT: Sidebar ── #}
+    <div class="hidden lg:flex w-64 shrink-0 flex-col gap-4 sticky top-[12vh]">
+
+      {# Live preview card #}
+      <div class="glass-card rounded-3xl p-5">
+        <p class="text-[10px] text-white/40 uppercase tracking-widest mb-4">Live Preview</p>
+        <p id="prev_title" class="text-sm font-semibold text-white mb-1 truncate">Job Title</p>
+        <p class="text-xs text-white/50 mb-3">{{ request.user.companyprofile.company_name }}</p>
+        <div id="prev_tags" class="flex flex-wrap gap-1.5 mb-3">
+          <span class="preview_tag bg-white/10 text-white/45 border border-white/15">Type</span>
+        </div>
+        <div class="border-t border-white/12 pt-3 space-y-1.5 text-xs">
+          <div class="flex justify-between">
+            <span class="text-white/40">Deadline</span>
+            <span id="prev_deadline" class="text-white/65">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-white/40">Location</span>
+            <span id="prev_location" class="text-white/65 text-right max-w-[100px] truncate">—</span>
+          </div>
+        </div>
+      </div>
+
+      {# Scoring weights guide #}
+      <div class="glass-card rounded-3xl p-5">
+        <p class="text-[10px] text-white/40 uppercase tracking-widest mb-3">AI Scoring Weights</p>
+        <div class="space-y-2.5">
+          {% for label, pct, color in "Skills,35,cyan-400|Experience,25,teal-400|Qualifications,20,emerald-400|Content Relevance,20,emerald-300"|split:"|" %}
+          {% endfor %}
+          <div>
+            <div class="flex justify-between text-xs mb-1"><span class="text-white/55">Skills</span><span class="text-white/70 font-medium">35%</span></div>
+            <div class="h-1.5 bg-white/10 rounded-full overflow-hidden"><div class="h-full bg-cyan-400 rounded-full" style="width:35%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1"><span class="text-white/55">Experience</span><span class="text-white/70 font-medium">25%</span></div>
+            <div class="h-1.5 bg-white/10 rounded-full overflow-hidden"><div class="h-full bg-teal-400 rounded-full" style="width:25%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1"><span class="text-white/55">Qualifications</span><span class="text-white/70 font-medium">20%</span></div>
+            <div class="h-1.5 bg-white/10 rounded-full overflow-hidden"><div class="h-full bg-emerald-400 rounded-full" style="width:20%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1"><span class="text-white/55">Content Relevance</span><span class="text-white/70 font-medium">20%</span></div>
+            <div class="h-1.5 bg-white/10 rounded-full overflow-hidden"><div class="h-full bg-emerald-300 rounded-full" style="width:20%"></div></div>
+          </div>
+        </div>
+        <p class="text-white/28 text-[10px] mt-3 leading-relaxed">A detailed description improves cosine similarity accuracy. Be specific about skills and qualifications.</p>
+      </div>
+
+      {# Tips #}
+      <div class="glass-card rounded-3xl p-5">
+        <p class="text-[10px] text-white/40 uppercase tracking-widest mb-3">Tips for Better Ranking</p>
+        <ul class="space-y-2">
+          <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> List all required skills individually — each one is matched against the resume</li>
+          <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Be explicit about minimum years of experience</li>
+          <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Set the qualification level — it's scored directly against the resume</li>
+          <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Longer, detailed description improves content similarity scoring</li>
+        </ul>
       </div>
 
     </div>
+  </div>
 
-    <!-- Submit row -->
-    <div class="flex items-center justify-between mt-8 fade-up delay-4">
-      <a href="{% if editing %}{% url 'job_detail' job.id %}{% else %}{% url 'company_dashboard' %}{% endif %}"
-         class="btn-outline rounded-xl px-6 py-3 text-sm">
-        Cancel
-      </a>
-      <div class="flex items-center gap-3">
-        {% if editing %}
-        <a href="{% url 'delete_job' job.id %}"
-           class="text-red-400 hover:text-red-300 text-sm transition-colors px-4 py-3"
-           onclick="return confirm('Delete this job posting?')">
-          Delete posting
-        </a>
-        {% endif %}
-        <button type="submit" class="btn-primary text-white rounded-xl px-8 py-3 text-sm">
-          {% if editing %}Save Changes{% else %}Publish Job{% endif %}
-        </button>
-      </div>
-    </div>
+</main>
 
-  </form>
-</div>
-{% endblock %}
+{% endblock main_content %}
+
 
 {% block extra_scripts %}
 <script>
-// ── Skill tag chip system ─────────────────────────────────────────────────
-(function() {
-  const hidden    = document.getElementById('skills-hidden');
-  const container = document.getElementById('skills-container');
-  const input     = document.getElementById('skills-tag-input');
+/* ── Skill chip system ─────────────────────────── */
+(function () {
+  const hidden     = document.getElementById('skills_hidden');
+  const container  = document.getElementById('skills_container');
+  const input      = document.getElementById('skill_tag_input');
+  const chipsDiv   = document.getElementById('skill_chips');
+
+  // Parse existing skills from the hidden input (pre-populated on edit)
   let skills = hidden.value ? hidden.value.split(',').map(s => s.trim()).filter(Boolean) : [];
 
   function render() {
-    // Remove existing chips
-    container.querySelectorAll('.skill-chip').forEach(c => c.remove());
+    chipsDiv.innerHTML = '';
     skills.forEach((skill, i) => {
       const chip = document.createElement('span');
-      chip.className = 'skill-chip';
-      chip.innerHTML = `${skill} <button type="button" onclick="removeSkill(${i})" title="Remove">×</button>`;
-      container.insertBefore(chip, input);
+      chip.className = 'skill_chip_item';
+      chip.innerHTML = `${skill} <button type="button" onclick="removeChip(${i})" title="Remove">×</button>`;
+      chipsDiv.appendChild(chip);
     });
     hidden.value = skills.join(', ');
-    input.placeholder = skills.length ? '' : "e.g. Python, Django, React...";
+    input.placeholder = skills.length ? '' : 'e.g. Python, Django, React…';
   }
 
-  window.removeSkill = function(i) {
+  window.addSkillChip = function () {
+    const val = input.value.trim().replace(/,$/, '').trim();
+    if (!val) return;
+    if (!skills.some(s => s.toLowerCase() === val.toLowerCase())) {
+      skills.push(val);
+      render();
+    }
+    input.value = '';
+  };
+
+  window.removeChip = function (i) {
     skills.splice(i, 1);
     render();
   };
 
-  function addSkill(raw) {
-    const name = raw.trim().replace(/,$/, '').trim();
-    if (name && !skills.some(s => s.toLowerCase() === name.toLowerCase())) {
-      skills.push(name);
-      render();
-    }
-  }
-
-  input.addEventListener('keydown', e => {
+  input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      if (input.value.trim()) { addSkill(input.value); input.value = ''; }
+      if (input.value.trim()) { window.addSkillChip(); }
     }
     if (e.key === 'Backspace' && !input.value && skills.length) {
       skills.pop();
@@ -311,23 +477,66 @@
     }
   });
 
-  input.addEventListener('blur', () => {
-    if (input.value.trim()) { addSkill(input.value); input.value = ''; }
-  });
-
-  // Handle paste of comma-separated list
-  input.addEventListener('paste', e => {
-    setTimeout(() => {
+  // Handle pasting comma-separated list
+  input.addEventListener('paste', function () {
+    setTimeout(function () {
       const parts = input.value.split(',');
       if (parts.length > 1) {
-        parts.forEach(p => { if (p.trim()) addSkill(p); });
+        parts.forEach(p => { if (p.trim()) { skills.push(p.trim()); } });
         input.value = '';
         render();
       }
     }, 10);
   });
 
-  render(); // Initial render from existing value
+  render(); // Initial render from existing value (important for edit mode)
 })();
+
+
+/* ── Live preview ── */
+function updatePreview() {
+  const title    = document.querySelector('[name="title"]').value || 'Job Title';
+  const jobType  = document.querySelector('[name="job_type"]');
+  const deadline = document.querySelector('[name="deadline"]').value;
+  const location = document.querySelector('[name="location"]').value;
+
+  document.getElementById('prev_title').textContent = title;
+
+  const tagsEl = document.getElementById('prev_tags');
+  tagsEl.innerHTML = '';
+  if (jobType && jobType.value) {
+    tagsEl.innerHTML += `<span class="preview_tag bg-white/15 text-white border border-white/25">${jobType.options[jobType.selectedIndex].text}</span>`;
+  }
+  if (location) {
+    tagsEl.innerHTML += `<span class="preview_tag bg-white/10 text-white/55 border border-white/15">📍 ${location}</span>`;
+  }
+  if (!jobType?.value && !location) {
+    tagsEl.innerHTML = `<span class="preview_tag bg-white/10 text-white/40 border border-white/12">Type / Location</span>`;
+  }
+
+  document.getElementById('prev_deadline').textContent = deadline
+    ? new Date(deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '—';
+
+  document.getElementById('prev_location').textContent = location || '—';
+}
+
+
+/* ── Char counter ── */
+function charCount(el, countId, max) {
+  const len = el.value.length;
+  const countEl = document.getElementById(countId);
+  countEl.textContent = `${len} / ${max}`;
+  countEl.className = 'char_count' + (len > max ? ' over' : len > max * 0.85 ? ' warn' : '');
+}
+
+
+/* ── Init on load ── */
+document.addEventListener('DOMContentLoaded', function () {
+  updatePreview();
+  // Initialise char count on description if it has a pre-filled value (edit mode)
+  const descEl = document.querySelector('[name="description"]');
+  if (descEl && descEl.value) charCount(descEl, 'desc_count', 1500);
+});
 </script>
-{% endblock %}
+{% endblock extra_scripts %}

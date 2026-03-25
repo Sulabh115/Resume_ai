@@ -2,7 +2,7 @@
 {% block title %}Company Dashboard — ResumeAI{% endblock %}
 
 {% block extra_head %}
-{#
+{% comment %} {#
   CONTEXT from accounts/views.py — company_dashboard view:
     company             → CompanyProfile instance (company.company_name, .location, .website)
     total_jobs          → int
@@ -54,7 +54,7 @@
   URL TO ADD — accounts/urls.py:
     path("dashboard/company/", views.company_dashboard, name="company_dashboard"),
     path("profile/company/edit/", views.company_edit_profile, name="company_edit_profile"),
-#}
+#} {% endcomment %}
 <style>
   /* Company dashboard-specific only.
      bg-canvas, shapes, .glass, .badge-*, .nav-link  →  all from base.html */

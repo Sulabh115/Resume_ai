@@ -1,244 +1,338 @@
 {% extends "base.html" %}
-{% block title %}Job Board — ResumeAI{% endblock %}
+{% block title %}Job Vacancies — ResumeAI{% endblock %}
 
 {% block extra_head %}
 <style>
-  .job-card {
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  .job_card { transition: all 0.2s ease; cursor: pointer; }
+  .job_card:hover {
+    background: rgba(255,255,255,0.26) !important;
+    border-color: rgba(255,255,255,0.55) !important;
+    box-shadow: 0 8px 36px rgba(0,0,80,0.18), inset 0 1px 0 rgba(255,255,255,0.6);
   }
-  .job-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(59,130,246,0.4);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(59,130,246,0.15);
+  .job_card:hover .job_title { color: #fff; }
+
+  .apply_btn { transition: all 0.15s ease; }
+  .apply_btn:hover {
+    background: rgba(255,255,255,0.95);
+    color: #2136f3;
+    box-shadow: 0 4px 14px rgba(255,255,255,0.3);
   }
-  .job-type-badge {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+
+  .job_tag {
+    font-size: 11px; padding: 2px 10px; border-radius: 999px;
+    font-weight: 500; backdrop-filter: blur(8px);
   }
-  .select-glass {
-    background: rgba(15,23,42,0.5);
-    border: 1px solid rgba(59,130,246,0.2);
-    color: #94a3b8;
-    -webkit-appearance: none;
-    appearance: none;
+
+  .filter_select {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.80);
+    appearance: none; -webkit-appearance: none;
+    outline: none; transition: all 0.15s ease;
   }
-  .select-glass:focus {
-    outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  .filter_select:focus { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.50); color: #fff; }
+  .filter_select option { background: #3730a3; color: #fff; }
+
+  .empty_state {
+    background: rgba(255,255,255,0.07);
+    border: 1.5px dashed rgba(255,255,255,0.20);
   }
-  .select-glass option { background: #0f172a; }
 </style>
 {% endblock %}
 
-{% block content %}
 
-<!-- Nav bar -->
-<nav class="sticky top-0 z-50 border-b border-blue-900/30" style="background: rgba(6,13,27,0.85); backdrop-filter: blur(16px);">
-  <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-    <a href="{% url 'job_list' %}" class="flex items-center gap-2">
-      <div class="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center shadow-md shadow-blue-500/30">
-        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-        </svg>
-      </div>
-      <span class="text-white font-bold text-base" style="font-family:'Syne',sans-serif;">ResumeAI</span>
-    </a>
-    <div class="flex items-center gap-3">
-      {% if user.is_authenticated %}
-        {% if user.companyprofile %}
-          <a href="{% url 'create_job' %}" class="btn-primary text-white rounded-xl px-4 py-2 text-xs">+ Post Job</a>
-          <a href="{% url 'company_dashboard' %}" class="btn-outline rounded-xl px-4 py-2 text-xs">Dashboard</a>
+{% block main_content %}
+
+<div class="bg-canvas candidate">
+  <div class="shape-bl"></div>
+  <div class="shape-tr"></div>
+  <div class="shape-mid"></div>
+</div>
+
+{# ══════════ NAVBAR ══════════ #}
+<header class="fixed top-0 left-0 w-full z-50 bg-transparent">
+  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
+
+    <div class="flex items-center gap-2 backdrop-blur-sm bg-white/20 border border-white/25 rounded-full px-4 py-2 shadow-sm">
+      <span class="font-serif-display text-2xl text-white tracking-tight">ResumeAI</span>
+      <span class="text-sm text-white/50 font-light mt-1">/ jobs</span>
+    </div>
+
+    <nav class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/20 border border-white/25 rounded-full px-3 py-2 shadow-md">
+      {% if request.user.is_authenticated %}
+        {% if request.user.companyprofile %}
+          <a href="{% url 'company_dashboard' %}"  class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Dashboard</a>
+          <a href="{% url 'company_job_list' %}"   class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Manage Jobs</a>
+          <a href="{% url 'create_job' %}"         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Post a Job</a>
         {% else %}
-          <a href="{% url 'candidate_dashboard' %}" class="btn-outline rounded-xl px-4 py-2 text-xs">Dashboard</a>
+          <a href="{% url 'candidate_dashboard' %}" class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Dashboard</a>
+          <a href="{% url 'job_list' %}"            class="nav-link active px-4 py-2 rounded-full text-sm font-medium text-white bg-white/20 shadow-sm">Jobs</a>
+          <a href="{% url 'resume_manager' %}"      class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Resumes</a>
         {% endif %}
       {% else %}
-        <a href="{% url 'login' %}" class="btn-outline rounded-xl px-4 py-2 text-xs">Sign In</a>
-        <a href="{% url 'candidate_register' %}" class="btn-primary text-white rounded-xl px-4 py-2 text-xs">Get Started</a>
+        <a href="{% url 'job_list' %}" class="nav-link active px-4 py-2 rounded-full text-sm font-medium text-white bg-white/20 shadow-sm">Browse Jobs</a>
+        <a href="{% url 'login' %}"    class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Sign In</a>
+      {% endif %}
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <button id="menu-toggle" type="button"
+              class="md:hidden w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/15 border border-white/25 hover:bg-white/25 transition-all">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+
+      {% if request.user.is_authenticated %}
+        <a href="{% if request.user.companyprofile %}{% url 'company_dashboard' %}{% else %}{% url 'candidate_dashboard' %}{% endif %}"
+           class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+          {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
+        </a>
+      {% else %}
+        <a href="{% url 'register' %}"
+           class="hidden md:block bg-white/18 border border-white/30 text-white text-sm font-medium px-5 py-2 rounded-full hover:bg-white/88 hover:text-indigo-700 transition-all">
+          Register
+        </a>
       {% endif %}
     </div>
   </div>
-</nav>
 
-<div class="max-w-7xl mx-auto px-6 py-12">
-
-  <!-- Page Header -->
-  <div class="mb-10 fade-up">
-    <h1 class="text-4xl font-bold text-white mb-2" style="font-family:'Syne',sans-serif;">Open Positions</h1>
-    <p class="text-slate-400">
-      <span class="text-blue-400 font-semibold">{{ total }}</span> role{{ total|pluralize }} available right now
-    </p>
-  </div>
-
-  <!-- Filters -->
-  <div class="glass rounded-2xl p-5 mb-8 fade-up delay-1">
-    <form method="get" action="{% url 'job_list' %}">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-
-        <!-- Search -->
-        <div class="md:col-span-2 relative">
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <input
-            type="text" name="q" value="{{ filter_form.q.value|default:'' }}"
-            class="glass-input w-full rounded-xl pl-9 pr-4 py-2.5 text-sm"
-            placeholder="Job title, company, or skill..."
-          />
-        </div>
-
-        <!-- Job type -->
-        <div class="relative">
-          <select name="job_type" class="select-glass w-full rounded-xl px-4 py-2.5 text-sm">
-            <option value="">All Types</option>
-            {% for val, label in filter_form.fields.job_type.choices %}
-              {% if val %}
-              <option value="{{ val }}" {% if filter_form.job_type.value == val %}selected{% endif %}>{{ label }}</option>
-              {% endif %}
-            {% endfor %}
-          </select>
-        </div>
-
-        <!-- Location -->
-        <div class="relative flex gap-2">
-          <input
-            type="text" name="location" value="{{ filter_form.location.value|default:'' }}"
-            class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
-            placeholder="Location..."
-          />
-          <button type="submit" class="btn-primary text-white rounded-xl px-4 py-2.5 text-sm flex-shrink-0">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Active filters display -->
-      {% if request.GET %}
-      <div class="flex items-center gap-2 mt-3 flex-wrap">
-        <span class="text-slate-500 text-xs">Active filters:</span>
-        {% if filter_form.q.value %}
-          <span class="pill rounded-full px-2.5 py-0.5 text-xs">{{ filter_form.q.value }}</span>
-        {% endif %}
-        {% if filter_form.job_type.value %}
-          <span class="pill rounded-full px-2.5 py-0.5 text-xs">{{ filter_form.job_type.value|title }}</span>
-        {% endif %}
-        {% if filter_form.location.value %}
-          <span class="pill rounded-full px-2.5 py-0.5 text-xs">{{ filter_form.location.value }}</span>
-        {% endif %}
-        <a href="{% url 'job_list' %}" class="text-slate-500 hover:text-slate-300 text-xs transition-colors ml-1">Clear all ×</a>
-      </div>
+  {# Mobile dropdown #}
+  <div id="mobile-menu" class="hidden md:hidden mx-4 mb-2 glass-card rounded-2xl p-3 flex flex-col gap-1">
+    {% if request.user.is_authenticated %}
+      {% if request.user.companyprofile %}
+        <a href="{% url 'company_dashboard' %}"  class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Dashboard</a>
+        <a href="{% url 'company_job_list' %}"   class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Manage Jobs</a>
+        <a href="{% url 'create_job' %}"         class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Post a Job</a>
+      {% else %}
+        <a href="{% url 'candidate_dashboard' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Dashboard</a>
+        <a href="{% url 'job_list' %}"            class="px-4 py-2 rounded-xl text-sm font-medium text-white bg-white/20">Jobs</a>
+        <a href="{% url 'resume_manager' %}"      class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Resumes</a>
       {% endif %}
-    </form>
+    {% else %}
+      <a href="{% url 'login' %}"    class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Sign In</a>
+      <a href="{% url 'register' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Register</a>
+    {% endif %}
   </div>
+</header>
 
-  <!-- Job Cards Grid -->
-  {% if jobs %}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    {% for job in jobs %}
-    <a href="{% url 'job_detail' job.id %}" class="job-card glass rounded-2xl p-6 block fade-up" style="animation-delay: {{ forloop.counter0 }}00ms">
+{# ══════════ MAIN ══════════ #}
+<main class="max-w-5xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
 
-      <div class="flex items-start justify-between gap-4 mb-4">
-        <!-- Company avatar -->
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center text-blue-300 font-bold text-base"
-               style="background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.2); font-family:'Syne',sans-serif;">
-            {{ job.company.company_name|first|upper }}
-          </div>
-          <div class="min-w-0">
-            <p class="text-slate-400 text-xs truncate">{{ job.company.company_name }}</p>
-            <h3 class="text-white font-semibold text-base leading-tight truncate" style="font-family:'Syne',sans-serif;">
-              {{ job.title }}
-            </h3>
-          </div>
-        </div>
+  {% if messages %}
+  <div class="flex flex-col gap-2 mb-5">
+    {% for message in messages %}
+    <div class="msg-{{ message.tags|default:'info' }} rounded-2xl px-4 py-3 text-sm flex items-center gap-2">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="{% if message.tags == 'error' %}M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z{% else %}M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z{% endif %}"/>
+      </svg>
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
-        <!-- Job type badge -->
-        <span class="job-type-badge pill rounded-lg px-2.5 py-1 flex-shrink-0">
-          {{ job.get_job_type_display }}
-        </span>
-      </div>
-
-      <!-- Meta row -->
-      <div class="flex items-center gap-4 text-slate-500 text-xs mb-4 flex-wrap">
-        {% if job.location %}
-        <span class="flex items-center gap-1">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-          </svg>
-          {{ job.location }}
-        </span>
-        {% endif %}
-        <span class="flex items-center gap-1">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-          </svg>
-          {{ job.experience_required }}+ yrs
-        </span>
-        <span class="flex items-center gap-1">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          {{ job.salary_display }}
-        </span>
-      </div>
-
-      <!-- Description snippet -->
-      <p class="text-slate-400 text-sm leading-relaxed mb-4 line-clamp-2">
-        {{ job.description|truncatechars:120 }}
+  {# Page header #}
+  <div class="flex items-center justify-between mb-5">
+    <div>
+      <h1 class="font-serif-display text-2xl text-white">Job Vacancies</h1>
+      <p class="text-sm text-white/50 mt-0.5">
+        <span class="text-white/80 font-medium">{{ total }}</span> open position{{ total|pluralize }}
       </p>
+    </div>
+    {% if request.user.is_authenticated and request.user.companyprofile %}
+    <a href="{% url 'create_job' %}"
+       class="bg-white/88 text-teal-700 font-semibold text-sm px-5 py-2.5 rounded-full hover:bg-white transition-all shadow-sm flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Post a Job
+    </a>
+    {% endif %}
+  </div>
 
-      <!-- Skills tags -->
-      {% if job.skills.all %}
-      <div class="flex flex-wrap gap-1.5">
-        {% for skill in job.skills.all|slice:":5" %}
-        <span class="text-xs px-2.5 py-0.5 rounded-lg text-slate-400"
-              style="background: rgba(30,41,59,0.6); border: 1px solid rgba(71,85,105,0.4);">
-          {{ skill.name }}
-        </span>
-        {% endfor %}
-        {% if job.skills.count > 5 %}
-        <span class="text-xs px-2.5 py-0.5 rounded-lg text-slate-500"
-              style="background: rgba(30,41,59,0.4); border: 1px solid rgba(71,85,105,0.25);">
-          +{{ job.skills.count|add:"-5" }} more
-        </span>
+  {# Filter form #}
+  <form method="get" action="{% url 'job_list' %}"
+        class="glass-card rounded-3xl p-4 mb-6 flex flex-col sm:flex-row gap-3 flex-wrap items-end">
+
+    {# Search #}
+    <div class="relative flex-1 min-w-[180px]">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input type="text" name="q" value="{{ filter_form.q.value|default:'' }}"
+             placeholder="Title, skill, company…"
+             class="w-full bg-white/10 border border-white/22 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/35 outline-none focus:border-white/50 focus:bg-white/15 transition-all"/>
+    </div>
+
+    {# Job type dropdown #}
+    <select name="job_type" onchange="this.form.submit()"
+            class="filter_select rounded-xl px-4 py-2.5 text-sm cursor-pointer">
+      <option value="">All Types</option>
+      {% for val, label in filter_form.fields.job_type.choices %}
+        {% if val %}
+        <option value="{{ val }}" {% if filter_form.job_type.value == val %}selected{% endif %}>{{ label }}</option>
+        {% endif %}
+      {% endfor %}
+    </select>
+
+    {# Experience dropdown #}
+    <select name="experience" onchange="this.form.submit()"
+            class="filter_select rounded-xl px-4 py-2.5 text-sm cursor-pointer">
+      {% for val, label in filter_form.fields.experience.choices %}
+      <option value="{{ val }}" {% if filter_form.experience.value == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    {# Location input + search button #}
+    <div class="flex gap-2">
+      <input type="text" name="location" value="{{ filter_form.location.value|default:'' }}"
+             placeholder="Location…"
+             class="bg-white/10 border border-white/22 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/35 outline-none focus:border-white/50 focus:bg-white/15 transition-all w-32"/>
+      <button type="submit"
+              class="bg-white/20 border border-white/35 text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-white/88 hover:text-indigo-700 transition-all shrink-0">
+        Search
+      </button>
+    </div>
+
+    {# Clear filters #}
+    {% if filter_form.q.value or filter_form.job_type.value or filter_form.experience.value or filter_form.location.value %}
+    <a href="{% url 'job_list' %}"
+       class="flex items-center gap-1.5 text-white/50 hover:text-white text-sm transition-colors px-3 py-2.5 rounded-xl hover:bg-white/10 shrink-0">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+      Clear
+    </a>
+    {% endif %}
+  </form>
+
+  {# Active filter pills #}
+  {% if filter_form.q.value or filter_form.job_type.value or filter_form.experience.value or filter_form.location.value %}
+  <div class="flex flex-wrap gap-2 mb-4 -mt-2">
+    <span class="text-white/40 text-xs self-center">Filtering by:</span>
+    {% if filter_form.q.value %}
+    <span class="text-xs bg-violet-500/20 text-violet-200 border border-violet-400/25 px-3 py-1 rounded-full">"{{ filter_form.q.value }}"</span>
+    {% endif %}
+    {% if filter_form.job_type.value %}
+    <span class="text-xs bg-white/15 text-white border border-white/25 px-3 py-1 rounded-full">{{ filter_form.job_type.value|title }}</span>
+    {% endif %}
+    {% if filter_form.location.value %}
+    <span class="text-xs bg-white/15 text-white border border-white/25 px-3 py-1 rounded-full">📍 {{ filter_form.location.value }}</span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# Job cards #}
+  {% if jobs %}
+  <div class="flex flex-col gap-3">
+    {% for job in jobs %}
+    <div class="job_card glass-card rounded-3xl px-5 py-4 flex items-center gap-5"
+         data-job-id="{{ job.id }}"
+         onclick="window.location.href='{% url 'job_detail' job.id %}'">
+
+      {# Company logo #}
+      <div class="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md border border-white/30 flex items-center justify-center shrink-0 overflow-hidden">
+        {% if job.company.logo %}
+          <img src="{{ job.company.logo.url }}" alt="{{ job.company.company_name }}" class="w-full h-full object-cover"/>
+        {% else %}
+          <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ job.company.company_name|urlencode }}&backgroundColor=dbeafe&textColor=2563eb"
+               alt="{{ job.company.company_name }}" class="w-full h-full object-cover"/>
         {% endif %}
       </div>
+
+      {# Info #}
+      <div class="flex-1 min-w-0">
+        <a href="{% url 'job_detail' job.id %}"
+           class="job_title text-base font-semibold text-white/90 hover:text-white transition-colors block truncate"
+           onclick="event.stopPropagation()">
+          {{ job.title }}
+        </a>
+        <p class="text-sm text-white/55 mt-0.5 truncate">
+          {{ job.company.company_name }}{% if job.location %} · {{ job.location }}{% endif %}
+        </p>
+
+        <div class="flex items-center gap-2 mt-2 flex-wrap">
+          <span class="job_tag bg-white/15 text-white border border-white/25">{{ job.get_job_type_display }}</span>
+
+          {% if job.salary_min or job.salary_max %}
+          <span class="job_tag bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">{{ job.salary_display }}</span>
+          {% endif %}
+
+          {% if job.experience_required %}
+          <span class="job_tag bg-white/10 text-white/60 border border-white/18">{{ job.experience_required }}+ yrs</span>
+          {% endif %}
+
+          {% if job.qualification_required %}
+          <span class="job_tag bg-violet-500/15 text-violet-300 border border-violet-400/20">{{ job.get_qualification_required_display }}</span>
+          {% endif %}
+
+          {% for skill in job.skills.all|slice:":3" %}
+          <span class="job_tag bg-white/10 text-white/65 border border-white/18">{{ skill.name }}</span>
+          {% endfor %}
+          {% if job.skills.count > 3 %}
+          <span class="job_tag bg-white/8 text-white/35 border border-white/12">+{{ job.skills.count|add:"-3" }}</span>
+          {% endif %}
+
+          {% if job.deadline %}
+          <span class="job_tag bg-white/8 text-white/40 border border-white/12">Closes {{ job.deadline|date:"M j" }}</span>
+          {% endif %}
+
+          <span class="job_tag bg-white/6 text-white/30 border border-white/10">{{ job.created_at|timesince }} ago</span>
+        </div>
+      </div>
+
+      {# CTA button #}
+      {% if request.user.is_authenticated %}
+        {% if request.user.candidateprofile %}
+        <a href="{% url 'apply_job' job.id %}"
+           class="apply_btn bg-white/20 border border-white/35 backdrop-blur-md text-white text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
+           onclick="event.stopPropagation()">
+          Apply
+        </a>
+        {% elif request.user.companyprofile == job.company %}
+        <a href="{% url 'edit_job' job.id %}"
+           class="apply_btn bg-white/15 border border-white/28 text-white/70 text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
+           onclick="event.stopPropagation()">
+          Edit
+        </a>
+        {% endif %}
+      {% else %}
+      <a href="{% url 'login' %}"
+         class="apply_btn bg-white/18 border border-white/28 text-white text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
+         onclick="event.stopPropagation()">
+        Sign in
+      </a>
       {% endif %}
 
-      <!-- Footer -->
-      <div class="flex items-center justify-between mt-4 pt-4 border-t border-slate-700/40">
-        <span class="text-slate-600 text-xs">{{ job.created_at|timesince }} ago</span>
-        <span class="text-blue-400 text-xs font-medium flex items-center gap-1" style="font-family:'Syne',sans-serif;">
-          View role
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-          </svg>
-        </span>
-      </div>
-    </a>
+    </div>
     {% endfor %}
   </div>
 
   {% else %}
-  <!-- Empty state -->
-  <div class="glass rounded-2xl p-16 text-center fade-up delay-2">
-    <div class="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center"
-         style="background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15);">
-      <svg class="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+  {# Empty state #}
+  <div class="empty_state rounded-3xl px-8 py-20 flex flex-col items-center gap-4 text-center mt-4">
+    <div class="w-16 h-16 rounded-2xl bg-white/10 border border-white/18 flex items-center justify-center">
+      <svg class="w-8 h-8 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
       </svg>
     </div>
-    <h3 class="text-white font-semibold text-lg mb-2" style="font-family:'Syne',sans-serif;">No jobs found</h3>
-    <p class="text-slate-500 text-sm mb-6">Try adjusting your filters or check back later.</p>
-    <a href="{% url 'job_list' %}" class="btn-outline rounded-xl px-5 py-2.5 text-sm">Clear Filters</a>
+    <div>
+      <p class="text-white/65 font-semibold">No jobs found</p>
+      <p class="text-white/40 text-sm mt-1 leading-relaxed">
+        {% if filter_form.q.value or filter_form.job_type.value or filter_form.experience.value or filter_form.location.value %}
+          Try adjusting your filters or
+          <a href="{% url 'job_list' %}" class="text-violet-300 hover:text-white underline underline-offset-2 transition-colors">clear all filters</a>.
+        {% else %}
+          No open positions right now — check back soon.
+        {% endif %}
+      </p>
+    </div>
   </div>
   {% endif %}
 
-</div>
-{% endblock %}
+</main>
+
+{% endblock main_content %}
