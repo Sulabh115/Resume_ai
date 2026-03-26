@@ -10,15 +10,18 @@
   .shape-bl { position: absolute; bottom: -90px; left: -90px; width: 480px; height: 480px; border-radius: 50%; background: #ad02f6; opacity: 0.5; }
   .shape-tr { position: absolute; top: -60px; right: -60px; width: 400px; height: 400px; border-radius: 40px; transform: rotate(18deg); background: #7c3aed; opacity: 0.5; }
   .shape-mid { position: absolute; top: 38%; left: 8%; width: 200px; height: 300px; border-radius: 999px; transform: rotate(-28deg); background: #e879f9; opacity: 0.22; }
+
   .glass-card {
     background: rgba(255,255,255,0.18);
     backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
     border: 1px solid rgba(255,255,255,0.35);
     box-shadow: 0 8px 40px rgba(0,0,80,0.16), inset 0 1px 0 rgba(255,255,255,0.5);
   }
+
   .role-toggle { display: flex; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22); border-radius: 999px; padding: 4px; gap: 4px; }
   .role-opt { flex: 1; text-align: center; padding: 9px 20px; border-radius: 999px; font-size: 14px; font-weight: 500; cursor: pointer; color: rgba(255,255,255,0.55); transition: all 0.2s ease; user-select: none; }
   .role-opt.active { background: rgba(255,255,255,0.22); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.3); }
+
   .form-input {
     width: 100%; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.25);
     border-radius: 12px; padding: 11px 14px; font-size: 14px; color: #fff; outline: none;
@@ -30,12 +33,38 @@
   textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.5; }
   select.form-input { color-scheme: dark; cursor: pointer; }
   select.form-input option { background: #3730a3; }
+
   .form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.45); font-weight: 500; display: block; margin-bottom: 6px; }
   .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.35); font-weight: 500; padding: 4px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 16px; }
+
+  /* ── Avatar upload zone (candidate) ── */
+  .avatar-zone {
+    width: 88px; height: 88px; border-radius: 50%;
+    background: rgba(255,255,255,0.10); border: 2px dashed rgba(255,255,255,0.28);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s ease; overflow: hidden; position: relative;
+    flex-shrink: 0;
+  }
+  .avatar-zone:hover { border-color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.18); }
+
+  /* ── Logo upload zone (company) ── */
+  .logo-zone {
+    width: 80px; height: 80px; border-radius: 16px;
+    background: rgba(255,255,255,0.10); border: 2px dashed rgba(255,255,255,0.28);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s ease; overflow: hidden; position: relative;
+    flex-shrink: 0;
+  }
+  .logo-zone:hover { border-color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.18); }
+
+  /* ── Password strength ── */
   .strength-bar { height: 3px; border-radius: 999px; background: rgba(255,255,255,0.10); overflow: hidden; margin-top: 6px; }
   .strength-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease, background 0.3s ease; width: 0; }
+
+  /* ── Buttons ── */
   .btn-white { background: #fff; color: #2136f3; font-weight: 600; transition: all 0.15s ease; }
   .btn-white:hover { background: rgba(255,255,255,0.92); box-shadow: 0 4px 20px rgba(255,255,255,0.25); }
+
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
 </style>
@@ -66,13 +95,11 @@
 <main class="relative z-10 min-h-screen flex items-start justify-center px-4 md:px-6 pt-[13vh] pb-16">
   <div class="w-full max-w-2xl">
 
-    {# Header #}
     <div class="text-center mb-7">
       <p class="text-[10px] uppercase tracking-widest text-white/40 mb-2">Create your account</p>
       <h1 class="text-2xl md:text-3xl text-white font-bold">Join ResumeAI</h1>
     </div>
 
-    {# Card #}
     <div class="glass-card rounded-3xl p-6 md:p-8">
 
       {# Role toggle #}
@@ -92,16 +119,53 @@
       </div>
       <p id="role_hint" class="text-xs text-white/35 text-center mb-7">Apply for jobs and track your applications</p>
 
-      {# ── CANDIDATE FORM ── #}
-      <form id="candidate_form" method="post" action="{% url 'register' %}" novalidate>
+      {# ════════════════════════════════
+         CANDIDATE FORM
+      ════════════════════════════════ #}
+      {# enctype is on the form — required for profile_picture upload #}
+      <form id="candidate_form" method="post" action="{% url 'register' %}"
+            enctype="multipart/form-data" novalidate>
         {% csrf_token %}
-        <input type="hidden" name="role" value="candidate">
+        <input type="hidden" name="role" value="candidate"/>
+
         {% if candidate_form.non_field_errors %}
         <div class="bg-red-500/15 border border-red-400/30 text-red-300 rounded-2xl px-4 py-3 text-sm mb-5">
           {% for error in candidate_form.non_field_errors %}{{ error }}{% endfor %}
         </div>
         {% endif %}
 
+        {# ── Profile picture ── #}
+        <div class="flex items-center gap-5 mb-7">
+          <div class="flex flex-col items-center gap-1">
+            <div class="avatar-zone" id="c_avatar_zone"
+                 onclick="document.getElementById('c_avatar_input').click()">
+              <input type="file" id="c_avatar_input" name="profile_picture"
+                     accept="image/jpeg,image/png,image/webp"
+                     class="hidden" onchange="previewImage(this,'c_avatar_img','c_avatar_placeholder','c_avatar_remove')"/>
+              <img id="c_avatar_img" src="" alt="" class="w-full h-full object-cover rounded-full hidden"/>
+              <div id="c_avatar_placeholder" class="flex flex-col items-center gap-1">
+                <svg class="w-6 h-6 text-white/35" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span class="text-[10px] text-white/30 text-center leading-tight">Upload<br/>photo</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-white mb-1">
+              Profile Picture
+              <span class="text-white/35 text-xs font-normal ml-1">— optional</span>
+            </p>
+            <p class="text-xs text-white/40 leading-relaxed">Upload a clear photo. JPG, PNG, or WebP — max 2 MB.</p>
+            <button type="button" id="c_avatar_remove"
+                    onclick="removeImage('c_avatar_input','c_avatar_img','c_avatar_placeholder','c_avatar_remove')"
+                    class="hidden mt-2 text-[11px] text-white/40 hover:text-white/70 transition-colors underline underline-offset-2">
+              Remove
+            </button>
+          </div>
+        </div>
+
+        {# ── Account Details ── #}
         <p class="section-title">Account Details</p>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -189,25 +253,18 @@
           </div>
         </div>
 
+        {# ── Profile Details ── #}
         <p class="section-title">
           Profile Details
           <span class="normal-case tracking-normal text-white/25 text-[10px] font-normal ml-2">— optional, can be added later</span>
         </p>
 
-        <div class="mb-4">
-          <label class="form-label">Phone</label>
-          <input type="tel" name="phone"
-                 value="{{ candidate_form.phone.value|default:'' }}"
-                 class="form-input" placeholder="+977 98XXXXXXXX"/>
-        </div>
-
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label class="form-label">Skills</label>
-            <input type="text" name="skills"
-                   value="{{ candidate_form.skills.value|default:'' }}"
-                   class="form-input" placeholder="Python, Django, React..."/>
-            <p class="text-[10px] text-white/30 mt-1">Comma-separated</p>
+            <label class="form-label">Phone</label>
+            <input type="tel" name="phone"
+                   value="{{ candidate_form.phone.value|default:'' }}"
+                   class="form-input" placeholder="+977 98XXXXXXXX"/>
           </div>
           <div>
             <label class="form-label">Years of Experience</label>
@@ -217,27 +274,84 @@
           </div>
         </div>
 
+        <div class="mb-4">
+          <label class="form-label">Skills</label>
+          <input type="text" name="skills"
+                 value="{{ candidate_form.skills.value|default:'' }}"
+                 class="form-input" placeholder="Python, Django, React..."/>
+          <p class="text-[10px] text-white/30 mt-1">Comma-separated</p>
+        </div>
+
         <div class="mb-6">
           <label class="form-label">Education / Qualifications</label>
           <textarea name="education" class="form-input"
                     placeholder="e.g. B.Sc. Computer Science, TU — 2023">{{ candidate_form.education.value|default:'' }}</textarea>
         </div>
 
-        <button type="submit" class="btn-white w-full py-3.5 rounded-2xl text-sm">
+        {# ── Terms ── #}
+        <div class="flex items-start gap-3 mb-6">
+          <input type="checkbox" id="c_terms" name="c_terms"
+                 class="mt-0.5 w-4 h-4 accent-white rounded shrink-0 cursor-pointer"/>
+          <label for="c_terms" class="text-xs text-white/50 leading-relaxed cursor-pointer">
+            I agree to the
+            <a href="#" class="text-white underline underline-offset-2 hover:text-white/80">Terms of Service</a>
+            and
+            <a href="#" class="text-white underline underline-offset-2 hover:text-white/80">Privacy Policy</a>
+          </label>
+        </div>
+        <p id="c_terms_err" class="text-xs text-red-300 -mt-4 mb-4 hidden">You must agree to the terms to continue.</p>
+
+        <button type="submit" id="c_submit" class="btn-white w-full py-3.5 rounded-2xl text-sm">
           Create Candidate Account
         </button>
       </form>
 
-      {# ── HR / COMPANY FORM ── #}
-      <form id="hr_form" class="hidden" method="post" action="{% url 'register' %}" novalidate>
+      {# ════════════════════════════════
+         HR / COMPANY FORM
+      ════════════════════════════════ #}
+      <form id="hr_form" class="hidden" method="post" action="{% url 'register' %}"
+            enctype="multipart/form-data" novalidate>
         {% csrf_token %}
-        <input type="hidden" name="role" value="company">
+        <input type="hidden" name="role" value="company"/>
+
         {% if company_form.non_field_errors %}
         <div class="bg-red-500/15 border border-red-400/30 text-red-300 rounded-2xl px-4 py-3 text-sm mb-5">
           {% for error in company_form.non_field_errors %}{{ error }}{% endfor %}
         </div>
         {% endif %}
 
+        {# ── Company Logo ── #}
+        <div class="flex items-center gap-5 mb-7">
+          <div class="flex flex-col items-center gap-1">
+            <div class="logo-zone" id="h_logo_zone"
+                 onclick="document.getElementById('h_logo_input').click()">
+              <input type="file" id="h_logo_input" name="logo"
+                     accept="image/jpeg,image/png,image/webp"
+                     class="hidden" onchange="previewImage(this,'h_logo_img','h_logo_placeholder','h_logo_remove')"/>
+              <img id="h_logo_img" src="" alt="" class="w-full h-full object-cover rounded-2xl hidden"/>
+              <div id="h_logo_placeholder" class="flex flex-col items-center gap-1 px-2">
+                <svg class="w-6 h-6 text-white/35" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                <span class="text-[10px] text-white/30 text-center leading-tight">Company<br/>logo</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-white mb-1">
+              Company Logo
+              <span class="text-white/35 text-xs font-normal ml-1">— optional</span>
+            </p>
+            <p class="text-xs text-white/40 leading-relaxed">Your company's logo. JPG, PNG, or WebP — max 2 MB.</p>
+            <button type="button" id="h_logo_remove"
+                    onclick="removeImage('h_logo_input','h_logo_img','h_logo_placeholder','h_logo_remove')"
+                    class="hidden mt-2 text-[11px] text-white/40 hover:text-white/70 transition-colors underline underline-offset-2">
+              Remove
+            </button>
+          </div>
+        </div>
+
+        {# ── HR Account Details ── #}
         <p class="section-title">Your Account Details</p>
 
         <div class="mb-4">
@@ -262,7 +376,7 @@
           {% endif %}
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
             <label class="form-label">Password <span class="text-red-400">*</span></label>
             <div class="relative">
@@ -302,6 +416,15 @@
           </div>
         </div>
 
+        {# HR phone — maps to company.phone saved in view #}
+        <div class="mb-6">
+          <label class="form-label">Your Phone</label>
+          <input type="tel" name="hr_phone"
+                 value="{{ company_form.hr_phone.value|default:'' }}"
+                 class="form-input" placeholder="+977 98XXXXXXXX"/>
+        </div>
+
+        {# ── Company Details ── #}
         <p class="section-title">Company Details</p>
 
         <div class="mb-4">
@@ -343,7 +466,20 @@
           </div>
         </div>
 
-        <button type="submit" class="btn-white w-full py-3.5 rounded-2xl text-sm">
+        {# ── Terms ── #}
+        <div class="flex items-start gap-3 mb-6">
+          <input type="checkbox" id="h_terms" name="h_terms"
+                 class="mt-0.5 w-4 h-4 accent-white rounded shrink-0 cursor-pointer"/>
+          <label for="h_terms" class="text-xs text-white/50 leading-relaxed cursor-pointer">
+            I agree to the
+            <a href="#" class="text-white underline underline-offset-2 hover:text-white/80">Terms of Service</a>
+            and
+            <a href="#" class="text-white underline underline-offset-2 hover:text-white/80">Privacy Policy</a>
+          </label>
+        </div>
+        <p id="h_terms_err" class="text-xs text-red-300 -mt-4 mb-4 hidden">You must agree to the terms to continue.</p>
+
+        <button type="submit" id="h_submit" class="btn-white w-full py-3.5 rounded-2xl text-sm">
           Create HR Account
         </button>
       </form>
@@ -353,7 +489,7 @@
         <a href="{% url 'login' %}" class="text-white font-medium underline underline-offset-2 hover:text-white/80 transition-colors ml-1">Sign in</a>
       </p>
 
-    </div>{# end .glass-card #}
+    </div>
   </div>
 </main>
 
@@ -361,52 +497,110 @@
 
 {% block extra_scripts %}
 <script>
-  /* ── Role toggle ── */
-  function setRole(role) {
-    document.getElementById('role_candidate').classList.toggle('active', role === 'candidate');
-    document.getElementById('role_hr').classList.toggle('active', role === 'hr');
-    document.getElementById('candidate_form').classList.toggle('hidden', role !== 'candidate');
-    document.getElementById('hr_form').classList.toggle('hidden', role !== 'hr');
-    document.getElementById('role_hint').textContent = role === 'candidate'
-      ? 'Apply for jobs and track your applications'
-      : 'Post jobs, manage applications and view ranked results';
-  }
+/* ── Role toggle ── */
+function setRole(role) {
+  document.getElementById('role_candidate').classList.toggle('active', role === 'candidate');
+  document.getElementById('role_hr').classList.toggle('active', role === 'hr');
+  document.getElementById('candidate_form').classList.toggle('hidden', role !== 'candidate');
+  document.getElementById('hr_form').classList.toggle('hidden', role !== 'hr');
+  document.getElementById('role_hint').textContent = role === 'candidate'
+    ? 'Apply for jobs and track your applications'
+    : 'Post jobs, manage applications and view ranked results';
+}
 
-  /* ── Auto-reveal correct tab if Django returned field errors ── */
-  document.addEventListener('DOMContentLoaded', function () {
-    const candidateHasErrors = !!document.getElementById('candidate_form').querySelector('.field-error');
-    const companyHasErrors   = !!document.getElementById('hr_form').querySelector('.field-error');
-    // If only company form has errors, switch to HR tab
-    if (companyHasErrors && !candidateHasErrors) setRole('hr');
-  });
+/* ── Auto-reveal correct tab if Django returned field errors ── */
+document.addEventListener('DOMContentLoaded', function () {
+  const candidateHasErrors = !!document.getElementById('candidate_form').querySelector('.field-error');
+  const companyHasErrors   = !!document.getElementById('hr_form').querySelector('.field-error');
+  if (companyHasErrors && !candidateHasErrors) setRole('hr');
+});
 
-  /* ── Password show/hide ── */
-  function togglePwd(inputId) {
-    const input = document.getElementById(inputId);
-    input.type = input.type === 'password' ? 'text' : 'password';
+/* ── Generic image preview (works for both avatar and logo) ──
+   imgId         — the <img> that shows the preview
+   placeholderId — the placeholder div to hide when a file is chosen
+   removeId      — the Remove button to reveal
+── */
+function previewImage(input, imgId, placeholderId, removeId) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Image must be under 2 MB.');
+    input.value = '';
+    return;
   }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = document.getElementById(imgId);
+    img.src = e.target.result;
+    img.classList.remove('hidden');
+    document.getElementById(placeholderId).classList.add('hidden');
+    document.getElementById(removeId).classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
 
-  /* ── Password strength meter ── */
-  function checkStrength(inputId, barId, labelId) {
-    const val   = document.getElementById(inputId).value;
-    const bar   = document.getElementById(barId);
-    const label = document.getElementById(labelId);
-    let score = 0;
-    if (val.length >= 8)            score++;
-    if (/[A-Z]/.test(val))          score++;
-    if (/[0-9]/.test(val))          score++;
-    if (/[^A-Za-z0-9]/.test(val))   score++;
-    const levels = [
-      { w: '0%',    bg: 'transparent', txt: '' },
-      { w: '25%',   bg: '#f87171',     txt: 'Weak' },
-      { w: '50%',   bg: '#fcd34d',     txt: 'Fair' },
-      { w: '75%',   bg: '#60a5fa',     txt: 'Good' },
-      { w: '100%',  bg: '#34d399',     txt: 'Strong' },
-    ];
-    bar.style.width      = levels[score].w;
-    bar.style.background = levels[score].bg;
-    label.textContent    = levels[score].txt;
-    label.style.color    = levels[score].bg;
+/* ── Generic image remove ── */
+function removeImage(inputId, imgId, placeholderId, removeId) {
+  document.getElementById(inputId).value = '';
+  const img = document.getElementById(imgId);
+  img.src = '';
+  img.classList.add('hidden');
+  document.getElementById(placeholderId).classList.remove('hidden');
+  document.getElementById(removeId).classList.add('hidden');
+}
+
+/* ── Password show/hide ── */
+function togglePwd(inputId) {
+  const input = document.getElementById(inputId);
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+/* ── Password strength meter ── */
+function checkStrength(inputId, barId, labelId) {
+  const val   = document.getElementById(inputId).value;
+  const bar   = document.getElementById(barId);
+  const label = document.getElementById(labelId);
+  let score = 0;
+  if (val.length >= 8)          score++;
+  if (/[A-Z]/.test(val))        score++;
+  if (/[0-9]/.test(val))        score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const levels = [
+    { w: '0%',   bg: 'transparent', txt: '' },
+    { w: '25%',  bg: '#f87171',     txt: 'Weak' },
+    { w: '50%',  bg: '#fcd34d',     txt: 'Fair' },
+    { w: '75%',  bg: '#60a5fa',     txt: 'Good' },
+    { w: '100%', bg: '#34d399',     txt: 'Strong' },
+  ];
+  bar.style.width      = levels[score].w;
+  bar.style.background = levels[score].bg;
+  label.textContent    = levels[score].txt;
+  label.style.color    = levels[score].bg;
+}
+
+/* ── Terms checkbox guard before Django form submission ──
+   Django handles all other validation server-side.
+   The terms checkbox is the only purely client-side guard
+   since it's not a model field.
+── */
+document.getElementById('candidate_form').addEventListener('submit', function(e) {
+  const cb  = document.getElementById('c_terms');
+  const err = document.getElementById('c_terms_err');
+  if (!cb.checked) {
+    e.preventDefault();
+    err.classList.remove('hidden');
+    cb.addEventListener('change', function() { err.classList.add('hidden'); }, { once: true });
   }
+});
+
+document.getElementById('hr_form').addEventListener('submit', function(e) {
+  const cb  = document.getElementById('h_terms');
+  const err = document.getElementById('h_terms_err');
+  if (!cb.checked) {
+    e.preventDefault();
+    err.classList.remove('hidden');
+    cb.addEventListener('change', function() { err.classList.add('hidden'); }, { once: true });
+  }
+});
 </script>
 {% endblock %}

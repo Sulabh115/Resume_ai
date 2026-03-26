@@ -54,8 +54,9 @@ def register(request):
     """
     Single registration page for both candidate and company.
     Role is determined by a hidden <input name="role"> in the form.
-    On failure, re-renders the combined page with errors so JS can
-    auto-switch to the correct tab.
+
+    Handles multipart/form-data for profile_picture (candidate)
+    and logo (company) file uploads.
     """
     candidate_form = CandidateRegistrationForm()
     company_form   = CompanyRegistrationForm()
@@ -66,14 +67,24 @@ def register(request):
         if role == "candidate":
             candidate_form = CandidateRegistrationForm(request.POST)
             if candidate_form.is_valid():
-                candidate_form.save()
+                user = candidate_form.save()
+                # Attach profile picture if uploaded
+                pic = request.FILES.get("profile_picture")
+                if pic:
+                    user.candidateprofile.profile_picture = pic
+                    user.candidateprofile.save(update_fields=["profile_picture"])
                 messages.success(request, "Account created! Please sign in.")
                 return redirect("login")
 
         elif role == "company":
             company_form = CompanyRegistrationForm(request.POST)
             if company_form.is_valid():
-                company_form.save()
+                user = company_form.save()
+                # Attach company logo if uploaded
+                logo = request.FILES.get("logo")
+                if logo:
+                    user.companyprofile.logo = logo
+                    user.companyprofile.save(update_fields=["logo"])
                 messages.success(request, "Company account created! Please sign in.")
                 return redirect("login")
 
@@ -81,7 +92,6 @@ def register(request):
         "candidate_form": candidate_form,
         "company_form":   company_form,
     })
-
 
 # ═══════════════════════════════════════════════════════════════
 #  AUTHENTICATION
@@ -299,18 +309,34 @@ def candidate_edit_profile(request):
         return redirect("company_dashboard")
 
     if request.method == "POST":
+        # ── User model fields ──────────────────────────────────────────────
         request.user.first_name = request.POST.get("first_name", "").strip()
         request.user.last_name  = request.POST.get("last_name", "").strip()
         request.user.email      = request.POST.get("email", "").strip()
         request.user.save(update_fields=["first_name", "last_name", "email"])
 
+        # ── CandidateProfile fields ────────────────────────────────────────
         candidate.phone      = request.POST.get("phone", "").strip()
         candidate.skills     = request.POST.get("skills", "").strip()
         candidate.experience = int(request.POST.get("experience") or 0)
         candidate.education  = request.POST.get("education", "").strip()
+
+        # Profile picture — only update if a new file was uploaded
+        if "profile_picture" in request.FILES:
+            # Delete old picture from storage to avoid orphan files
+            if candidate.profile_picture:
+                candidate.profile_picture.delete(save=False)
+            candidate.profile_picture = request.FILES["profile_picture"]
+
+        # Remove picture if the clear checkbox was ticked
+        elif request.POST.get("profile_picture_clear") == "on":
+            if candidate.profile_picture:
+                candidate.profile_picture.delete(save=False)
+            candidate.profile_picture = None
+
         candidate.save()
 
-        # Password change — only triggered if any password field is filled
+        # ── Optional password change ───────────────────────────────────────
         curr_pw = request.POST.get("current_password", "")
         new_pw  = request.POST.get("new_password", "")
         conf_pw = request.POST.get("confirm_password", "")
@@ -336,7 +362,7 @@ def candidate_edit_profile(request):
                 })
             request.user.set_password(new_pw)
             request.user.save()
-            update_session_auth_hash(request, request.user)  # keep session alive
+            update_session_auth_hash(request, request.user)
 
         messages.success(request, "Profile updated successfully.")
         return redirect("candidate_dashboard")
@@ -344,8 +370,6 @@ def candidate_edit_profile(request):
     return render(request, "accounts/candidate_edit_profile.html", {
         "candidate": candidate,
     })
-
-
 @login_required
 def company_edit_profile(request):
     company = getattr(request.user, "companyprofile", None)

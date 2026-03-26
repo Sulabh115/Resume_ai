@@ -66,7 +66,13 @@ class CompanyRegistrationForm(UserCreationForm):
         required=False,
         widget=forms.EmailInput(attrs={"placeholder": "hr@acme.com"})
     )
-    # Company-specific fields — saved to CompanyProfile after user creation
+    # ── New: HR's own phone number ────────────────────────────────────────
+    hr_phone = forms.CharField(
+        max_length=20,
+        required=False,
+        label="Your Phone",
+        widget=forms.TextInput(attrs={"placeholder": "+977 98XXXXXXXX"})
+    )
     company_name = forms.CharField(
         max_length=255,
         widget=forms.TextInput(attrs={"placeholder": "Acme Corporation"})
@@ -93,17 +99,17 @@ class CompanyRegistrationForm(UserCreationForm):
         user.email = self.cleaned_data.get("email", "")
         if commit:
             user.save()
-            # Create CompanyProfile with company-specific data
             CompanyProfile.objects.create(
                 user=user,
                 company_name=self.cleaned_data["company_name"],
                 description=self.cleaned_data.get("description", ""),
                 website=self.cleaned_data.get("website") or None,
                 location=self.cleaned_data.get("location") or None,
+                # phone is saved here from hr_phone field
+                phone=self.cleaned_data.get("hr_phone") or "",
             )
         return user
-
-
+    
 class ForgotPasswordForm(forms.Form):
     """Sends a password reset link to the provided email."""
     email = forms.EmailField(

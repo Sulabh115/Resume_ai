@@ -108,7 +108,7 @@ def job_detail(request, job_id):
 
 # ── Company-only views ───────────────────────────────────────────────────────
 
-# @login_required
+@login_required
 def create_job(request):
     """
     HR creates a new job posting.
@@ -151,7 +151,7 @@ def create_job(request):
     })
 
 
-# @login_required
+@login_required
 def edit_job(request, job_id):
     """HR edits an existing job. Only the owning company can edit."""
     company = _get_company(request)
@@ -227,7 +227,7 @@ def toggle_job_status(request, job_id):
     return redirect(request.META.get("HTTP_REFERER", "company_dashboard"))
 
 
-# @login_required
+@login_required
 def company_job_list(request):
     """
     Company's full job management page — all statuses, with applicant counts.
