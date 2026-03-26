@@ -18,5 +18,7 @@ class CompanyProfile(models.Model):
     description = models.TextField()
     website = models.URLField(blank=True, null=True)
     location = models.CharField(max_length=255, blank=True, null=True)
+    # accounts/models.py — add to CompanyProfile
+    logo = models.ImageField(upload_to="company_logos/", blank=True, null=True)
     def __str__(self):
         return self.company_name

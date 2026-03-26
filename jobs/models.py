@@ -1,5 +1,6 @@
 from django.db import models
 from accounts.models import CompanyProfile
+from datetime import date, timedelta
 
 
 class Skill(models.Model):
@@ -98,3 +99,10 @@ class Job(models.Model):
         if self.salary_min:
             return f"{self.salary_currency} {self.salary_min:,}+"
         return "Not disclosed"
+    
+    @property
+    def is_closing_soon(self):
+        """True if deadline is within 3 days."""
+        if self.deadline:
+            return self.deadline <= date.today() + timedelta(days=3)
+        return False
