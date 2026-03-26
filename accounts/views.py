@@ -218,7 +218,7 @@ def candidate_dashboard(request):
 
     recent_jobs = (
         Job.objects
-        .filter(status="open")
+        .filter(status=Job.STATUS.OPEN)
         .prefetch_related("skills")
         .order_by("-created_at")[:6]
     )
