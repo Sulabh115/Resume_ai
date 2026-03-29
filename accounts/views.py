@@ -194,7 +194,6 @@ def forgot_password(request):
             #     )
             # except User.DoesNotExist:
             #     pass  # Never reveal whether the email is registered
-            # {% endcomment %}
 
             return render(request, 'accounts/forgot_password.html', {
                 'form':            form,
