@@ -1,50 +1,25 @@
-{% extends "base.html" %}
-{% block title %}Delete Job — ResumeAI{% endblock %}
+{% extends "company_base.html" %}
+{% block title %}Delete Job — hirepath{% endblock %}
+
+{# ── No nav item active on delete confirmation page ── #}
+
+{# ── Company initial in navbar avatar ── #}
+{% block nav_avatar %}
+<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+  {{ request.user.companyprofile.company_name|first|upper }}
+</div>
+{% endblock %}
 
 {% block extra_head %}
 <style>
-  .danger_card {
+  .danger-card {
     background: rgba(239,68,68,0.06);
     border: 1px solid rgba(239,68,68,0.22);
   }
-  .btn_danger {
-    background: rgba(239,68,68,0.18); border: 1px solid rgba(239,68,68,0.35);
-    color: #fca5a5; font-weight: 600; transition: all 0.15s ease;
-  }
-  .btn_danger:hover { background: rgba(239,68,68,0.32); box-shadow: 0 4px 16px rgba(239,68,68,0.2); }
-  .btn_ghost { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.70); transition: all 0.15s ease; }
-  .btn_ghost:hover { background: rgba(255,255,255,0.20); color: #fff; }
 </style>
 {% endblock %}
 
-
 {% block main_content %}
-
-<div class="bg-canvas company">
-  <div class="shape-bl-teal"></div>
-  <div class="shape-tr-teal"></div>
-  <div class="shape-mid-teal"></div>
-</div>
-
-{# ══════════ NAVBAR ══════════ #}
-<header class="fixed top-0 left-0 w-full z-50 bg-transparent">
-  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
-    <div class="flex items-center gap-2 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-4 py-2 shadow-sm">
-      <span class="font-serif-display text-2xl text-white tracking-tight">ResumeAI</span>
-      <span class="text-sm text-white/45 font-light mt-1">/ hr</span>
-    </div>
-    <nav class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-3 py-2 shadow-md">
-      <a href="{% url 'company_dashboard' %}"  class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Dashboard</a>
-      <a href="{% url 'company_job_list' %}"   class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Manage Jobs</a>
-      <a href="{% url 'create_job' %}"         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Post a Job</a>
-    </nav>
-    <div class="h-10 w-10 flex items-center justify-center rounded-full bg-white/15 border border-white/25 font-bold text-white text-sm select-none">
-      {{ request.user.companyprofile.company_name|first|upper }}
-    </div>
-  </div>
-</header>
-
-{# ══════════ MAIN ══════════ #}
 <main class="relative z-10 min-h-screen flex items-center justify-center px-4 md:px-6 pt-[10vh]">
   <div class="w-full max-w-lg">
 
@@ -81,7 +56,7 @@
       </p>
 
       {# Job summary box #}
-      <div class="danger_card rounded-2xl p-4 mb-6 text-left">
+      <div class="danger-card rounded-2xl p-4 mb-6 text-left">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-xl bg-white/12 border border-white/22 overflow-hidden flex items-center justify-center shrink-0">
             {% if request.user.companyprofile.logo %}
@@ -115,12 +90,12 @@
       {# Action buttons #}
       <div class="flex gap-3">
         <a href="{% url 'job_detail' job.id %}"
-           class="btn_ghost flex-1 py-3.5 rounded-2xl text-sm text-center">
+           class="btn-ghost flex-1 py-3.5 rounded-2xl text-sm text-center">
           Keep This Job
         </a>
         <form method="post" action="{% url 'delete_job' job.id %}" class="flex-1">
           {% csrf_token %}
-          <button type="submit" class="btn_danger w-full py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2">
+          <button type="submit" class="btn-danger w-full py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
             </svg>
@@ -129,20 +104,22 @@
         </form>
       </div>
 
-      <p class="text-white/28 text-xs mt-4">
+      {# Close instead of delete — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
+      {# <p class="text-white/28 text-xs mt-4">
         Changed your mind about closing applications?
-        <a href="{% url 'toggle_job_status' job.id %}" class="text-teal-300 hover:text-white underline underline-offset-2 transition-colors" onclick="event.preventDefault(); document.getElementById('close_form').submit()">
+        <a href="#" class="text-teal-300 hover:text-white underline underline-offset-2 transition-colors"
+           onclick="event.preventDefault(); document.getElementById('close-form').submit()">
           Close the job instead →
         </a>
-      </p>
-    </div>
+      </p> #}
 
+    </div>
   </div>
 </main>
 
-{# Hidden form for toggle (close job instead of delete) #}
-<form id="close_form" method="post" action="{% url 'toggle_job_status' job.id %}">
+{# Hidden form for toggle — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
+{# <form id="close-form" method="post" action="">
   {% csrf_token %}
-</form>
+</form> #}
 
-{% endblock main_content %}
+{% endblock %}

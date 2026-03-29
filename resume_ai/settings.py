@@ -125,6 +125,12 @@ USE_I18N = True
 USE_TZ = True
 
 
+SESSION_COOKIE_AGE = 3600        # 1 hour idle timeout
+
+SESSION_SAVE_EVERY_REQUEST = True # reset timer on activity
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # also expire on browser close
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 

@@ -1,26 +1,5 @@
 """
 accounts/views.py
-═══════════════════════════════════════════════════════════════════════════════
-  AUTH & PROFILE VIEWS FOR THE ACCOUNTS APP
-───────────────────────────────────────────────────────────────────────────────
-  CURRENT VIEWS (accounts app):
-    register                → /accounts/register/
-    user_login              → /accounts/login/
-    user_logout             → /accounts/logout/
-    forgot_password         → /accounts/forgot-password/
-    candidate_dashboard     → /accounts/dashboard/candidate/
-    company_dashboard       → /accounts/dashboard/company/
-    candidate_edit_profile  → /accounts/profile/edit/
-    company_edit_profile    → /accounts/profile/company/edit/
-    delete_company_account  → /accounts/account/delete/
-
-  FUTURE APPS — views will be added in their own apps/views.py:
-    jobs app         → job_list, job_detail, create_job, company_job_list,
-                        edit_job, delete_job, old_jobs
-    applications app → apply_job, withdraw_application, view_applicants,
-                        resume_manager, candidate_applications
-    screening app    → run_screening, screening_results, to_shortlist
-═══════════════════════════════════════════════════════════════════════════════
 """
 
 from django.shortcuts import render, redirect
@@ -32,20 +11,52 @@ from django.db.models import Count
 from .models import CandidateProfile, CompanyProfile
 from .forms import CandidateRegistrationForm, CompanyRegistrationForm, ForgotPasswordForm
 
-# ── Imported here so dashboards can query across apps.
-#    These imports will work once the jobs and applications apps are created.
-#    If you haven't created those apps yet, comment these out temporarily
-#    and uncomment them once you do.
 from applications.models import Application
 from jobs.models import Job
 
+
+# ═══════════════════════════════════════════════════════════════
+#  HELPERS
+# ═══════════════════════════════════════════════════════════════
+
+def _get_user_role(user):
+    """
+    Check the DB directly — never rely on hasattr() which caches misses
+    on the user object and causes 'no profile' false negatives.
+    Returns 'candidate', 'company', or None.
+    """
+    if CandidateProfile.objects.filter(user=user).exists():
+        return 'candidate'
+    if CompanyProfile.objects.filter(user=user).exists():
+        return 'company'
+    return None
+
+
+def _redirect_by_role(user):
+    """
+    Return the correct redirect response for a user.
+    Returns None if the user has no profile.
+    """
+    role = _get_user_role(user)
+    if role == 'candidate':
+        return redirect('candidate_dashboard')
+    if role == 'company':
+        return redirect('company_dashboard')
+    return None
+
+
+# ═══════════════════════════════════════════════════════════════
+#  LANDING
+# ═══════════════════════════════════════════════════════════════
+
 def index(request):
     if request.user.is_authenticated:
-        if hasattr(request.user, "candidateprofile"):
-            return redirect("candidate_dashboard")
-        if hasattr(request.user, "companyprofile"):
-            return redirect("company_dashboard")
-    return render(request, "accounts/index.html")
+        response = _redirect_by_role(request.user)
+        if response:
+            return response
+    return render(request, 'accounts/index.html')
+
+
 # ═══════════════════════════════════════════════════════════════
 #  REGISTRATION
 # ═══════════════════════════════════════════════════════════════
@@ -54,44 +65,43 @@ def register(request):
     """
     Single registration page for both candidate and company.
     Role is determined by a hidden <input name="role"> in the form.
-
-    Handles multipart/form-data for profile_picture (candidate)
-    and logo (company) file uploads.
+    Handles multipart/form-data for profile_picture / logo uploads.
     """
     candidate_form = CandidateRegistrationForm()
     company_form   = CompanyRegistrationForm()
 
-    if request.method == "POST":
-        role = request.POST.get("role")
+    if request.method == 'POST':
+        role = request.POST.get('role')
 
-        if role == "candidate":
+        if role == 'candidate':
             candidate_form = CandidateRegistrationForm(request.POST)
             if candidate_form.is_valid():
                 user = candidate_form.save()
-                # Attach profile picture if uploaded
-                pic = request.FILES.get("profile_picture")
+                pic = request.FILES.get('profile_picture')
                 if pic:
-                    user.candidateprofile.profile_picture = pic
-                    user.candidateprofile.save(update_fields=["profile_picture"])
-                messages.success(request, "Account created! Please sign in.")
-                return redirect("login")
+                    profile = CandidateProfile.objects.get(user=user)
+                    profile.profile_picture = pic
+                    profile.save(update_fields=['profile_picture'])
+                messages.success(request, 'Account created! Please sign in.')
+                return redirect('login')
 
-        elif role == "company":
+        elif role == 'company':
             company_form = CompanyRegistrationForm(request.POST)
             if company_form.is_valid():
                 user = company_form.save()
-                # Attach company logo if uploaded
-                logo = request.FILES.get("logo")
+                logo = request.FILES.get('logo')
                 if logo:
-                    user.companyprofile.logo = logo
-                    user.companyprofile.save(update_fields=["logo"])
-                messages.success(request, "Company account created! Please sign in.")
-                return redirect("login")
+                    profile = CompanyProfile.objects.get(user=user)
+                    profile.logo = logo
+                    profile.save(update_fields=['logo'])
+                messages.success(request, 'Company account created! Please sign in.')
+                return redirect('login')
 
-    return render(request, "accounts/register.html", {
-        "candidate_form": candidate_form,
-        "company_form":   company_form,
+    return render(request, 'accounts/register.html', {
+        'candidate_form': candidate_form,
+        'company_form':   company_form,
     })
+
 
 # ═══════════════════════════════════════════════════════════════
 #  AUTHENTICATION
@@ -100,41 +110,47 @@ def register(request):
 def user_login(request):
     """
     Authenticates by username + password.
-    Redirects to the correct dashboard based on profile type.
-    If the user has neither profile (e.g. superuser), goes to /admin/.
+    Uses DB query (not hasattr) to detect profile type — avoids
+    the Django ORM cache bug where hasattr returns False on a fresh
+    user object even when the profile exists.
     """
-    # Already logged in — redirect to correct dashboard
     if request.user.is_authenticated:
-        if hasattr(request.user, "candidateprofile"):
-            return redirect("candidate_dashboard")
-        if hasattr(request.user, "companyprofile"):
-            return redirect("company_dashboard")
-        return redirect("/admin/")
+        response = _redirect_by_role(request.user)
+        if response:
+            return response
 
-    if request.method == "POST":
-        username = request.POST.get("username", "").strip()
-        password = request.POST.get("password", "")
-        user = authenticate(request, username=username, password=password)
+    error = None
 
-        if user:
-            login(request, user)
-            if hasattr(user, "candidateprofile"):
-                return redirect("candidate_dashboard")
-            if hasattr(user, "companyprofile"):
-                return redirect("company_dashboard")
-            return redirect("/admin/")
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
 
-        return render(request, "accounts/login.html", {
-            "error": "Incorrect username or password."
-        })
+        if not username or not password:
+            error = 'Please enter both username and password.'
+        else:
+            user = authenticate(request, username=username, password=password)
 
-    return render(request, "accounts/login.html")
+            if user is not None:
+                login(request, user)
+                response = _redirect_by_role(user)
+                if response:
+                    return response
+                # User authenticated but has no profile
+                logout(request)
+                error = (
+                    'Your account has no candidate or company profile. '
+                    'Please register first or contact support.'
+                )
+            else:
+                error = 'Incorrect username or password.'
+
+    return render(request, 'accounts/login.html', {'error': error})
 
 
 @login_required
 def user_logout(request):
     logout(request)
-    return redirect("login")
+    return redirect('login')
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -143,61 +159,59 @@ def user_logout(request):
 
 def forgot_password(request):
     """
-    Step 1: collect email and show success screen.
-
-    EMAIL SENDING — uncomment the block below once you configure
-    Django email settings (EMAIL_BACKEND, EMAIL_HOST, etc.)
-    The reset link uses Django's built-in token + uidb64 system and
-    lands on the password_reset_confirm URL (already wired in urls.py).
+    Step 1 — collect email and show success screen.
+    Email sending is stubbed; uncomment once email backend is configured.
     """
-    if request.method == "POST":
+    if request.method == 'POST':
         form = ForgotPasswordForm(request.POST)
         if form.is_valid():
-            email = form.cleaned_data["email"]
+            email = form.cleaned_data['email']
 
-            # ── EMAIL SENDING (implement when ready) ───────────────────
+
+            # EMAIL SENDING — uncomment when ready:
+
             # from django.contrib.auth.models import User
             # from django.contrib.auth.tokens import default_token_generator
             # from django.utils.http import urlsafe_base64_encode
             # from django.utils.encoding import force_bytes
             # from django.urls import reverse
             # from django.core.mail import send_mail
-            #
+
             # try:
             #     user = User.objects.get(email=email)
             #     uid   = urlsafe_base64_encode(force_bytes(user.pk))
             #     token = default_token_generator.make_token(user)
             #     reset_url = request.build_absolute_uri(
-            #         reverse("password_reset_confirm",
-            #                 kwargs={"uidb64": uid, "token": token})
+            #         reverse('password_reset_confirm',
+            #                 kwargs={'uidb64': uid, 'token': token})
             #     )
             #     send_mail(
-            #         subject="Reset your ResumeAI password",
-            #         message=f"Click here to reset your password:\n{reset_url}",
+            #         subject='Reset your ResumeAI password',
+            #         message=f'Click here to reset your password:\n{reset_url}',
             #         from_email=settings.DEFAULT_FROM_EMAIL,
             #         recipient_list=[email],
             #         fail_silently=False,
             #     )
             # except User.DoesNotExist:
             #     pass  # Never reveal whether the email is registered
-            # ────────────────────────────────────────────────────────────
+            # {% endcomment %}
 
-            return render(request, "accounts/forgot_password.html", {
-                "form":             form,
-                "email_sent":       True,
-                "submitted_email":  email,
-                "steps": [
-                    "Open your email inbox.",
-                    "Look for an email from ResumeAI.",
-                    "Click the reset link — it's valid for 24 hours.",
-                    "Choose a new password and sign in.",
+            return render(request, 'accounts/forgot_password.html', {
+                'form':            form,
+                'email_sent':      True,
+                'submitted_email': email,
+                'steps': [
+                    'Open your email inbox.',
+                    'Look for an email from ResumeAI.',
+                    'Click the reset link — it\'s valid for 24 hours.',
+                    'Choose a new password and sign in.',
                 ],
             })
 
-        return render(request, "accounts/forgot_password.html", {"form": form})
+        return render(request, 'accounts/forgot_password.html', {'form': form})
 
-    return render(request, "accounts/forgot_password.html", {
-        "form": ForgotPasswordForm()
+    return render(request, 'accounts/forgot_password.html', {
+        'form': ForgotPasswordForm()
     })
 
 
@@ -207,60 +221,77 @@ def forgot_password(request):
 
 @login_required
 def candidate_dashboard(request):
-    candidate = getattr(request.user, "candidateprofile", None)
+    candidate = CandidateProfile.objects.filter(user=request.user).first()
     if not candidate:
-        return redirect("company_dashboard")
+        return redirect('company_dashboard')
 
     applications = (
         Application.objects
         .filter(candidate=candidate)
-        .select_related("job__company", "resume")
-        .order_by("-applied_at")
+        .select_related('job__company', 'resume')
+        .order_by('-applied_at')
     )
 
-    # Stats — match exact status strings defined in Application.Status choices
     total       = applications.count()
     pending     = applications.filter(status=Application.Status.PENDING).count()
     shortlisted = applications.filter(status=Application.Status.SHORTLISTED).count()
     offered     = applications.filter(status=Application.Status.HIRED).count()
 
-    recent_applications = applications[:5]
+    recent_applications = (
+        applications
+        .exclude(status=Application.Status.WITHDRAWN)
+        [:5]
+    )
 
     recent_jobs = (
         Job.objects
-        .filter(status=Job.STATUS.OPEN)
-        .prefetch_related("skills")
-        .order_by("-created_at")[:6]
+        .filter(status=Job.Status.OPEN)
+        .prefetch_related('skills')
+        .order_by('-created_at')[:6]
     )
 
-    return render(request, "accounts/candidate_dashboard.html", {
-        "candidate":            candidate,
-        "total":                total,
-        "pending":              pending,
-        "shortlisted":          shortlisted,
-        "offered":              offered,
-        "recent_applications":  recent_applications,
-        "recent_jobs":          recent_jobs,
-        "has_resumes":          candidate.resumes.exists(),
+    skills_list = [
+        s.strip()
+        for s in (candidate.skills or '').split(',')
+        if s.strip()
+    ]
+
+    education_list = [
+        line.strip()
+        for line in (candidate.education or '').splitlines()
+        if line.strip()
+    ]
+
+    return render(request, 'accounts/candidate_dashboard.html', {
+        'candidate':           candidate,
+        'total':               total,
+        'pending':             pending,
+        'shortlisted':         shortlisted,
+        'offered':             offered,
+        'recent_applications': recent_applications,
+        'recent_jobs':         recent_jobs,
+        'has_resumes':         candidate.resumes.exists(),
+        'skills_list':         skills_list,
+        'education_list':      education_list,
     })
 
 
 @login_required
 def company_dashboard(request):
-    company = getattr(request.user, "companyprofile", None)
+    company = CompanyProfile.objects.filter(user=request.user).first()
     if not company:
-        return redirect("candidate_dashboard")
+        return redirect('candidate_dashboard')
 
     jobs = (
         Job.objects
         .filter(company=company)
-        .order_by("-created_at")
+        .order_by('-created_at')
     )
 
-    total_jobs   = jobs.count()
-    open_jobs    = jobs.filter(status="open").count()
-    closed_jobs  = jobs.filter(status="closed").count()
-    draft_jobs   = jobs.filter(status="draft").count()
+    total_jobs  = jobs.count()
+    open_jobs   = jobs.filter(status=Job.Status.OPEN).count()
+    closed_jobs = jobs.filter(status=Job.Status.CLOSED).count()
+    draft_jobs  = jobs.filter(status=Job.Status.DRAFT).count()
 
     all_apps = Application.objects.filter(job__company=company)
 
@@ -275,26 +306,25 @@ def company_dashboard(request):
     recent_applicants = (
         all_apps
         .exclude(status=Application.Status.WITHDRAWN)
-        .select_related("candidate__user", "job", "resume")
-        .order_by("-applied_at")[:8]
+        .select_related('candidate__user', 'job', 'resume')
+        .order_by('-applied_at')[:8]
     )
 
-    # Annotate open jobs with applicant count for the sidebar list
     active_jobs = (
-        jobs.filter(status="open")
-        .annotate(application_count=Count("applications"))
+        jobs.filter(status=Job.Status.OPEN)
+        .annotate(application_count=Count('applications'))
     )
 
-    return render(request, "accounts/company_dashboard.html", {
-        "company":           company,
-        "total_jobs":        total_jobs,
-        "open_jobs":         open_jobs,
-        "closed_jobs":       closed_jobs,
-        "draft_jobs":        draft_jobs,
-        "total_applicants":  total_applicants,
-        "pending_review":    pending_review,
-        "recent_applicants": recent_applicants,
-        "active_jobs":       active_jobs,
+    return render(request, 'accounts/company_dashboard.html', {
+        'company':           company,
+        'total_jobs':        total_jobs,
+        'open_jobs':         open_jobs,
+        'closed_jobs':       closed_jobs,
+        'draft_jobs':        draft_jobs,
+        'total_applicants':  total_applicants,
+        'pending_review':    pending_review,
+        'recent_applicants': recent_applicants,
+        'active_jobs':       active_jobs,
     })
 
 
@@ -304,134 +334,127 @@ def company_dashboard(request):
 
 @login_required
 def candidate_edit_profile(request):
-    candidate = getattr(request.user, "candidateprofile", None)
+    candidate = CandidateProfile.objects.filter(user=request.user).first()
     if not candidate:
-        return redirect("company_dashboard")
+        return redirect('company_dashboard')
 
-    if request.method == "POST":
-        # ── User model fields ──────────────────────────────────────────────
-        request.user.first_name = request.POST.get("first_name", "").strip()
-        request.user.last_name  = request.POST.get("last_name", "").strip()
-        request.user.email      = request.POST.get("email", "").strip()
-        request.user.save(update_fields=["first_name", "last_name", "email"])
+    if request.method == 'POST':
+        request.user.first_name = request.POST.get('first_name', '').strip()
+        request.user.last_name  = request.POST.get('last_name',  '').strip()
+        request.user.email      = request.POST.get('email',      '').strip()
+        request.user.save(update_fields=['first_name', 'last_name', 'email'])
 
-        # ── CandidateProfile fields ────────────────────────────────────────
-        candidate.phone      = request.POST.get("phone", "").strip()
-        candidate.skills     = request.POST.get("skills", "").strip()
-        candidate.experience = int(request.POST.get("experience") or 0)
-        candidate.education  = request.POST.get("education", "").strip()
+        candidate.phone      = request.POST.get('phone',     '').strip()
+        candidate.skills     = request.POST.get('skills',    '').strip()
+        candidate.education  = request.POST.get('education', '').strip()
 
-        # Profile picture — only update if a new file was uploaded
-        if "profile_picture" in request.FILES:
-            # Delete old picture from storage to avoid orphan files
+        raw_exp = request.POST.get('experience', '0').strip()
+        candidate.experience = int(raw_exp) if raw_exp.isdigit() else 0
+
+        if 'profile_picture' in request.FILES:
             if candidate.profile_picture:
                 candidate.profile_picture.delete(save=False)
-            candidate.profile_picture = request.FILES["profile_picture"]
-
-        # Remove picture if the clear checkbox was ticked
-        elif request.POST.get("profile_picture_clear") == "on":
+            candidate.profile_picture = request.FILES['profile_picture']
+        elif request.POST.get('profile_picture_clear') == 'on':
             if candidate.profile_picture:
                 candidate.profile_picture.delete(save=False)
             candidate.profile_picture = None
 
         candidate.save()
 
-        # ── Optional password change ───────────────────────────────────────
-        curr_pw = request.POST.get("current_password", "")
-        new_pw  = request.POST.get("new_password", "")
-        conf_pw = request.POST.get("confirm_password", "")
+        curr_pw = request.POST.get('current_password', '')
+        new_pw  = request.POST.get('new_password',     '')
+        conf_pw = request.POST.get('confirm_password', '')
 
         if curr_pw or new_pw:
+            error_ctx = {'candidate': candidate}
             if not request.user.check_password(curr_pw):
-                messages.error(request, "Current password is incorrect.")
-                return render(request, "accounts/candidate_edit_profile.html", {
-                    "candidate":      candidate,
-                    "password_error": "Current password is incorrect.",
+                return render(request, 'accounts/candidate_edit_profile.html', {
+                    **error_ctx,
+                    'password_error': 'Current password is incorrect.',
                 })
             if new_pw != conf_pw:
-                messages.error(request, "New passwords do not match.")
-                return render(request, "accounts/candidate_edit_profile.html", {
-                    "candidate":      candidate,
-                    "password_error": "New passwords do not match.",
+                return render(request, 'accounts/candidate_edit_profile.html', {
+                    **error_ctx,
+                    'password_error': 'New passwords do not match.',
                 })
             if len(new_pw) < 8:
-                messages.error(request, "Password must be at least 8 characters.")
-                return render(request, "accounts/candidate_edit_profile.html", {
-                    "candidate":      candidate,
-                    "password_error": "Min. 8 characters required.",
+                return render(request, 'accounts/candidate_edit_profile.html', {
+                    **error_ctx,
+                    'password_error': 'Password must be at least 8 characters.',
                 })
             request.user.set_password(new_pw)
             request.user.save()
             update_session_auth_hash(request, request.user)
 
-        messages.success(request, "Profile updated successfully.")
-        return redirect("candidate_dashboard")
+        messages.success(request, 'Profile updated successfully.')
+        return redirect('candidate_dashboard')
 
-    return render(request, "accounts/candidate_edit_profile.html", {
-        "candidate": candidate,
+    return render(request, 'accounts/candidate_edit_profile.html', {
+        'candidate': candidate,
     })
+
+
 @login_required
 def company_edit_profile(request):
-    company = getattr(request.user, "companyprofile", None)
+    company = CompanyProfile.objects.filter(user=request.user).first()
     if not company:
-        return redirect("candidate_dashboard")
+        return redirect('candidate_dashboard')
 
     def _stats():
-        """Helper — returns fresh stats dict for re-renders on error."""
         return {
-            "total_jobs":       company.jobs.count(),
-            "open_jobs":        company.jobs.filter(status="open").count(),
-            "total_applicants": Application.objects.filter(job__company=company).count(),
-            "total_hired":      Application.objects.filter(
+            'total_jobs':       company.jobs.count(),
+            'open_jobs':        company.jobs.filter(status=Job.Status.OPEN).count(),
+            'total_applicants': Application.objects.filter(job__company=company).count(),
+            'total_hired':      Application.objects.filter(
                                     job__company=company,
-                                    status=Application.Status.HIRED
+                                    status=Application.Status.HIRED,
                                 ).count(),
         }
 
-    if request.method == "POST":
-        request.user.first_name = request.POST.get("first_name", "").strip()
-        request.user.last_name  = request.POST.get("last_name", "").strip()
-        request.user.email      = request.POST.get("email", "").strip()
-        request.user.save(update_fields=["first_name", "last_name", "email"])
+    if request.method == 'POST':
+        request.user.first_name = request.POST.get('first_name', '').strip()
+        request.user.last_name  = request.POST.get('last_name',  '').strip()
+        request.user.email      = request.POST.get('email',      '').strip()
+        request.user.save(update_fields=['first_name', 'last_name', 'email'])
 
-        company.company_name = request.POST.get("company_name", "").strip()
-        company.description  = request.POST.get("description", "").strip()
-        company.location     = request.POST.get("location", "").strip()
-        company.website      = request.POST.get("website", "").strip()
-        company.phone        = request.POST.get("hr_phone", "").strip()
+        company.company_name = request.POST.get('company_name', '').strip()
+        company.description  = request.POST.get('description',  '').strip()
+        company.location     = request.POST.get('location',     '').strip()
+        company.phone        = request.POST.get('hr_phone',     '').strip()
+        website = request.POST.get('website', '').strip()
+        company.website = website if website else None
         company.save()
 
-        curr_pw = request.POST.get("current_password", "")
-        new_pw  = request.POST.get("new_password", "")
-        conf_pw = request.POST.get("confirm_password", "")
+        curr_pw = request.POST.get('current_password', '')
+        new_pw  = request.POST.get('new_password',     '')
+        conf_pw = request.POST.get('confirm_password', '')
 
         if curr_pw or new_pw:
+            error_ctx = {'company': company, **_stats()}
             if not request.user.check_password(curr_pw):
-                messages.error(request, "Current password is incorrect.")
-                return render(request, "accounts/company_edit_profile.html", {
-                    "company": company, **_stats(),
-                    "password_error": "Current password is incorrect.",
+                return render(request, 'accounts/company_edit_profile.html', {
+                    **error_ctx,
+                    'password_error': 'Current password is incorrect.',
                 })
             if new_pw != conf_pw:
-                messages.error(request, "New passwords do not match.")
-                return render(request, "accounts/company_edit_profile.html", {
-                    "company": company, **_stats(),
-                    "password_error": "New passwords do not match.",
+                return render(request, 'accounts/company_edit_profile.html', {
+                    **error_ctx,
+                    'password_error': 'New passwords do not match.',
                 })
             if len(new_pw) < 8:
-                messages.error(request, "Password must be at least 8 characters.")
-                return render(request, "accounts/company_edit_profile.html", {
-                    "company": company, **_stats(),
-                    "password_error": "Min. 8 characters required.",
+                return render(request, 'accounts/company_edit_profile.html', {
+                    **error_ctx,
+                    'password_error': 'Min. 8 characters required.',
                 })
             request.user.set_password(new_pw)
             request.user.save()
             update_session_auth_hash(request, request.user)
 
-        messages.success(request, "Company profile updated successfully.")
-        return redirect("company_dashboard")
+        messages.success(request, 'Company profile updated successfully.')
+        return redirect('company_dashboard')
 
-    return render(request, "accounts/company_edit_profile.html", {
-        "company": company,
+    return render(request, 'accounts/company_edit_profile.html', {
+        'company': company,
         **_stats(),
     })

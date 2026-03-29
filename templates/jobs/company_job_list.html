@@ -1,52 +1,52 @@
-{% extends "base.html" %}
-{% block title %}Manage Jobs — ResumeAI{% endblock %}
+{% extends "company_base.html" %}
+{% block title %}Manage Jobs — hirepath{% endblock %}
+
+{# ── Mark Manage Jobs active in navbar ── #}
+{% block nav_jobs %}active{% endblock %}
+
+{# ── Company initial in navbar avatar ── #}
+{% block nav_avatar %}
+<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+  {{ company.company_name|first|upper }}
+</div>
+{% endblock %}
 
 {% block extra_head %}
 <style>
-  /* Job card hover */
-  .job_row { transition: all 0.15s ease; }
-  .job_row:hover { background: rgba(255,255,255,0.18) !important; }
+  .job-row { transition: all 0.15s ease; }
+  .job-row:hover { background: rgba(255,255,255,0.18) !important; }
 
-  /* Status badges */
-  .badge_open   { background: rgba(52,211,153,0.18);  border: 1px solid rgba(52,211,153,0.38);  color: #6ee7b7; }
-  .badge_draft  { background: rgba(251,191,36,0.15);  border: 1px solid rgba(251,191,36,0.35);  color: #fcd34d; }
-  .badge_closed { background: rgba(148,163,184,0.15); border: 1px solid rgba(148,163,184,0.28); color: #cbd5e1; }
+  .badge-open   { background: rgba(52,211,153,0.18);  border: 1px solid rgba(52,211,153,0.38);  color: #6ee7b7; }
+  .badge-draft  { background: rgba(251,191,36,0.15);  border: 1px solid rgba(251,191,36,0.35);  color: #fcd34d; }
+  .badge-closed { background: rgba(148,163,184,0.15); border: 1px solid rgba(148,163,184,0.28); color: #cbd5e1; }
 
-  /* Action buttons */
-  .action_btn {
+  .action-btn {
     background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
-    color: rgba(255,255,255,0.75); font-size: 12px; font-weight: 500;
-    transition: all 0.15s ease;
+    color: rgba(255,255,255,0.75); font-size: 12px; font-weight: 500; transition: all 0.15s ease;
   }
-  .action_btn:hover { background: rgba(255,255,255,0.22); color: #fff; border-color: rgba(255,255,255,0.42); }
-  .action_btn_danger { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.28); color: rgba(252,165,165,0.90); font-size: 12px; font-weight: 500; transition: all 0.15s ease; }
-  .action_btn_danger:hover { background: rgba(239,68,68,0.24); color: #fca5a5; }
+  .action-btn:hover { background: rgba(255,255,255,0.22); color: #fff; border-color: rgba(255,255,255,0.42); }
 
-  /* Progress bar on stat cards */
-  .stat_bar { height: 4px; background: rgba(255,255,255,0.10); border-radius: 999px; overflow: hidden; }
-  .stat_bar_fill { height: 100%; border-radius: 999px; }
+  .action-btn-danger {
+    background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.28);
+    color: rgba(252,165,165,0.90); font-size: 12px; font-weight: 500; transition: all 0.15s ease;
+  }
+  .action-btn-danger:hover { background: rgba(239,68,68,0.24); color: #fca5a5; }
 
-  /* Delete confirm modal */
-  .confirm_overlay {
+  .stat-bar { height: 4px; background: rgba(255,255,255,0.10); border-radius: 999px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; border-radius: 999px; }
+
+  .confirm-overlay {
     position: fixed; inset: 0; z-index: 100;
     background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
   }
 </style>
 {% endblock %}
 
-
 {% block main_content %}
 
-<div class="bg-canvas company">
-  <div class="shape-bl-teal"></div>
-  <div class="shape-tr-teal"></div>
-  <div class="shape-mid-teal"></div>
-</div>
-
-{# ── Delete confirm modal ── #}
-<div id="delete_modal" class="confirm_overlay hidden">
+{# ── Delete confirm modal — outside main, z-index above everything ── #}
+<div id="delete-modal" class="confirm-overlay hidden">
   <div class="glass-card rounded-3xl p-6 w-80 text-center">
     <div class="w-12 h-12 rounded-full bg-red-500/20 border border-red-400/28 flex items-center justify-center mx-auto mb-4">
       <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,73 +55,20 @@
     </div>
     <p class="text-white font-semibold mb-1">Delete Job Post?</p>
     <p class="text-white/50 text-sm mb-5">
-      This will permanently delete <span id="delete_job_name" class="text-white/80 font-medium"></span> and all its applications.
+      This will permanently delete <span id="delete-job-name" class="text-white/80 font-medium"></span> and all its applications.
       This <strong>cannot</strong> be undone.
     </p>
     <div class="flex gap-3">
-      <button onclick="closeDeleteModal()" class="action_btn flex-1 px-4 py-2.5 rounded-xl">Cancel</button>
-      <form id="delete_form" method="post" class="flex-1">
+      <button onclick="closeDeleteModal()" class="action-btn flex-1 px-4 py-2.5 rounded-xl">Cancel</button>
+      <form id="delete-form" method="post" class="flex-1">
         {% csrf_token %}
-        <button type="submit" class="action_btn_danger w-full px-4 py-2.5 rounded-xl">Delete</button>
+        <button type="submit" class="action-btn-danger w-full px-4 py-2.5 rounded-xl">Delete</button>
       </form>
     </div>
   </div>
 </div>
 
-{# ══════════ NAVBAR ══════════ #}
-<header class="fixed top-0 left-0 w-full z-50 bg-transparent">
-  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
-
-    <div class="flex items-center gap-2 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-4 py-2 shadow-sm">
-      <span class="font-serif-display text-2xl text-white tracking-tight">ResumeAI</span>
-      <span class="text-sm text-white/45 font-light mt-1">/ hr</span>
-    </div>
-
-    <nav class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-3 py-2 shadow-md">
-      <a href="{% url 'company_dashboard' %}"  class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Dashboard</a>
-      <a href="{% url 'company_job_list' %}"   class="nav-link active px-4 py-2 rounded-full text-sm font-medium text-white bg-white/20 shadow-sm">Manage Jobs</a>
-      <a href="{% url 'create_job' %}"         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Post a Job</a>
-    </nav>
-
-    <div class="flex items-center gap-2">
-      <button id="menu-toggle" type="button"
-              class="md:hidden w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/15 border border-white/25 hover:bg-white/25 transition-all">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-      <a href="{% url 'company_edit_profile' %}"
-         class="h-10 w-10 flex items-center justify-center rounded-full bg-white/15 border border-white/25 hover:bg-white/25 transition-all shadow-sm font-bold text-white text-sm select-none">
-        {{ company.company_name|first|upper }}
-      </a>
-    </div>
-  </div>
-
-  <div id="mobile-menu" class="hidden md:hidden mx-4 mb-2 glass-card rounded-2xl p-3 flex flex-col gap-1">
-    <a href="{% url 'company_dashboard' %}"  class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Dashboard</a>
-    <a href="{% url 'company_job_list' %}"   class="px-4 py-2 rounded-xl text-sm font-medium text-white bg-white/20">Manage Jobs</a>
-    <a href="{% url 'create_job' %}"         class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Post a Job</a>
-    <a href="{% url 'logout' %}"             class="px-4 py-2 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/10 transition-all">Sign Out</a>
-  </div>
-</header>
-
-{# ══════════ MAIN ══════════ #}
 <main class="max-w-5xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
-
-  {# Flash messages #}
-  {% if messages %}
-  <div class="flex flex-col gap-2 mb-5">
-    {% for message in messages %}
-    <div class="msg-{{ message.tags|default:'info' }} rounded-2xl px-4 py-3 text-sm flex items-center gap-2">
-      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="{% if message.tags == 'error' %}M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z{% else %}M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z{% endif %}"/>
-      </svg>
-      {{ message }}
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
   {# Header row #}
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7">
@@ -129,13 +76,14 @@
       <h1 class="font-serif-display text-2xl text-white">Manage Jobs</h1>
       <p class="text-white/45 text-sm mt-0.5">{{ company.company_name }} · All job postings</p>
     </div>
-    <a href="{% url 'create_job' %}"
+    {# Post a Job — add href="{% url 'create_job' %}" when jobs app form is ready #}
+    {# <a href=""
        class="bg-white/88 text-teal-700 font-semibold text-sm px-5 py-2.5 rounded-full hover:bg-white transition-all shadow-sm flex items-center gap-2 self-start sm:self-auto">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
       Post a New Job
-    </a>
+    </a> #}
   </div>
 
   {# Stats row #}
@@ -144,17 +92,17 @@
     <div class="glass-card rounded-2xl p-4 text-center">
       <p class="text-2xl font-bold text-emerald-300">{{ open_count }}</p>
       <p class="text-xs text-white/45 mt-1">Open</p>
-      <div class="stat_bar mt-2"><div class="stat_bar_fill bg-emerald-400" style="width:{{ open_count|default:0 }}0%"></div></div>
+      <div class="stat-bar mt-2"><div class="stat-bar-fill bg-emerald-400" style="width:{{ open_count|default:0 }}0%"></div></div>
     </div>
     <div class="glass-card rounded-2xl p-4 text-center">
       <p class="text-2xl font-bold text-amber-300">{{ draft_count }}</p>
       <p class="text-xs text-white/45 mt-1">Draft</p>
-      <div class="stat_bar mt-2"><div class="stat_bar_fill bg-amber-400" style="width:{{ draft_count|default:0 }}0%"></div></div>
+      <div class="stat-bar mt-2"><div class="stat-bar-fill bg-amber-400" style="width:{{ draft_count|default:0 }}0%"></div></div>
     </div>
     <div class="glass-card rounded-2xl p-4 text-center">
       <p class="text-2xl font-bold text-slate-300">{{ closed_count }}</p>
       <p class="text-xs text-white/45 mt-1">Closed</p>
-      <div class="stat_bar mt-2"><div class="stat_bar_fill bg-slate-400" style="width:{{ closed_count|default:0 }}0%"></div></div>
+      <div class="stat-bar mt-2"><div class="stat-bar-fill bg-slate-400" style="width:{{ closed_count|default:0 }}0%"></div></div>
     </div>
   </div>
   {% endif %}
@@ -163,11 +111,10 @@
   {% if jobs %}
   <div class="flex flex-col gap-4">
     {% for job in jobs %}
-
-    <div class="job_row glass-card rounded-3xl px-5 py-5">
+    <div class="job-row glass-card rounded-3xl px-5 py-5">
       <div class="flex items-start gap-5">
 
-        {# Company logo placeholder #}
+        {# Company logo #}
         <div class="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md border border-white/28 flex items-center justify-center shrink-0 overflow-hidden mt-0.5">
           {% if company.logo %}
             <img src="{{ company.logo.url }}" alt="{{ company.company_name }}" class="w-full h-full object-cover"/>
@@ -186,14 +133,11 @@
                 {{ job.title }}
               </a>
               <p class="text-sm text-white/50 mt-0.5">
-                {{ job.get_job_type_display }}
-                {% if job.location %} · {{ job.location }}{% endif %}
+                {{ job.get_job_type_display }}{% if job.location %} · {{ job.location }}{% endif %}
               </p>
             </div>
-
-            {# Status badge + applicant count #}
             <div class="flex items-center gap-2 shrink-0">
-              <span class="badge_{{ job.status }} text-[10px] px-2.5 py-0.5 rounded-full font-medium">
+              <span class="badge-{{ job.status }} text-[10px] px-2.5 py-0.5 rounded-full font-medium">
                 {% if job.status == 'open' %}Open{% elif job.status == 'draft' %}Draft{% else %}Closed{% endif %}
               </span>
               <span class="text-xs text-white/55 bg-white/10 border border-white/18 px-2.5 py-0.5 rounded-full">
@@ -224,29 +168,29 @@
       {# Action row #}
       <div class="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-white/10">
 
-        {# View applicants — only if there are any or job is open/closed #}
+        {# View Applicants — add href="{% url 'view_applicants' job.id %}" when applications app is ready #}
         {% if job.status != 'draft' %}
-        <a href="{% url 'view_applicants' job.id %}"
-           class="action_btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
+        {# <a href=""
+           class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
           Applicants ({{ job.application_count }})
-        </a>
+        </a> #}
         {% endif %}
 
-        {# Edit #}
-        <a href="{% url 'edit_job' job.id %}"
-           class="action_btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
+        {# Edit Job — add href="{% url 'edit_job' job.id %}" when jobs form app is ready #}
+        {# <a href=""
+           class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
           Edit
-        </a>
+        </a> #}
 
-        {# View post #}
+        {# View Post — jobs app ✓ ready #}
         <a href="{% url 'job_detail' job.id %}"
-           class="action_btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
+           class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -254,12 +198,11 @@
           View Post
         </a>
 
-        {# Toggle open/close (only for open or closed) — depends on no other apps #}
+        {# Toggle open/close — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
         {% if job.status != 'draft' %}
-        <form method="post" action="{% url 'toggle_job_status' job.id %}" class="inline">
+        {# <form method="post" action="" class="inline">
           {% csrf_token %}
-          <button type="submit"
-                  class="action_btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
+          <button type="submit" class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
             {% if job.status == 'open' %}
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
             Close Job
@@ -268,37 +211,38 @@
             Reopen Job
             {% endif %}
           </button>
-        </form>
+        </form> #}
         {% endif %}
 
-        {# If draft: publish #}
+        {# Publish draft — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
         {% if job.status == 'draft' %}
-        <form method="post" action="{% url 'toggle_job_status' job.id %}" class="inline">
+        {# <form method="post" action="" class="inline">
           {% csrf_token %}
           <button type="submit"
                   class="bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-medium flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-emerald-500/32 transition-all">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             Publish
           </button>
-        </form>
+        </form> #}
         {% endif %}
 
-        {# AI Screening — requires applications app #}
+        {# AI Screening — add href="{% url 'screening_dashboard' job.id %}" when screening app is ready #}
         {% if job.status != 'draft' and job.application_count > 0 %}
-        <a href="{% url 'screening_dashboard' job.id %}"
-           class="action_btn flex items-center gap-1.5 px-3 py-2 rounded-xl"
+        {# <a href=""
+           class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl"
            style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.28);color:#a5b4fc;">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
           AI Screening
-        </a>
+        </a> #}
         {% endif %}
 
-        {# Spacer + Delete button #}
         <div class="flex-1"></div>
+
+        {# Delete — add delete URL to openDeleteModal when jobs app is ready #}
         <button onclick="openDeleteModal('{{ job.id }}', '{{ job.title|escapejs }}')"
-                class="action_btn_danger flex items-center gap-1.5 px-3 py-2 rounded-xl">
+                class="action-btn-danger flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
@@ -306,7 +250,6 @@
         </button>
       </div>
     </div>
-
     {% endfor %}
   </div>
 
@@ -323,34 +266,32 @@
       <p class="text-white/70 font-semibold">No jobs posted yet</p>
       <p class="text-white/40 text-sm mt-1">Create your first job posting to start receiving applications.</p>
     </div>
-    <a href="{% url 'create_job' %}"
+    {# Post first job — add href="{% url 'create_job' %}" when jobs form is ready #}
+    {# <a href=""
        class="bg-white/88 text-teal-700 font-semibold text-sm px-6 py-3 rounded-full hover:bg-white transition-all">
       Post Your First Job
-    </a>
+    </a> #}
   </div>
   {% endif %}
 
 </main>
-
-{% endblock main_content %}
-
+{% endblock %}
 
 {% block extra_scripts %}
 <script>
-  /* Delete confirmation modal */
   function openDeleteModal(jobId, jobTitle) {
-    document.getElementById('delete_job_name').textContent = '"' + jobTitle + '"';
-    document.getElementById('delete_form').action = '/jobs/' + jobId + '/delete/';
-    document.getElementById('delete_modal').classList.remove('hidden');
+    document.getElementById('delete-job-name').textContent = '"' + jobTitle + '"';
+    {# Update this URL pattern when delete_job URL is confirmed: '/jobs/' + jobId + '/delete/' #}
+    document.getElementById('delete-form').action = '/jobs/' + jobId + '/delete/';
+    document.getElementById('delete-modal').classList.remove('hidden');
   }
 
   function closeDeleteModal() {
-    document.getElementById('delete_modal').classList.add('hidden');
+    document.getElementById('delete-modal').classList.add('hidden');
   }
 
-  // Close on backdrop click
-  document.getElementById('delete_modal').addEventListener('click', function (e) {
+  document.getElementById('delete-modal').addEventListener('click', function (e) {
     if (e.target === this) closeDeleteModal();
   });
 </script>
-{% endblock extra_scripts %}
+{% endblock %}

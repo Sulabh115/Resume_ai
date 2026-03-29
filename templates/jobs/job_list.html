@@ -1,137 +1,61 @@
-{% extends "base.html" %}
-{% block title %}Job Vacancies — ResumeAI{% endblock %}
+{% extends "candidate_base.html" %}
+{% block title %}Job Vacancies — hirepath{% endblock %}
+
+{# ── Mark Jobs active in navbar ── #}
+{% block nav_jobs %}active{% endblock %}
+
+{# ── Avatar: initials for candidate, first letter for company, or nothing for guests ── #}
+{% block nav_avatar %}
+{% if request.user.is_authenticated %}
+  <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+    {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
+  </div>
+{% else %}
+  <a href="{% url 'register' %}"
+     class="hidden md:block bg-white/18 border border-white/30 text-white text-sm font-medium px-5 py-2 rounded-full hover:bg-white/88 hover:text-indigo-700 transition-all">
+    Register
+  </a>
+{% endif %}
+{% endblock %}
 
 {% block extra_head %}
 <style>
-  .job_card { transition: all 0.2s ease; cursor: pointer; }
-  .job_card:hover {
+  .job-card { transition: all 0.2s ease; cursor: pointer; }
+  .job-card:hover {
     background: rgba(255,255,255,0.26) !important;
     border-color: rgba(255,255,255,0.55) !important;
     box-shadow: 0 8px 36px rgba(0,0,80,0.18), inset 0 1px 0 rgba(255,255,255,0.6);
   }
-  .job_card:hover .job_title { color: #fff; }
+  .job-card:hover .job-title { color: #fff; }
 
-  .apply_btn { transition: all 0.15s ease; }
-  .apply_btn:hover {
-    background: rgba(255,255,255,0.95);
-    color: #2136f3;
+  .apply-btn { transition: all 0.15s ease; }
+  .apply-btn:hover {
+    background: rgba(255,255,255,0.95); color: #2136f3;
     box-shadow: 0 4px 14px rgba(255,255,255,0.3);
   }
 
-  .job_tag {
+  .job-tag {
     font-size: 11px; padding: 2px 10px; border-radius: 999px;
     font-weight: 500; backdrop-filter: blur(8px);
   }
 
-  .filter_select {
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.25);
-    color: rgba(255,255,255,0.80);
-    appearance: none; -webkit-appearance: none;
+  .filter-select {
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.80); appearance: none; -webkit-appearance: none;
     outline: none; transition: all 0.15s ease;
   }
-  .filter_select:focus { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.50); color: #fff; }
-  .filter_select option { background: #3730a3; color: #fff; }
+  .filter-select:focus { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.50); color: #fff; }
+  .filter-select option { background: #3730a3; color: #fff; }
 
-  .empty_state {
+  .empty-state {
     background: rgba(255,255,255,0.07);
     border: 1.5px dashed rgba(255,255,255,0.20);
   }
 </style>
 {% endblock %}
 
-
 {% block main_content %}
-
-<div class="bg-canvas candidate">
-  <div class="shape-bl"></div>
-  <div class="shape-tr"></div>
-  <div class="shape-mid"></div>
-</div>
-
-{# ══════════ NAVBAR ══════════ #}
-<header class="fixed top-0 left-0 w-full z-50 bg-transparent">
-  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
-
-    <div class="flex items-center gap-2 backdrop-blur-sm bg-white/20 border border-white/25 rounded-full px-4 py-2 shadow-sm">
-      <span class="font-serif-display text-2xl text-white tracking-tight">ResumeAI</span>
-      <span class="text-sm text-white/50 font-light mt-1">/ jobs</span>
-    </div>
-
-    <nav class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/20 border border-white/25 rounded-full px-3 py-2 shadow-md">
-      {% if request.user.is_authenticated %}
-        {% if request.user.companyprofile %}
-          <a href="{% url 'company_dashboard' %}"  class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Dashboard</a>
-          <a href="{% url 'company_job_list' %}"   class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Manage Jobs</a>
-          <a href="{% url 'create_job' %}"         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Post a Job</a>
-        {% else %}
-          <a href="{% url 'candidate_dashboard' %}" class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Dashboard</a>
-          <a href="{% url 'job_list' %}"            class="nav-link active px-4 py-2 rounded-full text-sm font-medium text-white bg-white/20 shadow-sm">Jobs</a>
-          <a href="{% url 'resume_manager' %}"      class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Resumes</a>
-        {% endif %}
-      {% else %}
-        <a href="{% url 'job_list' %}" class="nav-link active px-4 py-2 rounded-full text-sm font-medium text-white bg-white/20 shadow-sm">Browse Jobs</a>
-        <a href="{% url 'login' %}"    class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Sign In</a>
-      {% endif %}
-    </nav>
-
-    <div class="flex items-center gap-2">
-      <button id="menu-toggle" type="button"
-              class="md:hidden w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/15 border border-white/25 hover:bg-white/25 transition-all">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-
-      {% if request.user.is_authenticated %}
-        <a href="{% if request.user.companyprofile %}{% url 'company_dashboard' %}{% else %}{% url 'candidate_dashboard' %}{% endif %}"
-           class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-          {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
-        </a>
-      {% else %}
-        <a href="{% url 'register' %}"
-           class="hidden md:block bg-white/18 border border-white/30 text-white text-sm font-medium px-5 py-2 rounded-full hover:bg-white/88 hover:text-indigo-700 transition-all">
-          Register
-        </a>
-      {% endif %}
-    </div>
-  </div>
-
-  {# Mobile dropdown #}
-  <div id="mobile-menu" class="hidden md:hidden mx-4 mb-2 glass-card rounded-2xl p-3 flex flex-col gap-1">
-    {% if request.user.is_authenticated %}
-      {% if request.user.companyprofile %}
-        <a href="{% url 'company_dashboard' %}"  class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Dashboard</a>
-        <a href="{% url 'company_job_list' %}"   class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Manage Jobs</a>
-        <a href="{% url 'create_job' %}"         class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Post a Job</a>
-      {% else %}
-        <a href="{% url 'candidate_dashboard' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Dashboard</a>
-        <a href="{% url 'job_list' %}"            class="px-4 py-2 rounded-xl text-sm font-medium text-white bg-white/20">Jobs</a>
-        <a href="{% url 'resume_manager' %}"      class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Resumes</a>
-      {% endif %}
-    {% else %}
-      <a href="{% url 'login' %}"    class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Sign In</a>
-      <a href="{% url 'register' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Register</a>
-    {% endif %}
-  </div>
-</header>
-
-{# ══════════ MAIN ══════════ #}
 <main class="max-w-5xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
-
-  {% if messages %}
-  <div class="flex flex-col gap-2 mb-5">
-    {% for message in messages %}
-    <div class="msg-{{ message.tags|default:'info' }} rounded-2xl px-4 py-3 text-sm flex items-center gap-2">
-      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="{% if message.tags == 'error' %}M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z{% else %}M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z{% endif %}"/>
-      </svg>
-      {{ message }}
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
   {# Page header #}
   <div class="flex items-center justify-between mb-5">
@@ -141,14 +65,15 @@
         <span class="text-white/80 font-medium">{{ total }}</span> open position{{ total|pluralize }}
       </p>
     </div>
+    {# Company: Post a Job — add href="{% url 'create_job' %}" when jobs app is ready #}
     {% if request.user.is_authenticated and request.user.companyprofile %}
-    <a href="{% url 'create_job' %}"
+    {# <a href=""
        class="bg-white/88 text-teal-700 font-semibold text-sm px-5 py-2.5 rounded-full hover:bg-white transition-all shadow-sm flex items-center gap-2">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
       Post a Job
-    </a>
+    </a> #}
     {% endif %}
   </div>
 
@@ -168,7 +93,7 @@
 
     {# Job type dropdown #}
     <select name="job_type" onchange="this.form.submit()"
-            class="filter_select rounded-xl px-4 py-2.5 text-sm cursor-pointer">
+            class="filter-select rounded-xl px-4 py-2.5 text-sm cursor-pointer">
       <option value="">All Types</option>
       {% for val, label in filter_form.fields.job_type.choices %}
         {% if val %}
@@ -179,13 +104,13 @@
 
     {# Experience dropdown #}
     <select name="experience" onchange="this.form.submit()"
-            class="filter_select rounded-xl px-4 py-2.5 text-sm cursor-pointer">
+            class="filter-select rounded-xl px-4 py-2.5 text-sm cursor-pointer">
       {% for val, label in filter_form.fields.experience.choices %}
       <option value="{{ val }}" {% if filter_form.experience.value == val %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
 
-    {# Location input + search button #}
+    {# Location + search button #}
     <div class="flex gap-2">
       <input type="text" name="location" value="{{ filter_form.location.value|default:'' }}"
              placeholder="Location…"
@@ -224,12 +149,11 @@
   </div>
   {% endif %}
 
-  {# Job cards #}
+  {# ── JOB CARDS ── #}
   {% if jobs %}
   <div class="flex flex-col gap-3">
     {% for job in jobs %}
-    <div class="job_card glass-card rounded-3xl px-5 py-4 flex items-center gap-5"
-         data-job-id="{{ job.id }}"
+    <div class="job-card glass-card rounded-3xl px-5 py-4 flex items-center gap-5"
          onclick="window.location.href='{% url 'job_detail' job.id %}'">
 
       {# Company logo #}
@@ -245,7 +169,7 @@
       {# Info #}
       <div class="flex-1 min-w-0">
         <a href="{% url 'job_detail' job.id %}"
-           class="job_title text-base font-semibold text-white/90 hover:text-white transition-colors block truncate"
+           class="job-title text-base font-semibold text-white/90 hover:text-white transition-colors block truncate"
            onclick="event.stopPropagation()">
           {{ job.title }}
         </a>
@@ -254,32 +178,32 @@
         </p>
 
         <div class="flex items-center gap-2 mt-2 flex-wrap">
-          <span class="job_tag bg-white/15 text-white border border-white/25">{{ job.get_job_type_display }}</span>
+          <span class="job-tag bg-white/15 text-white border border-white/25">{{ job.get_job_type_display }}</span>
 
           {% if job.salary_min or job.salary_max %}
-          <span class="job_tag bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">{{ job.salary_display }}</span>
+          <span class="job-tag bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">{{ job.salary_display }}</span>
           {% endif %}
 
           {% if job.experience_required %}
-          <span class="job_tag bg-white/10 text-white/60 border border-white/18">{{ job.experience_required }}+ yrs</span>
+          <span class="job-tag bg-white/10 text-white/60 border border-white/18">{{ job.experience_required }}+ yrs</span>
           {% endif %}
 
           {% if job.qualification_required %}
-          <span class="job_tag bg-violet-500/15 text-violet-300 border border-violet-400/20">{{ job.get_qualification_required_display }}</span>
+          <span class="job-tag bg-violet-500/15 text-violet-300 border border-violet-400/20">{{ job.get_qualification_required_display }}</span>
           {% endif %}
 
           {% for skill in job.skills.all|slice:":3" %}
-          <span class="job_tag bg-white/10 text-white/65 border border-white/18">{{ skill.name }}</span>
+          <span class="job-tag bg-white/10 text-white/65 border border-white/18">{{ skill.name }}</span>
           {% endfor %}
           {% if job.skills.count > 3 %}
-          <span class="job_tag bg-white/8 text-white/35 border border-white/12">+{{ job.skills.count|add:"-3" }}</span>
+          <span class="job-tag bg-white/8 text-white/35 border border-white/12">+{{ job.skills.count|add:"-3" }}</span>
           {% endif %}
 
           {% if job.deadline %}
-          <span class="job_tag bg-white/8 text-white/40 border border-white/12">Closes {{ job.deadline|date:"M j" }}</span>
+          <span class="job-tag bg-white/8 text-white/40 border border-white/12">Closes {{ job.deadline|date:"M j" }}</span>
           {% endif %}
 
-          <span class="job_tag bg-white/6 text-white/30 border border-white/10">{{ job.created_at|timesince }} ago</span>
+          <span class="job-tag bg-white/6 text-white/30 border border-white/10">{{ job.created_at|timesince }} ago</span>
         </div>
       </div>
 
@@ -287,20 +211,21 @@
       {% if request.user.is_authenticated %}
         {% if request.user.candidateprofile %}
         <a href="{% url 'apply_job' job.id %}"
-           class="apply_btn bg-white/20 border border-white/35 backdrop-blur-md text-white text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
+           class="apply-btn bg-white/20 border border-white/35 backdrop-blur-md text-white text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
            onclick="event.stopPropagation()">
           Apply
         </a>
         {% elif request.user.companyprofile == job.company %}
-        <a href="{% url 'edit_job' job.id %}"
-           class="apply_btn bg-white/15 border border-white/28 text-white/70 text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
+        {# Edit Job — add href="{% url 'edit_job' job.id %}" when jobs app is ready #}
+        {# <a href=""
+           class="apply-btn bg-white/15 border border-white/28 text-white/70 text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
            onclick="event.stopPropagation()">
           Edit
-        </a>
+        </a> #}
         {% endif %}
       {% else %}
       <a href="{% url 'login' %}"
-         class="apply_btn bg-white/18 border border-white/28 text-white text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
+         class="apply-btn bg-white/18 border border-white/28 text-white text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
          onclick="event.stopPropagation()">
         Sign in
       </a>
@@ -312,7 +237,7 @@
 
   {% else %}
   {# Empty state #}
-  <div class="empty_state rounded-3xl px-8 py-20 flex flex-col items-center gap-4 text-center mt-4">
+  <div class="empty-state rounded-3xl px-8 py-20 flex flex-col items-center gap-4 text-center mt-4">
     <div class="w-16 h-16 rounded-2xl bg-white/10 border border-white/18 flex items-center justify-center">
       <svg class="w-8 h-8 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -334,5 +259,4 @@
   {% endif %}
 
 </main>
-
-{% endblock main_content %}
+{% endblock %}

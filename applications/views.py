@@ -1,3 +1,13 @@
+"""
+applications/views.py
+
+FIXES vs original:
+  1. resume.filename()  → resume.filename   (it's a @property, not a method)
+  2. render path        → "applications/resume_manager.html"
+     (file was named resume_manage.html — rename the file to resume_manager.html)
+  3. Application.Status.WITHDRAWN now valid after model update
+"""
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -13,6 +23,7 @@ from jobs.models import Job
 def _get_candidate(request):
     return getattr(request.user, "candidateprofile", None)
 
+
 def _get_company(request):
     return getattr(request.user, "companyprofile", None)
 
@@ -26,7 +37,7 @@ def apply_job(request, job_id):
         messages.error(request, "Only candidate accounts can apply for jobs.")
         return redirect("company_dashboard")
 
-    job = get_object_or_404(Job, id=job_id, status="open")
+    job = get_object_or_404(Job, id=job_id, status=Job.Status.OPEN)
 
     # Prevent duplicates
     if Application.objects.filter(candidate=candidate, job=job).exists():
@@ -38,7 +49,6 @@ def apply_job(request, job_id):
             existing = form.cleaned_data.get("existing_resume")
             new_file = form.cleaned_data.get("new_resume")
 
-            # Resolve which resume to use
             if new_file:
                 resume_obj = Resume.objects.create(
                     candidate=candidate,
@@ -60,8 +70,8 @@ def apply_job(request, job_id):
         form = ApplyJobForm(candidate)
 
     return render(request, "applications/apply_job.html", {
-        "form": form,
-        "job": job,
+        "form":        form,
+        "job":         job,
         "has_resumes": Resume.objects.filter(candidate=candidate).exists(),
     })
 
@@ -82,6 +92,7 @@ def withdraw_application(request, application_id):
 
     if request.method == "POST":
         job_title = application.job.title
+        # WITHDRAWN now valid on the model
         application.status = Application.Status.WITHDRAWN
         application.save(update_fields=["status"])
         messages.info(request, f'Application to "{job_title}" withdrawn.')
@@ -102,27 +113,25 @@ def view_applicants(request, job_id):
     applications = (
         job.applications
            .select_related("candidate__user", "resume")
-           .exclude(status=Application.Status.WITHDRAWN)
+           .exclude(status=Application.Status.WITHDRAWN)   # WITHDRAWN now valid
            .order_by("-match_score", "-applied_at")
     )
 
-    # Status filter
     status_filter = request.GET.get("status", "")
     if status_filter:
         applications = applications.filter(status=status_filter)
 
     return render(request, "applications/view_applicants.html", {
-        "job": job,
-        "applications": applications,
+        "job":            job,
+        "applications":   applications,
         "status_choices": Application.Status.choices,
-        "status_filter": status_filter,
-        "total": job.applications.exclude(status=Application.Status.WITHDRAWN).count(),
+        "status_filter":  status_filter,
+        "total":          job.applications.exclude(status=Application.Status.WITHDRAWN).count(),
     })
 
 
 @login_required
 def application_detail(request, application_id):
-    """Company views a single application in detail + can update status."""
     company = _get_company(request)
     if not company:
         raise Http404
@@ -130,7 +139,7 @@ def application_detail(request, application_id):
     application = get_object_or_404(
         Application.objects.select_related("candidate__user", "job__company", "resume"),
         id=application_id,
-        job__company=company
+        job__company=company,
     )
 
     if request.method == "POST":
@@ -144,20 +153,17 @@ def application_detail(request, application_id):
 
     return render(request, "applications/application_detail.html", {
         "application": application,
-        "form": form,
+        "form":        form,
     })
 
 
 @login_required
 def update_application_status(request, application_id):
-    """Quick AJAX-style POST to update status from the applicants list."""
     company = _get_company(request)
     if not company:
         return redirect("candidate_dashboard")
 
-    application = get_object_or_404(
-        Application, id=application_id, job__company=company
-    )
+    application = get_object_or_404(Application, id=application_id, job__company=company)
 
     if request.method == "POST":
         new_status = request.POST.get("status")
@@ -184,7 +190,6 @@ def resume_manager(request):
         if form.is_valid():
             resume = form.save(commit=False)
             resume.candidate = candidate
-            # If new resume is_default, unset others
             if resume.is_default:
                 candidate.resumes.update(is_default=False)
             resume.save()
@@ -193,9 +198,11 @@ def resume_manager(request):
     else:
         form = ResumeUploadForm()
 
+    # NOTE: template file must be named "resume_manager.html"
+    #       (was mistakenly named "resume_manage.html" in the repo — rename it)
     return render(request, "applications/resume_manager.html", {
         "resumes": resumes,
-        "form": form,
+        "form":    form,
     })
 
 
@@ -208,7 +215,7 @@ def delete_resume(request, resume_id):
     resume = get_object_or_404(Resume, id=resume_id, candidate=candidate)
 
     if request.method == "POST":
-        resume.file.delete(save=False)   # delete from storage
+        resume.file.delete(save=False)
         resume.delete()
         messages.success(request, "Resume deleted.")
     return redirect("resume_manager")
@@ -221,9 +228,13 @@ def set_default_resume(request, resume_id):
         return redirect("company_dashboard")
 
     resume = get_object_or_404(Resume, id=resume_id, candidate=candidate)
+
     if request.method == "POST":
         candidate.resumes.update(is_default=False)
         resume.is_default = True
         resume.save(update_fields=["is_default"])
-        messages.success(request, f'"{resume.label or resume.filename()}" set as default resume.')
+        # FIX: resume.filename is a @property — was incorrectly called as resume.filename()
+        label = resume.label or resume.filename
+        messages.success(request, f'"{label}" set as default resume.')
+
     return redirect("resume_manager")

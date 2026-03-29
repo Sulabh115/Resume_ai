@@ -1,137 +1,69 @@
-{% extends "base.html" %}
-{% block title %}{{ job.title }} — ResumeAI{% endblock %}
+{% extends "candidate_base.html" %}
+{% block title %}{{ job.title }} — hirepath{% endblock %}
+
+{# ── Mark Jobs active in navbar ── #}
+{% block nav_jobs %}active{% endblock %}
+
+{# ── Avatar: initials for authenticated users, nothing for guests ── #}
+{% block nav_avatar %}
+{% if request.user.is_authenticated %}
+  {# Company that owns this job: show Edit button beside avatar #}
+  {% if request.user.companyprofile == job.company %}
+  {# Add href="{% url 'edit_job' job.id %}" when jobs app is ready #}
+  {# <a href=""
+     class="hidden md:flex items-center gap-1.5 bg-white/18 border border-white/28 text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-white/88 hover:text-indigo-700 transition-all">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+    </svg>
+    Edit
+  </a> #}
+  {% endif %}
+  <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+    {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
+  </div>
+{% endif %}
+{% endblock %}
 
 {% block extra_head %}
 <style>
-  .detail_tag {
+  .detail-tag {
     font-size: 12px; padding: 4px 14px; border-radius: 999px;
     font-weight: 500; backdrop-filter: blur(8px);
   }
 
-  .skill_chip {
+  .skill-chip {
     background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.28); color: #fff;
-    transition: all 0.15s ease;
+    border: 1px solid rgba(255,255,255,0.28); color: #fff; transition: all 0.15s ease;
   }
-  .skill_chip:hover { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.5); }
+  .skill-chip:hover { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.5); }
 
-  .section_card {
+  .section-card {
     background: rgba(255,255,255,0.10);
     border: 1px solid rgba(255,255,255,0.18);
   }
 
-  .apply_btn_large {
-    background: rgba(255,255,255,0.20);
-    border: 1px solid rgba(255,255,255,0.35);
+  .apply-btn-large {
+    background: rgba(255,255,255,0.20); border: 1px solid rgba(255,255,255,0.35);
     transition: all 0.15s ease;
   }
-  .apply_btn_large:hover {
-    background: rgba(255,255,255,0.92);
-    color: #2136f3;
+  .apply-btn-large:hover {
+    background: rgba(255,255,255,0.92); color: #2136f3;
     box-shadow: 0 4px 20px rgba(255,255,255,0.3);
   }
 
-  .bullet_list li {
+  .bullet-list li {
     position: relative; padding-left: 1.25rem;
     color: rgba(255,255,255,0.70); font-size: 0.875rem; line-height: 1.7;
   }
-  .bullet_list li::before {
+  .bullet-list li::before {
     content: ''; position: absolute; left: 0; top: 0.65em;
-    width: 5px; height: 5px; border-radius: 50%;
-    background: rgba(255,255,255,0.45);
+    width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.45);
   }
 </style>
 {% endblock %}
 
-
 {% block main_content %}
-
-<div class="bg-canvas candidate">
-  <div class="shape-bl"></div>
-  <div class="shape-tr"></div>
-  <div class="shape-mid"></div>
-</div>
-
-{# ══════════ NAVBAR ══════════ #}
-<header class="fixed top-0 left-0 w-full z-50 bg-transparent">
-  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
-
-    <div class="flex items-center gap-2 backdrop-blur-sm bg-white/20 border border-white/25 rounded-full px-4 py-2 shadow-sm">
-      <span class="font-serif-display text-2xl text-white tracking-tight">ResumeAI</span>
-      <span class="text-sm text-white/50 font-light mt-1">/ jobs</span>
-    </div>
-
-    <nav class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/20 border border-white/25 rounded-full px-3 py-2 shadow-md">
-      {% if request.user.is_authenticated %}
-        {% if request.user.companyprofile %}
-          <a href="{% url 'company_dashboard' %}"  class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Dashboard</a>
-          <a href="{% url 'company_job_list' %}"   class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Manage Jobs</a>
-          <a href="{% url 'create_job' %}"         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Post a Job</a>
-        {% else %}
-          <a href="{% url 'candidate_dashboard' %}" class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Dashboard</a>
-          <a href="{% url 'job_list' %}"            class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Jobs</a>
-          <a href="{% url 'resume_manager' %}"      class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Resumes</a>
-        {% endif %}
-      {% else %}
-        <a href="{% url 'job_list' %}" class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Browse Jobs</a>
-        <a href="{% url 'login' %}"    class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Sign In</a>
-      {% endif %}
-    </nav>
-
-    <div class="flex items-center gap-2">
-      <button id="menu-toggle" type="button"
-              class="md:hidden w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/15 border border-white/25 hover:bg-white/25 transition-all">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-
-      {% if request.user.is_authenticated %}
-        {% if request.user.companyprofile == job.company %}
-          {# Company that owns this job — show edit button #}
-          <a href="{% url 'edit_job' job.id %}"
-             class="hidden md:flex items-center gap-1.5 bg-white/18 border border-white/28 text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-white/88 hover:text-indigo-700 transition-all">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-            </svg>
-            Edit
-          </a>
-        {% endif %}
-        <a href="{% if request.user.companyprofile %}{% url 'company_dashboard' %}{% else %}{% url 'candidate_dashboard' %}{% endif %}"
-           class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-          {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
-        </a>
-      {% endif %}
-    </div>
-  </div>
-
-  {# Mobile dropdown #}
-  <div id="mobile-menu" class="hidden md:hidden mx-4 mb-2 glass-card rounded-2xl p-3 flex flex-col gap-1">
-    <a href="{% url 'job_list' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">← All Jobs</a>
-    {% if request.user.is_authenticated and request.user.companyprofile == job.company %}
-    <a href="{% url 'edit_job' job.id %}"   class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Edit Job</a>
-    <a href="{% url 'delete_job' job.id %}" class="px-4 py-2 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/10 transition-all">Delete Job</a>
-    {% endif %}
-  </div>
-</header>
-
-{# ══════════ MAIN ══════════ #}
 <main class="max-w-5xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
-
-  {# Flash messages #}
-  {% if messages %}
-  <div class="flex flex-col gap-2 mb-5">
-    {% for message in messages %}
-    <div class="msg-{{ message.tags|default:'info' }} rounded-2xl px-4 py-3 text-sm flex items-center gap-2">
-      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="{% if message.tags == 'error' %}M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z{% else %}M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z{% endif %}"/>
-      </svg>
-      {{ message }}
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
   {# Back link #}
   <a href="{% url 'job_list' %}"
@@ -177,43 +109,43 @@
 
         {# Meta tags #}
         <div class="flex flex-wrap gap-2 mt-5">
-          <span class="detail_tag bg-white/15 text-white border border-white/25">{{ job.get_job_type_display }}</span>
+          <span class="detail-tag bg-white/15 text-white border border-white/25">{{ job.get_job_type_display }}</span>
 
           {% if job.salary_min or job.salary_max %}
-          <span class="detail_tag bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">{{ job.salary_display }}</span>
+          <span class="detail-tag bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">{{ job.salary_display }}</span>
           {% else %}
-          <span class="detail_tag bg-white/10 text-white/55 border border-white/18">Salary not disclosed</span>
+          <span class="detail-tag bg-white/10 text-white/55 border border-white/18">Salary not disclosed</span>
           {% endif %}
 
           {% if job.experience_required %}
-          <span class="detail_tag bg-white/10 text-white/65 border border-white/20">{{ job.experience_required }}+ years experience</span>
+          <span class="detail-tag bg-white/10 text-white/65 border border-white/20">{{ job.experience_required }}+ years experience</span>
           {% endif %}
 
           {% if job.qualification_required %}
-          <span class="detail_tag bg-violet-500/20 text-violet-200 border border-violet-400/25">{{ job.get_qualification_required_display }}</span>
+          <span class="detail-tag bg-violet-500/20 text-violet-200 border border-violet-400/25">{{ job.get_qualification_required_display }}</span>
           {% endif %}
 
           {% if job.deadline %}
-          <span class="detail_tag bg-amber-500/15 text-amber-300 border border-amber-400/25">
+          <span class="detail-tag bg-amber-500/15 text-amber-300 border border-amber-400/25">
             Deadline: {{ job.deadline|date:"M j, Y" }}
           </span>
           {% endif %}
 
-          <span class="detail_tag bg-white/8 text-white/40 border border-white/12">Posted {{ job.created_at|timesince }} ago</span>
+          <span class="detail-tag bg-white/8 text-white/40 border border-white/12">Posted {{ job.created_at|timesince }} ago</span>
         </div>
       </div>
 
       {# About the role #}
-      <div class="section_card rounded-3xl p-6">
+      <div class="section-card rounded-3xl p-6">
         <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">About the Role</p>
         <p class="text-sm text-white/70 leading-relaxed whitespace-pre-line">{{ job.description }}</p>
       </div>
 
       {# Responsibilities #}
       {% if job.responsibilities %}
-      <div class="section_card rounded-3xl p-6">
+      <div class="section-card rounded-3xl p-6">
         <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Responsibilities</p>
-        <ul class="bullet_list space-y-1">
+        <ul class="bullet-list space-y-1">
           {% for line in job.responsibilities.splitlines %}
             {% if line.strip %}
             <li>{{ line|cut:"•"|cut:"-"|cut:"*"|strip }}</li>
@@ -225,9 +157,9 @@
 
       {# Requirements #}
       {% if job.requirements %}
-      <div class="section_card rounded-3xl p-6">
+      <div class="section-card rounded-3xl p-6">
         <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Requirements</p>
-        <ul class="bullet_list space-y-1">
+        <ul class="bullet-list space-y-1">
           {% for line in job.requirements.splitlines %}
             {% if line.strip %}
             <li>{{ line|cut:"•"|cut:"-"|cut:"*"|strip }}</li>
@@ -239,11 +171,11 @@
 
       {# Skills #}
       {% if job.skills.all %}
-      <div class="section_card rounded-3xl p-6">
+      <div class="section-card rounded-3xl p-6">
         <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Required Skills</p>
         <div class="flex flex-wrap gap-2">
           {% for skill in job.skills.all %}
-          <span class="skill_chip text-sm px-4 py-1.5 rounded-full cursor-default">{{ skill.name }}</span>
+          <span class="skill-chip text-sm px-4 py-1.5 rounded-full cursor-default">{{ skill.name }}</span>
           {% endfor %}
         </div>
       </div>
@@ -282,25 +214,30 @@
         {% if request.user.is_authenticated %}
 
           {% if request.user.companyprofile == job.company %}
-            {# Owning company — show management actions #}
-            <a href="{% url 'edit_job' job.id %}"
-               class="apply_btn_large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center mb-2">
+            {# Owning company — management actions #}
+            {# Edit Job — add href="{% url 'edit_job' job.id %}" when jobs app is ready #}
+            {# <a href=""
+               class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center mb-2">
               Edit This Posting
-            </a>
-            <a href="{% url 'view_applicants' job.id %}"
+            </a> #}
+
+            {# View Applicants — add href="{% url 'view_applicants' job.id %}" when applications app is ready #}
+            {# <a href=""
                class="w-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-semibold py-2.5 rounded-2xl text-sm block text-center hover:bg-emerald-500/32 transition-all mb-2">
               View Applicants ({{ job.application_count }})
-            </a>
-            <form method="post" action="{% url 'toggle_job_status' job.id %}">
+            </a> #}
+
+            {# Toggle job status — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
+            {# <form method="post" action="">
               {% csrf_token %}
               <button type="submit"
                       class="w-full bg-white/10 border border-white/18 text-white/65 text-sm py-2.5 rounded-2xl hover:bg-white/18 hover:text-white transition-all">
                 {% if job.status == 'open' %}Close Job{% elif job.status == 'closed' %}Reopen Job{% else %}Publish Job{% endif %}
               </button>
-            </form>
+            </form> #}
 
           {% elif request.user.candidateprofile %}
-            {# Candidate #}
+            {# Candidate apply flow #}
             {% if already_applied %}
             <div class="w-full bg-emerald-500/18 border border-emerald-400/30 text-emerald-300 font-semibold py-3 rounded-2xl text-sm flex items-center justify-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,10 +247,11 @@
             </div>
             <p class="text-xs text-white/35 text-center mt-2">You've already applied for this role.</p>
             {% elif job.is_open %}
-            <a href="{% url 'apply_job' job.id %}"
-               class="apply_btn_large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center">
+            {# Apply — add href="{% url 'apply_job' job.id %}" when applications app is ready #}
+            {# <a href=""
+               class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center">
               Apply Now
-            </a>
+            </a> #}
             {% else %}
             <div class="w-full bg-white/8 border border-white/15 text-white/45 text-sm py-3 rounded-2xl text-center">
               Applications Closed
@@ -321,9 +259,9 @@
             {% endif %}
 
           {% else %}
-            {# Some other company viewing #}
+            {# Another company viewing #}
             <a href="{% url 'job_list' %}"
-               class="apply_btn_large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center">
+               class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center">
               Browse All Jobs
             </a>
           {% endif %}
@@ -331,7 +269,7 @@
         {% else %}
           {# Not logged in #}
           <a href="{% url 'login' %}"
-             class="apply_btn_large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center mb-3">
+             class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center mb-3">
             Sign in to Apply
           </a>
           <a href="{% url 'register' %}"
@@ -386,17 +324,16 @@
         {% endif %}
       </div>
 
-      {# Company owner: delete button #}
+      {# Company owner: delete button — add href="{% url 'delete_job' job.id %}" when jobs app is ready #}
       {% if request.user.is_authenticated and request.user.companyprofile == job.company %}
-      <a href="{% url 'delete_job' job.id %}"
+      {# <a href=""
          class="w-full bg-red-500/12 border border-red-400/25 text-red-300 text-sm font-medium py-2.5 rounded-2xl block text-center hover:bg-red-500/22 transition-all">
         Delete This Posting
-      </a>
+      </a> #}
       {% endif %}
 
     </div>
   </div>
 
 </main>
-
-{% endblock main_content %}
+{% endblock %}

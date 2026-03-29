@@ -1,31 +1,22 @@
-{% extends "base.html" %}
-{% block title %}Edit Profile — ResumeAI{% endblock %}
+{% extends "candidate_base.html" %}
+{% block title %}Edit Profile — hirepath{% endblock %}
+
+{# ── No nav item is "active" on the edit profile page ── #}
+
+{# ── Show profile picture in navbar avatar ── #}
+{% block nav_avatar %}
+{% if candidate.profile_picture %}
+  <img src="{{ candidate.profile_picture.url }}" alt="Profile"
+       class="h-10 w-10 rounded-full border-2 border-white/30 object-cover hover:opacity-90 transition-all"/>
+{% else %}
+  <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+    {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
+  </div>
+{% endif %}
+{% endblock %}
 
 {% block extra_head %}
 <style>
-  /* Page-specific only — glass-card, bg-canvas, shapes, nav-link from base.html */
-
-  .form-input {
-    width: 100%; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 12px; padding: 11px 14px; font-size: 14px; color: #fff; outline: none;
-    transition: all 0.15s ease;
-  }
-  .form-input::placeholder { color: rgba(255,255,255,0.28); }
-  .form-input:focus { border-color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.16); }
-  textarea.form-input  { resize: vertical; min-height: 90px; line-height: 1.6; }
-  select.form-input    { color-scheme: dark; cursor: pointer; }
-  select.form-input option { background: #2d1b69; }
-
-  .form-label {
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
-    color: rgba(255,255,255,0.45); font-weight: 500; display: block; margin-bottom: 6px;
-  }
-  .section-title {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
-    color: rgba(255,255,255,0.35); font-weight: 500;
-    padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.14); margin-bottom: 18px;
-  }
-
   /* ── Avatar upload ── */
   .avatar-zone {
     width: 96px; height: 96px; border-radius: 50%;
@@ -41,129 +32,23 @@
     border-radius: 50%; opacity: 0; transition: opacity 0.2s ease;
   }
   .avatar-zone:hover .avatar-overlay { opacity: 1; }
-
-  /* ── Tag input system ── */
-  .tag-wrap {
-    display: flex; gap: 8px; align-items: flex-start;
-    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22);
-    border-radius: 12px; padding: 8px 10px; flex-wrap: wrap; min-height: 46px;
-    transition: border-color 0.15s ease;
-  }
-  .tag-wrap:focus-within { border-color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.14); }
-  .tag-item {
-    display: flex; align-items: center; gap: 5px;
-    background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.28);
-    border-radius: 999px; padding: 3px 10px 3px 12px; font-size: 12px; font-weight: 500; color: #fff;
-  }
-  .tag-item button { color: rgba(255,255,255,0.45); font-size: 14px; line-height: 1; background: none; border: none; cursor: pointer; padding: 0; transition: color 0.1s; }
-  .tag-item button:hover { color: #fff; }
-  .tag-bare { background: transparent; border: none; outline: none; color: #fff; font-size: 13px; min-width: 100px; flex: 1; }
-  .tag-bare::placeholder { color: rgba(255,255,255,0.25); }
-  .tag-add-btn {
-    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.26);
-    color: #fff; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 500;
-    cursor: pointer; transition: all 0.15s ease; white-space: nowrap; flex-shrink: 0;
-  }
-  .tag-add-btn:hover { background: rgba(255,255,255,0.26); }
-
-  /* ── Password strength ── */
-  .strength-bar  { height: 3px; border-radius: 999px; background: rgba(255,255,255,0.10); overflow: hidden; margin-top: 6px; }
-  .strength-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease, background 0.3s ease; width: 0; }
-
-  /* ── Buttons ── */
-  .btn-white  { background: #fff; color: #2136f3; font-weight: 600; transition: all 0.15s ease; }
-  .btn-white:hover  { background: rgba(255,255,255,0.92); box-shadow: 0 4px 20px rgba(255,255,255,0.25); }
-  .btn-ghost  { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.70); transition: all 0.15s ease; }
-  .btn-ghost:hover  { background: rgba(255,255,255,0.20); color: #fff; }
-  .btn-danger { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.30); color: #fca5a5; transition: all 0.15s ease; }
-  .btn-danger:hover { background: rgba(239,68,68,0.28); }
-
-  /* ── Sticky save bar ── */
-  .save-bar {
-    position: fixed; bottom: 0; left: 0; width: 100%; z-index: 50;
-    background: rgba(20,10,60,0.80); backdrop-filter: blur(16px);
-    border-top: 1px solid rgba(255,255,255,0.15);
-    padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    transform: translateY(100%); transition: transform 0.3s ease;
-  }
-  .save-bar.visible { transform: translateY(0); }
 </style>
 {% endblock %}
 
 {% block main_content %}
 
-{# Background #}
-<div class="bg-canvas candidate">
-  <div class="shape-bl"></div>
-  <div class="shape-tr"></div>
-  <div class="shape-mid"></div>
-</div>
-
-{# ── Sticky save bar ── #}
+{# ── Sticky save bar — sits above everything ── #}
 <div class="save-bar" id="save-bar">
-  <p class="text-white/60 text-sm">You have unsaved changes</p>
-  <div class="flex items-center gap-3">
+  <p class="text-white/60 text-sm hidden sm:block">You have unsaved changes</p>
+  <div class="flex items-center gap-3 ml-auto">
     <a href="{% url 'candidate_dashboard' %}" class="btn-ghost px-5 py-2.5 rounded-full text-sm">Discard</a>
     <button type="submit" form="profile-form" class="btn-white px-6 py-2.5 rounded-full text-sm">Save Changes</button>
   </div>
 </div>
 
-{# ══════════════ NAVBAR ══════════════ #}
-<header class="fixed top-0 left-0 w-full z-40">
-  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
-    <div class="flex items-center gap-2 backdrop-blur-sm bg-white/20 border border-white/25 rounded-full px-3 md:px-4 py-2 shadow-sm">
-      <span class="text-xl md:text-2xl text-white tracking-tight font-bold">ResumeAI</span>
-      <span class="hidden sm:block text-sm text-white/50 font-light">/&nbsp;candidate</span>
-    </div>
-
-    <nav class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/20 border border-white/25 rounded-full px-3 py-2 shadow-md">
-      <a href="{% url 'candidate_dashboard' %}"
-         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
-        Dashboard
-      </a>
-      <a href="{% url 'job_list' %}"
-         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
-        Jobs
-      </a>
-      <a href="{% url 'resume_manager' %}"
-         class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
-        Resumes
-      </a>
-    </nav>
-
-    <div class="flex items-center gap-2">
-      <button id="menu-toggle"
-              class="md:hidden p-2 rounded-full bg-white/15 border border-white/25 text-white hover:bg-white/25 transition-all">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-      {# Avatar — shows picture if uploaded, otherwise initials #}
-      {% if candidate.profile_picture %}
-        <img src="{{ candidate.profile_picture.url }}"
-             alt="{{ request.user.get_full_name }}"
-             class="h-10 w-10 rounded-full border-2 border-white/30 object-cover"/>
-      {% else %}
-        <div class="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 border border-white/30 font-bold text-white text-sm select-none">
-          {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
-        </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <div id="mobile-menu" class="hidden md:hidden px-4 pb-3">
-    <div class="backdrop-blur-sm bg-white/20 border border-white/25 rounded-2xl p-2 flex flex-col gap-0.5 text-sm">
-      <a href="{% url 'candidate_dashboard' %}" class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15">Dashboard</a>
-      <a href="{% url 'job_list' %}"             class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15">Jobs</a>
-      <a href="{% url 'resume_manager' %}"        class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15">Resumes</a>
-      <a href="{% url 'logout' %}"               class="px-4 py-2.5 rounded-xl font-medium text-red-300 hover:bg-red-500/10">Sign Out</a>
-    </div>
-  </div>
-</header>
-
-{# ══════════════ MAIN ══════════════ #}
 <main class="relative z-10 max-w-3xl mx-auto px-4 md:px-6 pt-[12vh] pb-28">
 
+  {# Back link #}
   <a href="{% url 'candidate_dashboard' %}"
      class="inline-flex items-center gap-2 text-white/55 hover:text-white text-sm mb-6 transition-colors group">
     <svg class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,7 +62,7 @@
     <p class="text-white/45 text-sm mt-1">Your profile info is used to pre-fill job applications.</p>
   </div>
 
-  {# Flash messages #}
+  {# Flash messages — inline (base handles global toasts) #}
   {% if messages %}
   <div class="mb-5 space-y-2">
     {% for message in messages %}
@@ -191,7 +76,7 @@
   </div>
   {% endif %}
 
-  {# enctype MUST be multipart/form-data for file upload to work #}
+  {# enctype=multipart/form-data required for file uploads #}
   <form id="profile-form" method="post" action="{% url 'candidate_edit_profile' %}"
         enctype="multipart/form-data" novalidate class="flex flex-col gap-5">
     {% csrf_token %}
@@ -201,25 +86,21 @@
       <p class="section-title">Profile Picture</p>
       <div class="flex items-center gap-6">
 
-        {# Avatar preview circle #}
         <div class="avatar-zone" id="avatar-zone"
              onclick="document.getElementById('avatar-input').click()">
           <input type="file" id="avatar-input" name="profile_picture"
                  accept="image/jpeg,image/png,image/webp"
                  class="hidden" onchange="previewAvatar(this)"/>
-
           {% if candidate.profile_picture %}
             <img id="avatar-img" src="{{ candidate.profile_picture.url }}"
                  alt="Profile picture" class="w-full h-full object-cover rounded-full"/>
           {% else %}
-            {# Initials placeholder — replaced by JS once a file is chosen #}
             <div id="avatar-initials"
                  class="w-full h-full rounded-full flex items-center justify-center font-bold text-2xl text-white select-none bg-white/15">
               {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
             </div>
             <img id="avatar-img" src="" alt="" class="w-full h-full object-cover rounded-full hidden"/>
           {% endif %}
-
           <div class="avatar-overlay">
             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -229,14 +110,12 @@
           </div>
         </div>
 
-        {# Controls beside avatar #}
         <div>
           <p class="text-sm font-medium text-white mb-1">
             {{ request.user.get_full_name|default:request.user.username }}
           </p>
           <p class="text-xs text-white/45 mb-3 leading-relaxed">
-            Click the photo to upload a new one.<br/>
-            JPG, PNG, or WebP — max 2 MB.
+            Click the photo to upload a new one.<br/>JPG, PNG, or WebP — max 2 MB.
           </p>
           <div class="flex flex-wrap gap-2">
             <button type="button"
@@ -249,9 +128,7 @@
                     class="btn-danger px-4 py-2 rounded-xl text-xs">
               Remove
             </button>
-            {# Hidden checkbox — checked by removeAvatar() to tell Django to clear the field #}
-            <input type="checkbox" name="profile_picture_clear" id="profile-picture-clear"
-                   class="hidden"/>
+            <input type="checkbox" name="profile_picture_clear" id="profile-picture-clear" class="hidden"/>
             {% endif %}
           </div>
         </div>
@@ -261,33 +138,27 @@
     {# ── ACCOUNT DETAILS ── #}
     <div class="glass-card rounded-3xl p-6">
       <p class="section-title">Account Details</p>
-
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label class="form-label">First Name</label>
-          <input type="text" name="first_name"
-                 value="{{ request.user.first_name }}"
+          <label class="form-label block mb-1.5">First Name</label>
+          <input type="text" name="first_name" value="{{ request.user.first_name }}"
                  class="form-input" placeholder="Aarav" oninput="markDirty()"/>
         </div>
         <div>
-          <label class="form-label">Last Name</label>
-          <input type="text" name="last_name"
-                 value="{{ request.user.last_name }}"
+          <label class="form-label block mb-1.5">Last Name</label>
+          <input type="text" name="last_name" value="{{ request.user.last_name }}"
                  class="form-input" placeholder="Thapa" oninput="markDirty()"/>
         </div>
       </div>
-
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="form-label">Email Address</label>
-          <input type="email" name="email"
-                 value="{{ request.user.email }}"
+          <label class="form-label block mb-1.5">Email Address</label>
+          <input type="email" name="email" value="{{ request.user.email }}"
                  class="form-input" placeholder="you@email.com" oninput="markDirty()"/>
         </div>
         <div>
-          <label class="form-label">Phone</label>
-          <input type="tel" name="phone"
-                 value="{{ candidate.phone|default:'' }}"
+          <label class="form-label block mb-1.5">Phone</label>
+          <input type="tel" name="phone" value="{{ candidate.phone|default:'' }}"
                  class="form-input" placeholder="+977 98XXXXXXXX" oninput="markDirty()"/>
         </div>
       </div>
@@ -297,9 +168,9 @@
     <div class="glass-card rounded-3xl p-6">
       <p class="section-title">Profile Details</p>
 
-      {# Skills — tag input, synced to hidden field #}
+      {# Skills — tag input synced to hidden field #}
       <div class="mb-5">
-        <label class="form-label">
+        <label class="form-label block mb-1.5">
           Skills
           <span class="normal-case tracking-normal text-white/25 text-[9px] font-normal ml-1">— press Enter or + to add</span>
         </label>
@@ -312,13 +183,12 @@
                     onclick="addTag('skill-input', 'skills-tags', 'skills-store')">+ Add</button>
           </div>
         </div>
-        <input type="hidden" name="skills" id="skills-store"
-               value="{{ candidate.skills|default:'' }}"/>
+        <input type="hidden" name="skills" id="skills-store" value="{{ candidate.skills|default:'' }}"/>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         <div>
-          <label class="form-label">Years of Experience</label>
+          <label class="form-label block mb-1.5">Years of Experience</label>
           <input type="number" name="experience" min="0"
                  value="{{ candidate.experience|default:0 }}"
                  class="form-input" placeholder="0" oninput="markDirty()"/>
@@ -326,7 +196,7 @@
       </div>
 
       <div>
-        <label class="form-label">
+        <label class="form-label block mb-1.5">
           Education / Qualifications
           <span class="normal-case tracking-normal text-white/25 text-[9px] font-normal ml-1">— one per line</span>
         </label>
@@ -344,7 +214,7 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label class="form-label">Current Password</label>
+          <label class="form-label block mb-1.5">Current Password</label>
           <div class="relative">
             <input type="password" name="current_password" id="curr-pw"
                    class="form-input pr-10" placeholder="Enter current password" oninput="markDirty()"/>
@@ -355,13 +225,15 @@
               </svg>
             </button>
           </div>
-          {% if password_error %}<p class="text-xs text-red-300 mt-1">{{ password_error }}</p>{% endif %}
+          {% if password_error %}
+          <p class="text-xs text-red-300 mt-1">{{ password_error }}</p>
+          {% endif %}
         </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="form-label">New Password</label>
+          <label class="form-label block mb-1.5">New Password</label>
           <div class="relative">
             <input type="password" name="new_password" id="new-pw"
                    class="form-input pr-10" placeholder="Min. 8 characters"
@@ -377,7 +249,7 @@
           <p id="strength-label" class="text-[10px] text-white/35 mt-1 h-4"></p>
         </div>
         <div>
-          <label class="form-label">Confirm New Password</label>
+          <label class="form-label block mb-1.5">Confirm New Password</label>
           <div class="relative">
             <input type="password" name="confirm_password" id="confirm-pw"
                    class="form-input pr-10" placeholder="Repeat new password" oninput="markDirty()"/>
@@ -392,7 +264,7 @@
       </div>
     </div>
 
-    {# Inline save row (fallback / mobile) #}
+    {# Inline save row — fallback / always visible on mobile #}
     <div class="flex gap-3 pb-2">
       <button type="submit" class="btn-white flex-1 py-3.5 rounded-2xl text-sm">Save All Changes</button>
       <a href="{% url 'candidate_dashboard' %}"
@@ -401,7 +273,6 @@
 
   </form>
 </main>
-
 {% endblock %}
 
 {% block extra_scripts %}
@@ -426,10 +297,10 @@ function checkStrength() {
   const label = document.getElementById('strength-label');
   if (!val) { fill.style.width = '0'; label.textContent = ''; return; }
   let score = 0;
-  if (val.length >= 8)          score++;
-  if (/[A-Z]/.test(val))        score++;
-  if (/[0-9]/.test(val))        score++;
-  if (/[^A-Za-z0-9]/.test(val)) score++;
+  if (val.length >= 8)           score++;
+  if (/[A-Z]/.test(val))         score++;
+  if (/[0-9]/.test(val))         score++;
+  if (/[^A-Za-z0-9]/.test(val))  score++;
   const levels = [
     { w: '0%',   bg: 'transparent', txt: '' },
     { w: '25%',  bg: '#f87171',     txt: 'Weak' },
@@ -454,7 +325,7 @@ function previewAvatar(input) {
   }
   const reader = new FileReader();
   reader.onload = function(e) {
-    const img = document.getElementById('avatar-img');
+    const img      = document.getElementById('avatar-img');
     const initials = document.getElementById('avatar-initials');
     img.src = e.target.result;
     img.classList.remove('hidden');
@@ -466,21 +337,14 @@ function previewAvatar(input) {
 
 /* ── Remove avatar ── */
 function removeAvatar() {
-  // Reset the file input
-  const input = document.getElementById('avatar-input');
-  input.value = '';
-
-  // Show initials, hide image
-  const img = document.getElementById('avatar-img');
+  document.getElementById('avatar-input').value = '';
+  const img      = document.getElementById('avatar-img');
   const initials = document.getElementById('avatar-initials');
   img.src = '';
   img.classList.add('hidden');
   if (initials) initials.classList.remove('hidden');
-
-  // Tell Django to clear the field on save
-  const clearCb = document.getElementById('profile-picture-clear');
-  if (clearCb) clearCb.checked = true;
-
+  const cb = document.getElementById('profile-picture-clear');
+  if (cb) cb.checked = true;
   markDirty();
 }
 
@@ -489,16 +353,16 @@ const tagStore = {};
 
 function initTags(storeId, containerId) {
   const hidden = document.getElementById(storeId);
-  const raw = hidden.value || '';
+  const raw    = hidden.value || '';
   tagStore[storeId] = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
   tagStore[storeId].forEach(val => renderTag(val, storeId, containerId));
 }
 
 function renderTag(val, storeId, containerId) {
   const tag = document.createElement('div');
-  tag.className = 'tag-item';
+  tag.className   = 'tag-item';
   tag.dataset.val = val.toLowerCase();
-  tag.innerHTML = `<span>${val}</span>
+  tag.innerHTML   = `<span>${val}</span>
     <button type="button" onclick="removeTag(this,'${storeId}','${containerId}')">×</button>`;
   document.getElementById(containerId).appendChild(tag);
 }
@@ -509,7 +373,7 @@ function syncHidden(storeId) {
 
 function addTag(inputId, containerId, storeId) {
   const input = document.getElementById(inputId);
-  const val = input.value.trim();
+  const val   = input.value.trim();
   if (!val) return;
   if (tagStore[storeId].map(v => v.toLowerCase()).includes(val.toLowerCase())) {
     input.value = ''; return;

@@ -78,7 +78,7 @@
   <div class="shape-mid"></div>
 </div>
 
-{# ── Navbar ── #}
+{% comment %} ── Navbar ── {% endcomment %}
 <nav class="fixed top-0 left-0 w-full z-50">
   <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
     <a href="{% url 'login' %}" class="flex items-center gap-2 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-4 py-2">
@@ -91,7 +91,7 @@
   </div>
 </nav>
 
-{# ── Main ── #}
+{% comment %} ── Main ── {% endcomment %}
 <main class="relative z-10 min-h-screen flex items-start justify-center px-4 md:px-6 pt-[13vh] pb-16">
   <div class="w-full max-w-2xl">
 
@@ -102,7 +102,7 @@
 
     <div class="glass-card rounded-3xl p-6 md:p-8">
 
-      {# Role toggle #}
+      {% comment %} Role toggle {% endcomment %}
       <div class="role-toggle mb-2">
         <div class="role-opt active" id="role_candidate" onclick="setRole('candidate')">
           <svg class="w-3.5 h-3.5 inline mr-1.5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,10 +119,12 @@
       </div>
       <p id="role_hint" class="text-xs text-white/35 text-center mb-7">Apply for jobs and track your applications</p>
 
-      {# ════════════════════════════════
-         CANDIDATE FORM
-      ════════════════════════════════ #}
-      {# enctype is on the form — required for profile_picture upload #}
+      {% comment %}
+        ════════════════════════════════
+        CANDIDATE FORM
+        ════════════════════════════════
+      {% endcomment %}
+      {% comment %} enctype is on the form — required for profile_picture upload {% endcomment %}
       <form id="candidate_form" method="post" action="{% url 'register' %}"
             enctype="multipart/form-data" novalidate>
         {% csrf_token %}
@@ -134,14 +136,15 @@
         </div>
         {% endif %}
 
-        {# ── Profile picture ── #}
+        {% comment %} ── Profile picture ── {% endcomment %}
         <div class="flex items-center gap-5 mb-7">
           <div class="flex flex-col items-center gap-1">
             <div class="avatar-zone" id="c_avatar_zone"
                  onclick="document.getElementById('c_avatar_input').click()">
               <input type="file" id="c_avatar_input" name="profile_picture"
                      accept="image/jpeg,image/png,image/webp"
-                     class="hidden" onchange="previewImage(this,'c_avatar_img','c_avatar_placeholder','c_avatar_remove')"/>
+                     class="hidden" required
+                     onchange="previewImage(this,'c_avatar_img','c_avatar_placeholder','c_avatar_remove')"/>
               <img id="c_avatar_img" src="" alt="" class="w-full h-full object-cover rounded-full hidden"/>
               <div id="c_avatar_placeholder" class="flex flex-col items-center gap-1">
                 <svg class="w-6 h-6 text-white/35" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,7 +157,7 @@
           <div>
             <p class="text-sm font-medium text-white mb-1">
               Profile Picture
-              <span class="text-white/35 text-xs font-normal ml-1">— optional</span>
+              <span class="text-red-400 text-xs font-normal ml-1">*</span>
             </p>
             <p class="text-xs text-white/40 leading-relaxed">Upload a clear photo. JPG, PNG, or WebP — max 2 MB.</p>
             <button type="button" id="c_avatar_remove"
@@ -165,7 +168,7 @@
           </div>
         </div>
 
-        {# ── Account Details ── #}
+        {% comment %} ── Account Details ── {% endcomment %}
         <p class="section-title">Account Details</p>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -253,7 +256,7 @@
           </div>
         </div>
 
-        {# ── Profile Details ── #}
+        {% comment %} ── Profile Details ── {% endcomment %}
         <p class="section-title">
           Profile Details
           <span class="normal-case tracking-normal text-white/25 text-[10px] font-normal ml-2">— optional, can be added later</span>
@@ -288,7 +291,7 @@
                     placeholder="e.g. B.Sc. Computer Science, TU — 2023">{{ candidate_form.education.value|default:'' }}</textarea>
         </div>
 
-        {# ── Terms ── #}
+        {% comment %} ── Terms ── {% endcomment %}
         <div class="flex items-start gap-3 mb-6">
           <input type="checkbox" id="c_terms" name="c_terms"
                  class="mt-0.5 w-4 h-4 accent-white rounded shrink-0 cursor-pointer"/>
@@ -306,9 +309,11 @@
         </button>
       </form>
 
-      {# ════════════════════════════════
-         HR / COMPANY FORM
-      ════════════════════════════════ #}
+      {% comment %}
+        ════════════════════════════════
+        HR / COMPANY FORM
+        ════════════════════════════════
+      {% endcomment %}
       <form id="hr_form" class="hidden" method="post" action="{% url 'register' %}"
             enctype="multipart/form-data" novalidate>
         {% csrf_token %}
@@ -320,14 +325,15 @@
         </div>
         {% endif %}
 
-        {# ── Company Logo ── #}
+        {% comment %} ── Company Logo ── {% endcomment %}
         <div class="flex items-center gap-5 mb-7">
           <div class="flex flex-col items-center gap-1">
             <div class="logo-zone" id="h_logo_zone"
                  onclick="document.getElementById('h_logo_input').click()">
               <input type="file" id="h_logo_input" name="logo"
                      accept="image/jpeg,image/png,image/webp"
-                     class="hidden" onchange="previewImage(this,'h_logo_img','h_logo_placeholder','h_logo_remove')"/>
+                     class="hidden" required
+                     onchange="previewImage(this,'h_logo_img','h_logo_placeholder','h_logo_remove')"/>
               <img id="h_logo_img" src="" alt="" class="w-full h-full object-cover rounded-2xl hidden"/>
               <div id="h_logo_placeholder" class="flex flex-col items-center gap-1 px-2">
                 <svg class="w-6 h-6 text-white/35" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -340,7 +346,7 @@
           <div>
             <p class="text-sm font-medium text-white mb-1">
               Company Logo
-              <span class="text-white/35 text-xs font-normal ml-1">— optional</span>
+              <span class="text-red-400 text-xs font-normal ml-1">*</span>
             </p>
             <p class="text-xs text-white/40 leading-relaxed">Your company's logo. JPG, PNG, or WebP — max 2 MB.</p>
             <button type="button" id="h_logo_remove"
@@ -351,7 +357,7 @@
           </div>
         </div>
 
-        {# ── HR Account Details ── #}
+        {% comment %} ── HR Account Details ── {% endcomment %}
         <p class="section-title">Your Account Details</p>
 
         <div class="mb-4">
@@ -416,7 +422,7 @@
           </div>
         </div>
 
-        {# HR phone — maps to company.phone saved in view #}
+        {% comment %} HR phone — maps to company.phone saved in view {% endcomment %}
         <div class="mb-6">
           <label class="form-label">Your Phone</label>
           <input type="tel" name="hr_phone"
@@ -424,7 +430,7 @@
                  class="form-input" placeholder="+977 98XXXXXXXX"/>
         </div>
 
-        {# ── Company Details ── #}
+        {% comment %} ── Company Details ── {% endcomment %}
         <p class="section-title">Company Details</p>
 
         <div class="mb-4">
@@ -466,7 +472,7 @@
           </div>
         </div>
 
-        {# ── Terms ── #}
+        {% comment %} ── Terms ── {% endcomment %}
         <div class="flex items-start gap-3 mb-6">
           <input type="checkbox" id="h_terms" name="h_terms"
                  class="mt-0.5 w-4 h-4 accent-white rounded shrink-0 cursor-pointer"/>

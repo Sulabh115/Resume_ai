@@ -1,138 +1,69 @@
-{% extends "base.html" %}
-{% block title %}{% if editing %}Edit Job{% else %}Post a Job{% endif %} — ResumeAI{% endblock %}
+{% extends "company_base.html" %}
+{% block title %}{% if editing %}Edit Job{% else %}Post a Job{% endif %} — hirepath{% endblock %}
+
+{# ── Mark Post a Job active when creating, Manage Jobs active when editing ── #}
+{% if editing %}
+{% block nav_jobs %}active{% endblock %}
+{% else %}
+{% block nav_post_job %}active{% endblock %}
+{% endif %}
+
+{# ── Company initial in navbar avatar ── #}
+{% block nav_avatar %}
+<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+  {{ request.user.companyprofile.company_name|first|upper }}
+</div>
+{% endblock %}
 
 {% block extra_head %}
 <style>
-  .form_input {
-    width: 100%; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22);
-    border-radius: 12px; padding: 11px 14px; font-size: 14px; color: #fff; outline: none;
-    transition: all 0.15s ease;
-  }
-  .form_input::placeholder { color: rgba(255,255,255,0.28); }
-  .form_input:focus { border-color: rgba(255,255,255,0.52); background: rgba(255,255,255,0.16); }
-  .form_input.field_error { border-color: rgba(248,113,113,0.70); }
-  textarea.form_input { resize: vertical; min-height: 96px; line-height: 1.6; }
-  select.form_input {
-    color-scheme: dark; cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;
-    padding-right: 36px; appearance: none; -webkit-appearance: none;
-  }
-  select.form_input option { background: #0e4f5f; }
-
-  .form_label {
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
-    color: rgba(255,255,255,0.45); font-weight: 500; display: block; margin-bottom: 6px;
-  }
-
-  .section_title {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
-    color: rgba(255,255,255,0.30); font-weight: 500;
-    padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.14); margin-bottom: 18px;
-  }
-
-  .field_error_msg { font-size: 11px; color: #fca5a5; margin-top: 4px; display: none; }
-  .field_error_msg.show { display: block; }
-
   /* ── Skill chip system ── */
-  .skill_chip_item {
+  .skill-chip-item {
     display: inline-flex; align-items: center; gap: 5px;
     background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.28);
     color: #fff; border-radius: 8px; padding: 3px 10px 3px 12px;
     font-size: 12px; font-weight: 500; animation: chipIn 0.15s ease;
   }
   @keyframes chipIn { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
-  .skill_chip_item button { color: rgba(255,255,255,0.45); font-size: 14px; line-height:1; background:none; border:none; cursor:pointer; padding:0; transition:color 0.1s; }
-  .skill_chip_item button:hover { color: #fca5a5; }
+  .skill-chip-item button { color: rgba(255,255,255,0.45); font-size: 14px; line-height:1; background:none; border:none; cursor:pointer; padding:0; transition:color 0.1s; }
+  .skill-chip-item button:hover { color: #fca5a5; }
 
-  .skills_container {
+  .skills-container {
     background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22);
     border-radius: 12px; padding: 8px 10px; min-height: 46px;
     display: flex; flex-wrap: wrap; gap: 6px; align-items: center; cursor: text;
     transition: border-color 0.15s ease;
   }
-  .skills_container:focus-within { border-color: rgba(255,255,255,0.52); background: rgba(255,255,255,0.14); }
+  .skills-container:focus-within { border-color: rgba(255,255,255,0.52); background: rgba(255,255,255,0.14); }
 
-  .skill_bare_input {
+  .skill-bare-input {
     background: transparent; border: none; outline: none;
     color: #fff; font-size: 13px; min-width: 140px; flex: 1;
   }
-  .skill_bare_input::placeholder { color: rgba(255,255,255,0.25); }
+  .skill-bare-input::placeholder { color: rgba(255,255,255,0.25); }
 
-  .skill_add_btn {
+  .skill-add-btn {
     background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.26);
     color: #fff; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 500;
     cursor: pointer; transition: all 0.15s ease; white-space: nowrap; flex-shrink: 0;
   }
-  .skill_add_btn:hover { background: rgba(255,255,255,0.26); }
+  .skill-add-btn:hover { background: rgba(255,255,255,0.26); }
 
-  /* Preview card in sidebar */
-  .preview_tag {
-    font-size: 11px; padding: 2px 10px; border-radius: 999px; font-weight: 500;
-  }
+  /* Preview tag */
+  .preview-tag { font-size: 11px; padding: 2px 10px; border-radius: 999px; font-weight: 500; }
 
   /* Char counter */
-  .char_count { font-size: 10px; color: rgba(255,255,255,0.28); text-align: right; margin-top: 4px; }
-  .char_count.warn { color: #fcd34d; }
-  .char_count.over { color: #f87171; }
+  .char-count { font-size: 10px; color: rgba(255,255,255,0.28); text-align: right; margin-top: 4px; }
+  .char-count.warn { color: #fcd34d; }
+  .char-count.over { color: #f87171; }
 
-  /* Buttons */
-  .btn_teal { background: rgba(255,255,255,0.90); color: #0e7490; font-weight: 600; transition: all 0.15s ease; }
-  .btn_teal:hover { background: #fff; box-shadow: 0 4px 20px rgba(255,255,255,0.25); }
-  .btn_ghost { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.70); transition: all 0.15s ease; }
-  .btn_ghost:hover { background: rgba(255,255,255,0.20); color: #fff; }
+  /* Field error */
+  .field-error-msg { font-size: 11px; color: #fca5a5; margin-top: 4px; display: none; }
+  .field-error-msg.show { display: block; }
 </style>
 {% endblock %}
 
-
 {% block main_content %}
-
-<div class="bg-canvas company">
-  <div class="shape-bl-teal"></div>
-  <div class="shape-tr-teal"></div>
-  <div class="shape-mid-teal"></div>
-</div>
-
-{# ══════════ NAVBAR ══════════ #}
-<header class="fixed top-0 left-0 w-full z-50 bg-transparent">
-  <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
-
-    <div class="flex items-center gap-2 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-4 py-2 shadow-sm">
-      <span class="font-serif-display text-2xl text-white tracking-tight">ResumeAI</span>
-      <span class="text-sm text-white/45 font-light mt-1">/ hr</span>
-    </div>
-
-    <nav class="hidden md:flex items-center gap-1 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-3 py-2 shadow-md">
-      <a href="{% url 'company_dashboard' %}"  class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Dashboard</a>
-      <a href="{% url 'company_job_list' %}"   class="nav-link px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">Manage Jobs</a>
-      <a href="{% url 'create_job' %}"
-         class="nav-link {% if not editing %}active{% endif %} px-4 py-2 rounded-full text-sm font-medium {% if not editing %}text-white bg-white/20 shadow-sm{% else %}text-white/80 hover:text-white hover:bg-white/15{% endif %} transition-all">
-        Post a Job
-      </a>
-    </nav>
-
-    <div class="flex items-center gap-2">
-      <button id="menu-toggle" type="button"
-              class="md:hidden w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/15 border border-white/25 hover:bg-white/25 transition-all">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-      <div class="h-10 w-10 flex items-center justify-center rounded-full bg-white/15 border border-white/25 font-bold text-white text-sm select-none">
-        {{ request.user.companyprofile.company_name|first|upper }}
-      </div>
-    </div>
-  </div>
-
-  <div id="mobile-menu" class="hidden md:hidden mx-4 mb-2 glass-card rounded-2xl p-3 flex flex-col gap-1">
-    <a href="{% url 'company_dashboard' %}"  class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Dashboard</a>
-    <a href="{% url 'company_job_list' %}"   class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Manage Jobs</a>
-    <a href="{% url 'create_job' %}"         class="px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:bg-white/15 hover:text-white transition-all">Post a Job</a>
-    <a href="{% url 'logout' %}"             class="px-4 py-2 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/10 transition-all">Sign Out</a>
-  </div>
-</header>
-
-{# ══════════ MAIN ══════════ #}
 <main class="max-w-5xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
 
   {# Back link #}
@@ -153,7 +84,7 @@
     </p>
   </div>
 
-  {# Flash messages #}
+  {# Flash messages — inline (base handles global toasts) #}
   {% if messages %}
   <div class="flex flex-col gap-2 mb-5">
     {% for message in messages %}
@@ -172,10 +103,10 @@
 
     {# ── LEFT: Form ── #}
     <div class="flex-1 min-w-0">
-      <form method="post" action="{% if editing %}{% url 'edit_job' job.id %}{% else %}{% url 'create_job' %}{% endif %}">
+      <form method="post"
+            action="{% if editing %}{% url 'edit_job' job.id %}{% else %}{% url 'create_job' %}{% endif %}">
         {% csrf_token %}
 
-        {# Non-field errors #}
         {% if form.non_field_errors %}
         <div class="bg-red-500/15 border border-red-400/25 text-red-300 rounded-2xl px-4 py-3 text-sm mb-5">
           {% for error in form.non_field_errors %}{{ error }}{% endfor %}
@@ -186,67 +117,62 @@
 
           {# ── BASICS ── #}
           <div class="glass-card rounded-3xl p-6">
-            <p class="section_title">Basic Information</p>
+            <p class="section-title">Basic Information</p>
 
-            {# Title #}
             <div class="mb-4">
-              <label class="form_label">Job Title <span class="text-red-400">*</span></label>
+              <label class="form-label block mb-1.5">Job Title <span class="text-red-400">*</span></label>
               <input type="text" name="title" value="{{ form.title.value|default:'' }}" required
-                     class="form_input {% if form.title.errors %}field_error{% endif %}"
+                     class="form-input {% if form.title.errors %}border-red-400/70{% endif %}"
                      placeholder="e.g. Senior Django Developer"
                      oninput="updatePreview()"/>
-              {% if form.title.errors %}<p class="field_error_msg show">{{ form.title.errors.0 }}</p>{% endif %}
+              {% if form.title.errors %}<p class="field-error-msg show">{{ form.title.errors.0 }}</p>{% endif %}
             </div>
 
-            {# Job type + Experience + Location #}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label class="form_label">Job Type</label>
-                <select name="job_type" class="form_input" onchange="updatePreview()">
+                <label class="form-label block mb-1.5">Job Type</label>
+                <select name="job_type" class="form-input" onchange="updatePreview()">
                   {% for val, label in form.fields.job_type.choices %}
                   <option value="{{ val }}" {% if form.job_type.value == val %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
               </div>
               <div>
-                <label class="form_label">Min. Experience (yrs)</label>
+                <label class="form-label block mb-1.5">Min. Experience (yrs)</label>
                 <input type="number" name="experience_required" min="0"
                        value="{{ form.experience_required.value|default:'0' }}"
-                       class="form_input" placeholder="2"
-                       oninput="updatePreview()"/>
+                       class="form-input" placeholder="2" oninput="updatePreview()"/>
               </div>
               <div>
-                <label class="form_label">Location</label>
+                <label class="form-label block mb-1.5">Location</label>
                 <input type="text" name="location"
                        value="{{ form.location.value|default:'' }}"
-                       class="form_input" placeholder="Kathmandu or Remote"
-                       oninput="updatePreview()"/>
+                       class="form-input" placeholder="Kathmandu or Remote" oninput="updatePreview()"/>
               </div>
             </div>
 
-            {# Qualification + Status + Deadline #}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label class="form_label">Qualification Required</label>
-                <select name="qualification_required" class="form_input">
+                <label class="form-label block mb-1.5">Qualification Required</label>
+                <select name="qualification_required" class="form-input">
                   {% for val, label in form.fields.qualification_required.choices %}
                   <option value="{{ val }}" {% if form.qualification_required.value == val %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
               </div>
               <div>
-                <label class="form_label">Status</label>
-                <select name="status" class="form_input">
+                <label class="form-label block mb-1.5">Status</label>
+                <select name="status" class="form-input">
                   {% for val, label in form.fields.status.choices %}
                   <option value="{{ val }}" {% if form.status.value == val %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
               </div>
               <div>
-                <label class="form_label">Application Deadline</label>
+                <label class="form-label block mb-1.5">Application Deadline</label>
                 <input type="date" name="deadline"
                        value="{{ form.deadline.value|default:'' }}"
-                       class="form_input" style="color-scheme: dark;"
+                       class="form-input" style="color-scheme: dark;"
                        oninput="updatePreview()"/>
               </div>
             </div>
@@ -254,58 +180,60 @@
 
           {# ── SALARY ── #}
           <div class="glass-card rounded-3xl p-6">
-            <p class="section_title">Compensation <span style="text-transform:none;letter-spacing:0;font-size:10px;color:rgba(255,255,255,0.25);">— optional</span></p>
+            <p class="section-title">
+              Compensation
+              <span class="normal-case tracking-normal text-white/25 text-[10px] font-normal ml-2">— optional</span>
+            </p>
             <div class="grid grid-cols-3 gap-4">
               <div>
-                <label class="form_label">Currency</label>
+                <label class="form-label block mb-1.5">Currency</label>
                 <input type="text" name="salary_currency"
                        value="{{ form.salary_currency.value|default:'NPR' }}"
-                       class="form_input" placeholder="NPR"
-                       oninput="updatePreview()"/>
+                       class="form-input" placeholder="NPR" oninput="updatePreview()"/>
               </div>
               <div>
-                <label class="form_label">Minimum</label>
+                <label class="form-label block mb-1.5">Minimum</label>
                 <input type="number" name="salary_min"
                        value="{{ form.salary_min.value|default:'' }}"
-                       class="form_input" placeholder="50000"/>
+                       class="form-input" placeholder="50000"/>
               </div>
               <div>
-                <label class="form_label">Maximum</label>
+                <label class="form-label block mb-1.5">Maximum</label>
                 <input type="number" name="salary_max"
                        value="{{ form.salary_max.value|default:'' }}"
-                       class="form_input" placeholder="80000"/>
+                       class="form-input" placeholder="80000"/>
               </div>
             </div>
           </div>
 
           {# ── ROLE DETAILS ── #}
           <div class="glass-card rounded-3xl p-6">
-            <p class="section_title">Role Details</p>
+            <p class="section-title">Role Details</p>
 
             <div class="mb-5">
-              <label class="form_label">Job Description <span class="text-red-400">*</span></label>
+              <label class="form-label block mb-1.5">Job Description <span class="text-red-400">*</span></label>
               <textarea name="description" required rows="5"
-                        class="form_input {% if form.description.errors %}field_error{% endif %}"
+                        class="form-input {% if form.description.errors %}border-red-400/70{% endif %}"
                         placeholder="Describe the role, team, and what makes this opportunity exciting…"
-                        oninput="charCount(this, 'desc_count', 1500)">{{ form.description.value|default:'' }}</textarea>
+                        oninput="charCount(this, 'desc-count', 1500)">{{ form.description.value|default:'' }}</textarea>
               <div class="flex justify-between items-start mt-1">
-                {% if form.description.errors %}<p class="field_error_msg show text-xs">{{ form.description.errors.0 }}</p>{% else %}<span></span>{% endif %}
-                <p id="desc_count" class="char_count">{{ form.description.value|default:''|length }} / 1500</p>
+                {% if form.description.errors %}<p class="field-error-msg show text-xs">{{ form.description.errors.0 }}</p>{% else %}<span></span>{% endif %}
+                <p id="desc-count" class="char-count">{{ form.description.value|default:''|length }} / 1500</p>
               </div>
             </div>
 
             <div class="mb-5">
-              <label class="form_label">Key Responsibilities</label>
+              <label class="form-label block mb-1.5">Key Responsibilities</label>
               <textarea name="responsibilities" rows="4"
-                        class="form_input"
+                        class="form-input"
                         placeholder="• Design and build scalable REST APIs&#10;• Collaborate with the frontend team&#10;• Conduct code reviews">{{ form.responsibilities.value|default:'' }}</textarea>
               <p class="text-white/28 text-xs mt-1">One responsibility per line</p>
             </div>
 
             <div>
-              <label class="form_label">Requirements</label>
+              <label class="form-label block mb-1.5">Requirements</label>
               <textarea name="requirements" rows="4"
-                        class="form_input"
+                        class="form-input"
                         placeholder="• Bachelor's degree in CS or related field&#10;• 3+ years Django experience">{{ form.requirements.value|default:'' }}</textarea>
               <p class="text-white/28 text-xs mt-1">One requirement per line</p>
             </div>
@@ -313,44 +241,42 @@
 
           {# ── SKILLS ── #}
           <div class="glass-card rounded-3xl p-6">
-            <p class="section_title">Skills & Technologies</p>
+            <p class="section-title">Skills & Technologies</p>
             <p class="text-white/40 text-xs mb-3">Type a skill and press Enter or comma — these are used by the AI screening engine.</p>
 
-            {# Hidden input submitted with form #}
-            <input type="hidden" name="skills_input" id="skills_hidden"
+            <input type="hidden" name="skills_input" id="skills-hidden"
                    value="{{ form.skills_input.value|default:'' }}"/>
 
-            {# Visual chip container #}
-            <div id="skills_container" class="skills_container"
-                 onclick="document.getElementById('skill_tag_input').focus()">
-              <div id="skill_chips"></div>
-              <input type="text" id="skill_tag_input"
-                     class="skill_bare_input"
+            <div id="skills-container" class="skills-container"
+                 onclick="document.getElementById('skill-tag-input').focus()">
+              <div id="skill-chips"></div>
+              <input type="text" id="skill-tag-input" class="skill-bare-input"
                      placeholder="e.g. Python, Django, React…"/>
-              <button type="button" class="skill_add_btn" onclick="addSkillChip()">+ Add</button>
+              <button type="button" class="skill-add-btn" onclick="addSkillChip()">+ Add</button>
             </div>
 
             {% if form.skills_input.errors %}
-            <p class="field_error_msg show text-xs mt-1">{{ form.skills_input.errors.0 }}</p>
+            <p class="field-error-msg show text-xs mt-1">{{ form.skills_input.errors.0 }}</p>
             {% endif %}
           </div>
 
         </div>
 
-        {# ── Submit row ── #}
+        {# Submit row #}
         <div class="flex items-center justify-between mt-6">
           <a href="{% if editing %}{% url 'job_detail' job.id %}{% else %}{% url 'company_job_list' %}{% endif %}"
-             class="btn_ghost px-6 py-3 rounded-2xl text-sm">Cancel</a>
+             class="btn-ghost px-6 py-3 rounded-2xl text-sm">Cancel</a>
 
           <div class="flex items-center gap-3">
             {% if editing %}
-            <a href="{% url 'delete_job' job.id %}"
+            {# Delete — add href="{% url 'delete_job' job.id %}" when jobs app is ready #}
+            {# <a href=""
                class="text-red-300 hover:text-red-200 text-sm transition-colors px-4 py-3"
                onclick="return confirm('Delete this job posting? This cannot be undone.')">
               Delete Posting
-            </a>
+            </a> #}
             {% endif %}
-            <button type="submit" class="btn_teal px-8 py-3 rounded-2xl text-sm">
+            <button type="submit" class="btn-teal px-8 py-3 rounded-2xl text-sm">
               {% if editing %}Save Changes{% else %}Publish Job{% endif %}
             </button>
           </div>
@@ -365,29 +291,27 @@
       {# Live preview card #}
       <div class="glass-card rounded-3xl p-5">
         <p class="text-[10px] text-white/40 uppercase tracking-widest mb-4">Live Preview</p>
-        <p id="prev_title" class="text-sm font-semibold text-white mb-1 truncate">Job Title</p>
+        <p id="prev-title" class="text-sm font-semibold text-white mb-1 truncate">Job Title</p>
         <p class="text-xs text-white/50 mb-3">{{ request.user.companyprofile.company_name }}</p>
-        <div id="prev_tags" class="flex flex-wrap gap-1.5 mb-3">
-          <span class="preview_tag bg-white/10 text-white/45 border border-white/15">Type</span>
+        <div id="prev-tags" class="flex flex-wrap gap-1.5 mb-3">
+          <span class="preview-tag bg-white/10 text-white/45 border border-white/15">Type</span>
         </div>
         <div class="border-t border-white/12 pt-3 space-y-1.5 text-xs">
           <div class="flex justify-between">
             <span class="text-white/40">Deadline</span>
-            <span id="prev_deadline" class="text-white/65">—</span>
+            <span id="prev-deadline" class="text-white/65">—</span>
           </div>
           <div class="flex justify-between">
             <span class="text-white/40">Location</span>
-            <span id="prev_location" class="text-white/65 text-right max-w-[100px] truncate">—</span>
+            <span id="prev-location" class="text-white/65 text-right max-w-[100px] truncate">—</span>
           </div>
         </div>
       </div>
 
-      {# Scoring weights guide #}
+      {# AI Scoring weights guide #}
       <div class="glass-card rounded-3xl p-5">
         <p class="text-[10px] text-white/40 uppercase tracking-widest mb-3">AI Scoring Weights</p>
         <div class="space-y-2.5">
-          {% for label, pct, color in "Skills,35,cyan-400|Experience,25,teal-400|Qualifications,20,emerald-400|Content Relevance,20,emerald-300"|split:"|" %}
-          {% endfor %}
           <div>
             <div class="flex justify-between text-xs mb-1"><span class="text-white/55">Skills</span><span class="text-white/70 font-medium">35%</span></div>
             <div class="h-1.5 bg-white/10 rounded-full overflow-hidden"><div class="h-full bg-cyan-400 rounded-full" style="width:35%"></div></div>
@@ -412,9 +336,9 @@
       <div class="glass-card rounded-3xl p-5">
         <p class="text-[10px] text-white/40 uppercase tracking-widest mb-3">Tips for Better Ranking</p>
         <ul class="space-y-2">
-          <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> List all required skills individually — each one is matched against the resume</li>
+          <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> List all required skills individually — each is matched against resumes</li>
           <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Be explicit about minimum years of experience</li>
-          <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Set the qualification level — it's scored directly against the resume</li>
+          <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Set the qualification level — scored directly against resumes</li>
           <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Longer, detailed description improves content similarity scoring</li>
         </ul>
       </div>
@@ -423,27 +347,22 @@
   </div>
 
 </main>
-
-{% endblock main_content %}
-
+{% endblock %}
 
 {% block extra_scripts %}
 <script>
-/* ── Skill chip system ─────────────────────────── */
+/* ── Skill chip system ── */
 (function () {
-  const hidden     = document.getElementById('skills_hidden');
-  const container  = document.getElementById('skills_container');
-  const input      = document.getElementById('skill_tag_input');
-  const chipsDiv   = document.getElementById('skill_chips');
-
-  // Parse existing skills from the hidden input (pre-populated on edit)
-  let skills = hidden.value ? hidden.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const hidden    = document.getElementById('skills-hidden');
+  const input     = document.getElementById('skill-tag-input');
+  const chipsDiv  = document.getElementById('skill-chips');
+  let skills      = hidden.value ? hidden.value.split(',').map(s => s.trim()).filter(Boolean) : [];
 
   function render() {
     chipsDiv.innerHTML = '';
     skills.forEach((skill, i) => {
       const chip = document.createElement('span');
-      chip.className = 'skill_chip_item';
+      chip.className = 'skill-chip-item';
       chip.innerHTML = `${skill} <button type="button" onclick="removeChip(${i})" title="Remove">×</button>`;
       chipsDiv.appendChild(chip);
     });
@@ -469,27 +388,25 @@
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      if (input.value.trim()) { window.addSkillChip(); }
+      if (input.value.trim()) window.addSkillChip();
     }
     if (e.key === 'Backspace' && !input.value && skills.length) {
-      skills.pop();
-      render();
+      skills.pop(); render();
     }
   });
 
-  // Handle pasting comma-separated list
   input.addEventListener('paste', function () {
     setTimeout(function () {
       const parts = input.value.split(',');
       if (parts.length > 1) {
-        parts.forEach(p => { if (p.trim()) { skills.push(p.trim()); } });
+        parts.forEach(p => { if (p.trim()) skills.push(p.trim()); });
         input.value = '';
         render();
       }
     }, 10);
   });
 
-  render(); // Initial render from existing value (important for edit mode)
+  render();
 })();
 
 
@@ -500,25 +417,24 @@ function updatePreview() {
   const deadline = document.querySelector('[name="deadline"]').value;
   const location = document.querySelector('[name="location"]').value;
 
-  document.getElementById('prev_title').textContent = title;
+  document.getElementById('prev-title').textContent = title;
 
-  const tagsEl = document.getElementById('prev_tags');
+  const tagsEl = document.getElementById('prev-tags');
   tagsEl.innerHTML = '';
   if (jobType && jobType.value) {
-    tagsEl.innerHTML += `<span class="preview_tag bg-white/15 text-white border border-white/25">${jobType.options[jobType.selectedIndex].text}</span>`;
+    tagsEl.innerHTML += `<span class="preview-tag bg-white/15 text-white border border-white/25">${jobType.options[jobType.selectedIndex].text}</span>`;
   }
   if (location) {
-    tagsEl.innerHTML += `<span class="preview_tag bg-white/10 text-white/55 border border-white/15">📍 ${location}</span>`;
+    tagsEl.innerHTML += `<span class="preview-tag bg-white/10 text-white/55 border border-white/15">📍 ${location}</span>`;
   }
   if (!jobType?.value && !location) {
-    tagsEl.innerHTML = `<span class="preview_tag bg-white/10 text-white/40 border border-white/12">Type / Location</span>`;
+    tagsEl.innerHTML = `<span class="preview-tag bg-white/10 text-white/40 border border-white/12">Type / Location</span>`;
   }
 
-  document.getElementById('prev_deadline').textContent = deadline
+  document.getElementById('prev-deadline').textContent = deadline
     ? new Date(deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—';
-
-  document.getElementById('prev_location').textContent = location || '—';
+  document.getElementById('prev-location').textContent = location || '—';
 }
 
 
@@ -527,16 +443,15 @@ function charCount(el, countId, max) {
   const len = el.value.length;
   const countEl = document.getElementById(countId);
   countEl.textContent = `${len} / ${max}`;
-  countEl.className = 'char_count' + (len > max ? ' over' : len > max * 0.85 ? ' warn' : '');
+  countEl.className = 'char-count' + (len > max ? ' over' : len > max * 0.85 ? ' warn' : '');
 }
 
 
-/* ── Init on load ── */
+/* ── Init ── */
 document.addEventListener('DOMContentLoaded', function () {
   updatePreview();
-  // Initialise char count on description if it has a pre-filled value (edit mode)
   const descEl = document.querySelector('[name="description"]');
-  if (descEl && descEl.value) charCount(descEl, 'desc_count', 1500);
+  if (descEl && descEl.value) charCount(descEl, 'desc-count', 1500);
 });
 </script>
-{% endblock extra_scripts %}
+{% endblock %}
