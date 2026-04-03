@@ -8,6 +8,13 @@ All job data is pulled directly from the database — no hardcoding.
     job.skills (M2M)        → compared with resume skills (fuzzy match)
     job.experience_required → compared with resume experience (date parsing)
     job.qualification_required → compared with resume qualifications (level match)
+
+FIX #2:
+    required_qualification is a CharField value like "" | "bachelor" | "master" etc.
+    calculate_qualification_score() expects job_qual_list: List[str], not a bare string.
+    Passing a bare string caused iteration over individual characters ("b","a","c",...)
+    so the qualification score was always 0.
+    Fix: wrap in a list — [required_qualification] if non-empty, else [].
 """
 
 from typing import Dict
@@ -58,8 +65,8 @@ def compute_match_score(resume_file, job) -> Dict:
     raw_resume_text = extract_text_from_resume(resume_file)
 
     # ── 2. Build job text from DB fields ──────────────────────────────────
-    #    Combines description + requirements + responsibilities + skill names
-    #    This is what gets compared semantically with the resume
+    #    Combines description + requirements + responsibilities + skill names.
+    #    This is what gets compared semantically with the resume.
     raw_job_text = _build_job_text(job)
 
     # ── 3. Clean both texts ────────────────────────────────────────────────
@@ -70,7 +77,7 @@ def compute_match_score(resume_file, job) -> Dict:
     resume_vector = text_to_vector(cleaned_resume)
     job_vector    = text_to_vector(cleaned_job)
 
-    # ── 5. Cosine similarity (job.description vs resume) ──────────────────
+    # ── 5. Cosine similarity (job description vs resume) ──────────────────
     cosine_score = cosine_similarity_score(resume_vector, job_vector)
 
     # ── 6. Skill matching (job.skills M2M from DB vs resume) ──────────────
@@ -86,14 +93,35 @@ def compute_match_score(resume_file, job) -> Dict:
     adj_exp_sc    = adjusted_experience_score(exp_sc, skill_sc)
 
     # ── 8. Qualification (job.qualification_required from DB vs resume) ───
+    #
+    #    FIX #2 is here.
+    #
     #    job.qualification_required is a CharField with choices:
     #    "" | "diploma" | "bachelor" | "master" | "phd"
+    #
+    #    calculate_qualification_score() signature:
+    #        def calculate_qualification_score(
+    #            candidate_quals: List[str],
+    #            job_qual_list:   List[str],   ← expects a LIST
+    #        ) -> float
+    #
+    #    BEFORE (broken):
+    #        qual_sc = calculate_qualification_score(
+    #            candidate_quals,
+    #            required_qualification        # bare string → iterates characters
+    #        )
+    #
+    #    AFTER (fixed):
+    #        Wrap the string in a list. If the field is blank (""), pass an
+    #        empty list so the function correctly returns a neutral score
+    #        rather than trying to match empty-string characters.
+    #
     candidate_quals        = extract_candidate_qualifications(raw_resume_text)
     required_qualification = job.qualification_required or ""
-    qual_sc                = calculate_qualification_score(
-                               candidate_quals,
-                               required_qualification   # ← direct DB value, no parsing
-                             )
+
+    job_qual_list = [required_qualification] if required_qualification else []
+
+    qual_sc = calculate_qualification_score(candidate_quals, job_qual_list)
 
     # ── 9. Final weighted score → 0–100 ───────────────────────────────────
     raw_score = final_score(cosine_score, skill_sc, adj_exp_sc, qual_sc)
@@ -166,11 +194,13 @@ def _build_summary(
     if required_exp > 0:
         if candidate_exp >= required_exp:
             parts.append(
-                f"Experience requirement met ({candidate_exp} yrs vs {required_exp} required)."
+                f"Experience requirement met "
+                f"({candidate_exp} yrs vs {required_exp} required)."
             )
         else:
             parts.append(
-                f"Experience below requirement ({candidate_exp} yrs vs {required_exp} required)."
+                f"Experience below requirement "
+                f"({candidate_exp} yrs vs {required_exp} required)."
             )
 
     # Qualification
@@ -182,7 +212,8 @@ def _build_summary(
             )
         else:
             parts.append(
-                f"No qualification detected in resume. Required: {required_qualification}."
+                f"No qualification detected in resume. "
+                f"Required: {required_qualification}."
             )
 
     return " ".join(parts)

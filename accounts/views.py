@@ -1,12 +1,32 @@
 """
 accounts/views.py
+
+FIX #8:
+    company_edit_profile previously called company.save() and
+    request.user.save() BEFORE the password validation block.
+    If the user submitted a wrong current password, the profile
+    fields (company_name, description, location, phone, website)
+    were already written to the DB before the error was returned —
+    silently persisting a partial save.
+
+    Fix: mirror the pattern that candidate_edit_profile already uses
+    correctly — validate password first, then save everything together
+    in a single code path at the end.
 """
 
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib import messages
-from django.db.models import Count
+from django.core.mail import EmailMultiAlternatives
+from django.db.models import Count, Q
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from django.conf import settings
 
 from .models import CandidateProfile, CompanyProfile
 from .forms import CandidateRegistrationForm, CompanyRegistrationForm, ForgotPasswordForm
@@ -159,56 +179,101 @@ def user_logout(request):
 
 def forgot_password(request):
     """
-    Step 1 — collect email and show success screen.
-    Email sending is stubbed; uncomment once email backend is configured.
+    Password reset — step 1.
+
+    Collects the user's email, generates a secure uid+token pair using
+    Django's built-in token generator, builds the reset URL, and sends
+    a plain-text + HTML email via EmailMultiAlternatives.
+
+    Security: the success screen is always shown even when no account
+    exists for the submitted email — this prevents user enumeration.
+
+    Token lifetime is controlled by PASSWORD_RESET_TIMEOUT in settings
+    (Django default: 259200 s = 3 days).  The template shows "24 hours"
+    as a conservative user-facing message; adjust both if needed.
     """
     if request.method == 'POST':
         form = ForgotPasswordForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data['email']
 
+            # Wrapped in try/except so a misconfigured email backend never
+            # shows an error page — the success screen is always shown.
+            try:
+                user = User.objects.get(email=email)
 
-            # EMAIL SENDING — uncomment when ready:
+                # Build uid + token using Django's built-in token generator.
+                # The token is single-use and expires after PASSWORD_RESET_TIMEOUT.
+                uid   = urlsafe_base64_encode(force_bytes(user.pk))
+                token = default_token_generator.make_token(user)
 
-            # from django.contrib.auth.models import User
-            # from django.contrib.auth.tokens import default_token_generator
-            # from django.utils.http import urlsafe_base64_encode
-            # from django.utils.encoding import force_bytes
-            # from django.urls import reverse
-            # from django.core.mail import send_mail
+                # Build the full absolute reset URL so it works in any
+                # environment without hardcoding the domain.
+                from django.urls import reverse
+                reset_path = reverse(
+                    'password_reset_confirm',
+                    kwargs={'uidb64': uid, 'token': token},
+                )
+                reset_url = request.build_absolute_uri(reset_path)
 
-            # try:
-            #     user = User.objects.get(email=email)
-            #     uid   = urlsafe_base64_encode(force_bytes(user.pk))
-            #     token = default_token_generator.make_token(user)
-            #     reset_url = request.build_absolute_uri(
-            #         reverse('password_reset_confirm',
-            #                 kwargs={'uidb64': uid, 'token': token})
-            #     )
-            #     send_mail(
-            #         subject='Reset your ResumeAI password',
-            #         message=f'Click here to reset your password:\n{reset_url}',
-            #         from_email=settings.DEFAULT_FROM_EMAIL,
-            #         recipient_list=[email],
-            #         fail_silently=False,
-            #     )
-            # except User.DoesNotExist:
-            #     pass  # Never reveal whether the email is registered
+                name = user.get_full_name() or user.username
 
+                # ── Plain-text body ───────────────────────────────────────
+                text_body = (
+                    f"Hi {name},\n\n"
+                    f"We received a request to reset the password for your "
+                    f"hirepath account.\n\n"
+                    f"Click the link below to choose a new password:\n"
+                    f"{reset_url}\n\n"
+                    f"This link is valid for 24 hours. If you did not request "
+                    f"a password reset, you can safely ignore this email — "
+                    f"your password will not change.\n\n"
+                    f"— The hirepath team"
+                )
+
+                # ── HTML body — rendered from a dedicated template ────────
+                html_body = render_to_string(
+                    'accounts/email/password_reset.html',
+                    {
+                        'name':      name,
+                        'reset_url': reset_url,
+                        'username':  user.username,
+                    },
+                )
+
+                # ── Send plain-text + HTML via EmailMultiAlternatives ─────
+                msg = EmailMultiAlternatives(
+                    subject    = 'Reset your hirepath password',
+                    body       = text_body,
+                    from_email = settings.DEFAULT_FROM_EMAIL,
+                    to         = [email],
+                )
+                msg.attach_alternative(html_body, 'text/html')
+                msg.send(fail_silently=False)
+
+            except User.DoesNotExist:
+                pass   # Never reveal whether the email is registered
+
+            except Exception:
+                pass   # SMTP / backend error — silently fall through
+
+            # Always show the success screen regardless of outcome.
             return render(request, 'accounts/forgot_password.html', {
                 'form':            form,
                 'email_sent':      True,
                 'submitted_email': email,
                 'steps': [
                     'Open your email inbox.',
-                    'Look for an email from ResumeAI.',
-                    'Click the reset link — it\'s valid for 24 hours.',
+                    'Look for an email from hirepath.',
+                    "Click the reset link — it's valid for 24 hours.",
                     'Choose a new password and sign in.',
                 ],
             })
 
+        # Form invalid — re-render with errors
         return render(request, 'accounts/forgot_password.html', {'form': form})
 
+    # GET — show the blank form
     return render(request, 'accounts/forgot_password.html', {
         'form': ForgotPasswordForm()
     })
@@ -309,8 +374,16 @@ def company_dashboard(request):
         .order_by('-applied_at')[:8]
     )
 
+    # FIX #12: active_jobs previously showed every OPEN job regardless of
+    # deadline.  Expired-but-open jobs (deadline < today) were visible in the
+    # dashboard sidebar even though company_job_list correctly excluded them.
+    # Added the same deadline filter that company_job_list already uses so
+    # both views are consistent.
+    today = timezone.now().date()
     active_jobs = (
-        jobs.filter(status=Job.Status.OPEN)
+        jobs
+        .filter(status=Job.Status.OPEN)
+        .filter(Q(deadline__gte=today) | Q(deadline__isnull=True))
         .annotate(app_count=Count('applications'))
     )
 
@@ -393,6 +466,7 @@ def candidate_edit_profile(request):
 
         messages.success(request, 'Profile updated successfully.')
         return redirect('candidate_dashboard')
+
     return render(request, 'accounts/candidate_edit_profile.html', {
         'candidate': candidate,
     })
@@ -416,25 +490,36 @@ def company_edit_profile(request):
         }
 
     if request.method == 'POST':
-        request.user.first_name = request.POST.get('first_name', '').strip()
-        request.user.last_name  = request.POST.get('last_name',  '').strip()
-        request.user.email      = request.POST.get('email',      '').strip()
-        request.user.save(update_fields=['first_name', 'last_name', 'email'])
 
-        company.company_name = request.POST.get('company_name', '').strip()
-        company.description  = request.POST.get('description',  '').strip()
-        company.location     = request.POST.get('location',     '').strip()
-        company.phone        = request.POST.get('phone',     '').strip()
-        website = request.POST.get('website', '').strip()
-        company.website = website if website else None
-        company.save()
+        # ── FIX #8: collect all field values into local variables first ──
+        #
+        # BEFORE (broken): request.user.save() and company.save() were called
+        # immediately after reading POST data, BEFORE the password validation
+        # block below.  If the password check failed, the view returned an
+        # error response — but the profile changes were already in the DB.
+        #
+        # AFTER (fixed): all values are staged into Python variables here.
+        # Nothing is written to the DB until we reach the save block at the
+        # bottom, which only runs after ALL validation has passed.
+        #
+        first_name   = request.POST.get('first_name',   '').strip()
+        last_name    = request.POST.get('last_name',    '').strip()
+        email        = request.POST.get('email',        '').strip()
+        company_name = request.POST.get('company_name', '').strip()
+        description  = request.POST.get('description',  '').strip()
+        location     = request.POST.get('location',     '').strip()
+        phone        = request.POST.get('phone',        '').strip()
+        website_raw  = request.POST.get('website',      '').strip()
+        website      = website_raw if website_raw else None
 
         curr_pw = request.POST.get('current_password', '')
         new_pw  = request.POST.get('new_password',     '')
         conf_pw = request.POST.get('confirm_password', '')
 
+        # ── Password validation — runs BEFORE any DB write ───────────────
         if curr_pw or new_pw:
             error_ctx = {'company': company, **_stats()}
+
             if not request.user.check_password(curr_pw):
                 return render(request, 'accounts/company_edit_profile.html', {
                     **error_ctx,
@@ -450,6 +535,22 @@ def company_edit_profile(request):
                     **error_ctx,
                     'password_error': 'Min. 8 characters required.',
                 })
+
+        # ── All validation passed — now write to DB ───────────────────────
+        request.user.first_name = first_name
+        request.user.last_name  = last_name
+        request.user.email      = email
+        request.user.save(update_fields=['first_name', 'last_name', 'email'])
+
+        company.company_name = company_name
+        company.description  = description
+        company.location     = location
+        company.phone        = phone
+        company.website      = website
+        company.save()
+
+        # ── Apply password change if requested ────────────────────────────
+        if curr_pw or new_pw:
             request.user.set_password(new_pw)
             request.user.save()
             update_session_auth_hash(request, request.user)

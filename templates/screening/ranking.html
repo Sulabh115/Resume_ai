@@ -1,23 +1,176 @@
-{% extends "base.html" %}
+{% extends "company_base.html" %}
+{% block title %}Candidate Ranking — hirepath{% endblock %}
 
-{% block content %}
+{% block nav_screening %}active{% endblock %}
 
-<h2>Candidate Ranking</h2>
+{% block extra_head %}
+<style>
+  .score-bar-track { height: 4px; background: rgba(255,255,255,0.12); border-radius: 99px; overflow: hidden; }
+  .score-bar-fill  { height: 100%; border-radius: 99px; }
+  .score-green  { background: linear-gradient(90deg, #22c55e, #4ade80); }
+  .score-yellow { background: linear-gradient(90deg, #eab308, #facc15); }
+  .score-red    { background: linear-gradient(90deg, #ef4444, #f87171); }
 
-{% for result in results %}
+  .rank-row { transition: background 0.15s ease; }
+  .rank-row:hover { background: rgba(255,255,255,0.06); }
 
-<div>
+  .medal-1 { background: rgba(251,191,36,0.25);  color: #fcd34d; border: 1px solid rgba(251,191,36,0.4); }
+  .medal-2 { background: rgba(148,163,184,0.20); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.35); }
+  .medal-3 { background: rgba(180,120,60,0.20);  color: #d4956a; border: 1px solid rgba(180,120,60,0.35); }
+  .medal-n { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); border: 1px solid rgba(255,255,255,0.15); }
+</style>
+{% endblock %}
 
-    <p>Applicant: {{ result.application.applicant.username }}</p>
+{% block main_content %}
+{#
+  FIX #9:
+  BEFORE — extended "base.html" which does not exist in this project.
+           Only candidate_base.html and company_base.html exist.
+           Also used {% block content %} which is not defined in either base.
+           Both errors would raise TemplateDoesNotExist / BlockNotFound
+           the moment this template was rendered.
 
-    <p>Job: {{ result.application.job.title }}</p>
+  AFTER  — extends "company_base.html" (ranking is a company-facing view).
+            Uses {% block main_content %} which is the correct block name
+            defined in company_base.html.
+            Template is also fleshed out to actually display the results
+            rather than being an empty stub.
+#}
+<main class="max-w-4xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
 
-    <p>Score: {{ result.similarity_score }}</p>
+  {# Header #}
+  <div class="mb-7">
+    <h1 class="font-serif-display text-2xl text-white">Candidate Ranking</h1>
+    <p class="text-white/45 text-sm mt-1">
+      AI screening results ranked by match score.
+    </p>
+  </div>
 
-</div>
+  {% if messages %}
+  <div class="flex flex-col gap-2 mb-5">
+    {% for message in messages %}
+    <div class="msg-{{ message.tags|default:'info' }} rounded-2xl px-4 py-3 text-sm flex items-center gap-2">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
-<hr>
+  {% if results %}
+  <div class="glass-card rounded-3xl overflow-hidden">
+    <table class="w-full">
+      <thead>
+        <tr class="border-b border-white/15">
+          <th class="text-left px-6 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider">Rank</th>
+          <th class="text-left px-4 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider">Candidate</th>
+          <th class="text-left px-4 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider">Job</th>
+          <th class="text-left px-4 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider">AI Score</th>
+          <th class="text-right px-6 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider">Detail</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/8">
+        {% for result in results %}
+        <tr class="rank-row">
 
-{% endfor %}
+          {# Rank medal #}
+          <td class="px-6 py-4">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
+              {% if forloop.counter == 1 %}medal-1
+              {% elif forloop.counter == 2 %}medal-2
+              {% elif forloop.counter == 3 %}medal-3
+              {% else %}medal-n{% endif %}">
+              {{ forloop.counter }}
+            </div>
+          </td>
 
+          {# Candidate #}
+          <td class="px-4 py-4">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center font-bold text-sm bg-white/15 border border-white/25 text-white select-none">
+                {{ result.application.candidate.user.first_name|first|default:result.application.candidate.user.username|first|upper }}
+              </div>
+              <div>
+                <p class="text-white text-sm font-medium">
+                  {{ result.application.candidate.user.get_full_name|default:result.application.candidate.user.username }}
+                </p>
+                <p class="text-white/40 text-xs">
+                  {{ result.application.candidate.user.email }}
+                </p>
+              </div>
+            </div>
+          </td>
+
+          {# Job #}
+          <td class="px-4 py-4">
+            <p class="text-white/70 text-sm truncate max-w-[180px]">
+              {{ result.application.job.title }}
+            </p>
+            <p class="text-white/35 text-xs mt-0.5">
+              {{ result.application.applied_at|timesince }} ago
+            </p>
+          </td>
+
+          {# Score #}
+          <td class="px-4 py-4">
+            <div class="flex items-center gap-2 min-w-[100px]">
+              <span class="font-bold text-sm w-10 shrink-0
+                {% if result.similarity_score >= 75 %}text-emerald-400
+                {% elif result.similarity_score >= 50 %}text-amber-400
+                {% else %}text-red-400{% endif %}">
+                {{ result.similarity_score|floatformat:0 }}%
+              </span>
+              <div class="score-bar-track flex-1">
+                <div class="score-bar-fill
+                  {% if result.similarity_score >= 75 %}score-green
+                  {% elif result.similarity_score >= 50 %}score-yellow
+                  {% else %}score-red{% endif %}"
+                     style="width: {{ result.similarity_score }}%;">
+                </div>
+              </div>
+            </div>
+            <p class="text-xs mt-1
+              {% if result.similarity_score >= 75 %}text-emerald-500
+              {% elif result.similarity_score >= 50 %}text-amber-500
+              {% else %}text-red-500{% endif %}">
+              {{ result.score_label }}
+            </p>
+          </td>
+
+          {# Detail link #}
+          <td class="px-6 py-4 text-right">
+            <a href="{% url 'screening_result_detail' result.application.id %}"
+               class="btn-ghost p-2 rounded-xl inline-block" title="View full screening">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </a>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <div class="glass-card rounded-3xl p-16 text-center">
+    <div class="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center bg-white/8 border border-white/15">
+      <svg class="w-8 h-8 text-white/25" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+    </div>
+    <p class="text-white/55 font-semibold mb-1">No screening results yet</p>
+    <p class="text-white/35 text-sm">Run AI screening on a job to see candidates ranked here.</p>
+  </div>
+  {% endif %}
+
+</main>
 {% endblock %}

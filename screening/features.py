@@ -31,17 +31,17 @@ MONTH_MAP = {
 
 # Level hierarchy: higher value = higher qualification
 QUAL_LEVELS = {
-    "phd":      3,
-    "doctor":   3,
-    "master":   2,
-    "msc":      2,
-    "mtech":    2,
-    "bachelor": 1,
-    "bsc":      1,
-    "be":       1,
-    "btech":    1,
-    "ba":       1,
-    "diploma":  0.5,
+    "phd":        3,
+    "doctor":     3,
+    "master":     2,
+    "msc":        2,
+    "mtech":      2,
+    "bachelor":   1,
+    "bsc":        1,
+    "be":         1,
+    "btech":      1,
+    "ba":         1,
+    "diploma":    0.5,
     "certificate": 0.2,
 }
 
@@ -65,8 +65,11 @@ def extract_skills(
     Returns:
         List of skills from skill_list that were found in the resume.
     """
-    text   = cleaned_resume_text.lower()
-    words  = text.split()
+    if not skill_list:
+        return []
+
+    text  = cleaned_resume_text.lower()
+    words = text.split()
 
     # Build unigrams, bigrams, trigrams for matching multi-word skills
     ngrams = (
@@ -94,7 +97,7 @@ def get_missing_skills(
     Return skills from job_skill_list NOT found in extracted_skills.
     Used to populate ScreeningResult.missing_skills.
     """
-    found_lower  = {s.lower() for s in extracted_skills}
+    found_lower = {s.lower() for s in extracted_skills}
     return [s for s in job_skill_list if s.lower() not in found_lower]
 
 
@@ -177,20 +180,38 @@ def calculate_qualification_score(
     Score the candidate's qualifications against the job's requirements.
 
     Rules:
+        - If job_qual_list is empty (no qualification required), return 1.0
+          — every candidate satisfies a job with no qualification requirement.
         - Exact match (after cleaning both sides) → 1.0
         - Candidate's highest level > job's required level → +0.10 bonus
         - No match → 0.0
 
+    Args:
+        candidate_quals: List of qualification phrases extracted from resume.
+                         e.g. ['Bachelor in Computer Science', 'AWS Certified']
+        job_qual_list:   List containing the required qualification string.
+                         e.g. ['bachelor'] or ['master'] or [] if none required.
+
+                         NOTE: This must always be a List[str].
+                         In utils.py, job.qualification_required (a CharField)
+                         is wrapped before calling:
+                             [required_qualification] if required_qualification else []
+
     Returns:
         Float between 0.0 and 1.10.
     """
+
+    # ── Guard: no qualification requirement → full score ──────────────────
+    if not job_qual_list:
+        return 1.0
+
     score                   = 0.0
     highest_candidate_level = 0.0
     highest_job_level       = 0.0
 
     cleaned_job_quals = [clean_text(jq) for jq in job_qual_list]
 
-    # Determine minimum required qualification level
+    # Determine minimum required qualification level from the job list
     for jq in cleaned_job_quals:
         for level_name, level_val in QUAL_LEVELS.items():
             if level_name in jq:
@@ -205,6 +226,12 @@ def calculate_qualification_score(
         for level_name, level_val in QUAL_LEVELS.items():
             if level_name in cq:
                 highest_candidate_level = max(highest_candidate_level, level_val)
+
+    # If candidate's level meets or exceeds the job requirement, give full score
+    # even if the cleaned phrase didn't match exactly
+    if highest_candidate_level > 0 and highest_job_level > 0:
+        if highest_candidate_level >= highest_job_level:
+            score = max(score, 1.0)
 
     # Bonus: candidate is over-qualified
     if highest_candidate_level > highest_job_level:

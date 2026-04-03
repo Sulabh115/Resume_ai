@@ -1,12 +1,7 @@
 {% extends "company_base.html" %}
 {% block title %}{% if editing %}Edit Job{% else %}Post a Job{% endif %} — hirepath{% endblock %}
 
-{# ── Mark Post a Job active when creating, Manage Jobs active when editing ── #}
-{% comment %} {% if editing %}
-{% block nav_jobs %}active{% endblock %}
-{% else %} {% endcomment %}
 {% block nav_post_job %}active{% endblock %}
-{% comment %} {% endif %} {% endcomment %}
 
 {% block extra_head %}
 <style>
@@ -77,7 +72,24 @@
     </p>
   </div>
 
-  {# Flash messages — inline (base handles global toasts) #}
+  {% if is_repost %}
+  <div class="flex items-start gap-3 bg-amber-500/15 border border-amber-400/30 rounded-2xl px-5 py-4 mb-6">
+    <svg class="w-4 h-4 text-amber-300 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+    </svg>
+    <div>
+      <p class="text-amber-300 text-sm font-semibold">Reposting an expired job</p>
+      <p class="text-amber-300/70 text-xs mt-0.5 leading-relaxed">
+        The form has been pre-filled from your previous posting.
+        <strong class="text-amber-300">Set a new application deadline</strong> before publishing —
+        the old deadline has been cleared.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Flash messages #}
   {% if messages %}
   <div class="flex flex-col gap-2 mb-5">
     {% for message in messages %}
@@ -162,10 +174,13 @@
                 </select>
               </div>
               <div>
-                <label class="form-label block mb-1.5">Application Deadline</label>
+                <label class="form-label block mb-1.5">
+                  Application Deadline
+                  {% if is_repost %}<span class="text-amber-400 text-[10px] normal-case tracking-normal font-normal ml-1">— required for repost</span>{% endif %}
+                </label>
                 <input type="date" name="deadline"
                        value="{{ form.deadline.value|default:'' }}"
-                       class="form-input" style="color-scheme: dark;"
+                       class="form-input {% if is_repost %}border-amber-400/60{% endif %}" style="color-scheme: dark;"
                        oninput="updatePreview()"/>
               </div>
             </div>
@@ -262,13 +277,13 @@
 
           <div class="flex items-center gap-3">
             {% if editing %}
-            {# Delete — add href="{% url 'delete_job' job.id %}" when jobs app is ready #}
-            <a href=""
+            <a href="{% url 'delete_job' job.id %}"
                class="text-red-300 hover:text-red-200 text-sm transition-colors px-4 py-3"
                onclick="return confirm('Delete this job posting? This cannot be undone.')">
               Delete Posting
             </a>
             {% endif %}
+
             <button type="submit" class="btn-teal px-8 py-3 rounded-2xl text-sm">
               {% if editing %}Save Changes{% else %}Publish Job{% endif %}
             </button>
@@ -285,7 +300,7 @@
       <div class="glass-card rounded-3xl p-5">
         <p class="text-[10px] text-white/40 uppercase tracking-widest mb-4">Live Preview</p>
         <p id="prev-title" class="text-sm font-semibold text-white mb-1 truncate">Job Title</p>
-        <p class="text-xs text-white/50 mb-3">{{ request.user.companyprofile.company_name }}</p>
+        <p class="text-xs text-white/50 mb-3">{{ company.company_name }}</p>
         <div id="prev-tags" class="flex flex-wrap gap-1.5 mb-3">
           <span class="preview-tag bg-white/10 text-white/45 border border-white/15">Type</span>
         </div>

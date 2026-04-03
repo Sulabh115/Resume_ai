@@ -48,10 +48,6 @@ def run_screening(request, job_id):
         messages.info(request, "All applications have already been screened. Use 'Re-screen all' to force re-run.")
         return redirect("view_applicants", job_id=job.id)
 
-    # ── screening loop ──
-    # compute_match_score will be plugged in once utils.py is ready.
-    # For now, ScreeningResult records are created with status=PENDING
-    # so the results page shows a "waiting to be screened" state.
     processed = 0
     failed = 0
 
@@ -61,39 +57,52 @@ def run_screening(request, job_id):
             defaults={"status": ScreeningResult.Status.PENDING}
         )
 
+        # If re-screening an existing result, reset it to PROCESSING first
+        if not created:
+            result.status = ScreeningResult.Status.PROCESSING
+            result.save(update_fields=["status"])
+
         try:
-            # ── PLUG IN HERE ──────────────────────────────────────────
-            score_data = compute_match_score(app.resume, job)
-            result.similarity_score  = score_data["score"]
+            score_data = compute_match_score(app.resume.file, job)
+
+            result.similarity_score = score_data["score"]
             result.extracted_skills  = score_data.get("extracted_skills", "")
             result.matched_skills    = score_data.get("matched_skills", "")
             result.missing_skills    = score_data.get("missing_skills", "")
             result.summary           = score_data.get("summary", "")
             result.status            = ScreeningResult.Status.DONE
+            result.error_message     = ""
             result.save()
-            
-            # Push score back to Application for sorting
-            app.match_score  = result.similarity_score
-            app.score_notes  = result.summary
-            app.save(update_fields=["match_score", "score_notes"])
-            # ─────────────────────────────────────────────────────────
 
-            # Placeholder until utils is ready:
-            result.status = ScreeningResult.Status.PENDING
-            result.save(update_fields=["status"])
+            # Push score back to Application for dashboard sorting
+            app.match_score = result.similarity_score
+            app.score_notes = result.summary
+            app.save(update_fields=["match_score", "score_notes"])
+
             processed += 1
 
         except Exception as e:
-            result.status = ScreeningResult.Status.FAILED
+            result.status        = ScreeningResult.Status.FAILED
             result.error_message = str(e)
             result.save(update_fields=["status", "error_message"])
             failed += 1
 
     # Feedback message
-    if failed:
-        messages.warning(request, f"Screening triggered for {processed} application(s). {failed} failed.")
+    if failed and processed:
+        messages.warning(
+            request,
+            f"Screening complete. {processed} succeeded, {failed} failed."
+        )
+    elif failed and not processed:
+        messages.error(
+            request,
+            f"Screening failed for all {failed} application(s). Check resume files."
+        )
     else:
-        messages.success(request, f"Screening triggered for {processed} application(s). Results will appear shortly.")
+        messages.success(
+            request,
+            f"Screening complete. {processed} application(s) scored successfully."
+        )
 
     return redirect("view_applicants", job_id=job.id)
 
@@ -121,17 +130,17 @@ def screening_dashboard(request, job_id):
     )
 
     # Summary stats
-    total       = applications.count()
-    screened    = ScreeningResult.objects.filter(
+    total    = applications.count()
+    screened = ScreeningResult.objects.filter(
                     application__job=job,
                     status=ScreeningResult.Status.DONE
-                  ).count()
-    pending     = total - screened
-    strong      = ScreeningResult.objects.filter(
+               ).count()
+    pending  = total - screened
+    strong   = ScreeningResult.objects.filter(
                     application__job=job,
                     status=ScreeningResult.Status.DONE,
                     similarity_score__gte=75
-                  ).count()
+               ).count()
 
     return render(request, "screening/screening_dashboard.html", {
         "job":          job,
@@ -163,7 +172,6 @@ def screening_result_detail(request, application_id):
         job__company=company,
     )
 
-    # Get or create a placeholder result
     result = getattr(application, "screening_result", None)
 
     return render(request, "screening/screening_result_detail.html", {

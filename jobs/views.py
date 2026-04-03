@@ -9,12 +9,30 @@ FIXES vs previous:
                  Also passes has_resumes to template.
   3. job_detail: imports CandidateProfile at top level instead of inline.
   4. create_job: no changes — skill resolution already correct.
+
+FIX #3:
+  old_jobs view previously built ranked_json as a bare list of
+  {name, score, status} dicts.  The JS openModal() in old_jobs.html
+  reads data.title, data.total, data.shortlisted, data.applicants —
+  none of which existed.  ranked_json is now a dict with those four
+  keys so the modal renders correctly.
+
+FIX #6:
+  old_jobs.html references job.avg_score_offset to set the SVG ring
+  stroke-dashoffset.  The view annotates avg_score via Avg() but never
+  computed avg_score_offset, so the ring always showed a full circle.
+  avg_score_offset is now computed in the loop:
+      offset = 94.2 * (1 - avg_score / 100)
+  where 94.2 is the circumference of the r=15 SVG circle.
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
 from django.db.models import Q, Count, Avg
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from accounts.models import CandidateProfile, CompanyProfile
@@ -79,7 +97,6 @@ def job_list(request):
         if location:
             jobs = jobs.filter(location__icontains=location)
 
-    # FIX: check resume existence via DB, not hasattr
     has_resumes = False
     candidate   = _get_candidate(request)
     if candidate:
@@ -106,20 +123,23 @@ def job_detail(request, job_id):
     if candidate:
         already_applied = job.applications.filter(candidate=candidate).exists()
         has_resumes     = candidate.resumes.exists()
+
     def clean_lines(text):
         return [
             line.strip().lstrip("•-*").strip()
             for line in (text or "").splitlines()
             if line.strip()
         ]
+
     responsibilities_list = clean_lines(job.responsibilities)
     requirements_list     = clean_lines(job.requirements)
+
     return render(request, "jobs/job_detail.html", {
-        "job":             job,
-        "already_applied": already_applied,
-        "has_resumes":     has_resumes,
+        "job":                   job,
+        "already_applied":       already_applied,
+        "has_resumes":           has_resumes,
         "responsibilities_list": responsibilities_list,
-        "requirements_list": requirements_list,
+        "requirements_list":     requirements_list,
     })
 
 
@@ -131,6 +151,23 @@ def create_job(request):
     HR creates a new job posting.
     Uses commit=False so we can attach the company before saving,
     then manually resolve skills (because M2M needs the PK to exist first).
+
+    REPOST FIX:
+        GET ?repost=<job_id> pre-populates the form from an existing job so
+        HR can quickly re-list an expired posting without retyping everything.
+
+        Fields carried over:  title, description, requirements,
+                              responsibilities, experience_required,
+                              qualification_required, location, job_type,
+                              salary_min, salary_max, salary_currency, skills.
+
+        Fields intentionally reset:
+            deadline → blank   (old deadline is in the past, must set a new one)
+            status   → OPEN    (new posting should be live immediately)
+            results_published / shortlist_email_sent → False (new job, no history)
+
+        The source job is looked up with company= guard so one company cannot
+        repost another company's job.
     """
     company = _get_company(request)
     if not company:
@@ -157,12 +194,51 @@ def create_job(request):
             messages.success(request, f'"{job.title}" posted successfully.')
             return redirect("job_detail", job_id=job.id)
     else:
-        form = JobForm()
+        # ── Repost: pre-populate form from an existing job ────────────────
+        repost_id  = request.GET.get("repost")
+        repost_job = None
+
+        if repost_id:
+            try:
+                repost_job = Job.objects.get(id=int(repost_id), company=company)
+            except (Job.DoesNotExist, ValueError, TypeError):
+                # Invalid or foreign job id — silently fall through to blank form
+                repost_job = None
+
+        if repost_job:
+            # Build initial data dict from the source job — reset volatile fields
+            initial = {
+                "title":                  f"{repost_job.title}",
+                "description":            repost_job.description,
+                "requirements":           repost_job.requirements,
+                "responsibilities":       repost_job.responsibilities,
+                "experience_required":    repost_job.experience_required,
+                "qualification_required": repost_job.qualification_required,
+                "location":               repost_job.location,
+                "job_type":               repost_job.job_type,
+                "salary_min":             repost_job.salary_min,
+                "salary_max":             repost_job.salary_max,
+                "salary_currency":        repost_job.salary_currency,
+                "status":                 Job.Status.OPEN,
+                "deadline":               None,   # must set a fresh deadline
+                "skills_input":           ", ".join(
+                                              repost_job.skills.values_list("name", flat=True)
+                                          ),
+            }
+            form = JobForm(initial=initial)
+            messages.info(
+                request,
+                f'Reposting "{repost_job.title}". '
+                f'Update the deadline and make any other changes before publishing.'
+            )
+        else:
+            form = JobForm()
 
     return render(request, "jobs/create_job.html", {
-        "form":    form,
-        "editing": False,
-        "company" : company,
+        "form":       form,
+        "editing":    False,
+        "company":    company,
+        "is_repost":  repost_job is not None if request.method == "GET" else False,
     })
 
 
@@ -251,9 +327,9 @@ def company_job_list(request):
     company = _get_company(request)
     if not company:
         return redirect('candidate_dashboard')
- 
+
     today = timezone.now().date()
- 
+
     jobs = (
         Job.objects
         .filter(company=company)
@@ -265,10 +341,10 @@ def company_job_list(request):
         )
         .order_by('-created_at')
     )
- 
+
     return render(request, 'jobs/company_job_list.html', {
-        'company':  company,
-        'jobs':     jobs,
+        'company': company,
+        'jobs':    jobs,
     })
 
 
@@ -277,13 +353,25 @@ def old_jobs(request):
     """
     Expired jobs — deadline passed OR status is closed.
     Shows ranked applicants for results modal (as JSON per job).
+
+    FIX #3:
+        ranked_json was previously a bare list of {name, score, status} dicts.
+        openModal() in old_jobs.html reads:
+            data.title        — job title for modal heading
+            data.total        — total applicant count for stats strip
+            data.shortlisted  — shortlisted count for stats strip
+            data.applicants   — the ranked list array
+
+        ranked_json is now a dict containing all four keys so the modal
+        renders correctly.  When results are not yet published, an empty
+        stub dict is stored so openModal() always receives a valid object.
     """
     company = _get_company(request)
     if not company:
         return redirect('candidate_dashboard')
- 
+
     today = timezone.now().date()
- 
+
     jobs = (
         Job.objects
         .filter(company=company)
@@ -304,10 +392,31 @@ def old_jobs(request):
         )
         .order_by('-deadline')
     )
- 
+
     # Pre-load ranked applicants for each job (used in "View Results" modal)
     jobs_data = []
     for job in jobs:
+
+        # FIX #6: compute avg_score_offset for the SVG ring in old_jobs.html.
+        #
+        # The ring uses stroke-dasharray="94.2" (circumference of r=15 circle:
+        # 2 * π * 15 ≈ 94.25).  stroke-dashoffset controls how much of the
+        # ring is filled:
+        #   offset = circumference - (score / 100) * circumference
+        #   offset = 94.2 * (1 - score / 100)
+        #
+        # A score of 0   → offset 94.2  (ring fully empty)
+        # A score of 100 → offset 0.0   (ring fully filled)
+        # A score of 70  → offset 94.2 * 0.30 = 28.3
+        #
+        # avg_score is None when no applications have been screened yet —
+        # guard with "or 0" so the arithmetic never raises TypeError.
+        #
+        if job.avg_score is not None:
+            job.avg_score_offset = round(94.2 * (1 - job.avg_score / 100), 1)
+        else:
+            job.avg_score_offset = 94.2   # ring stays empty when no score
+
         if job.results_published:
             applicants_qs = (
                 Application.objects
@@ -316,29 +425,49 @@ def old_jobs(request):
                 .select_related('candidate__user')
                 .order_by('-match_score')
             )
+
             ranked = []
             for app in applicants_qs:
                 u = app.candidate.user
                 ranked.append({
-                    'name':   u.get_full_name() or u.username,
-                    'score':  round(app.match_score or 0),
-                    'status': app.status,
+                    'name':        u.get_full_name() or u.username,
+                    'score':       round(app.match_score or 0),
+                    'status':      app.status,
+                    # FIX #3: explicit boolean so JS badge logic works
+                    'shortlisted': app.status == 'shortlisted',
                 })
-            ranked_json = json.dumps(ranked)
+
+            total_count       = len(ranked)
+            shortlisted_count = sum(1 for a in ranked if a['shortlisted'])
+
+            # FIX #3: wrap in a dict with all keys openModal() expects
+            ranked_json = json.dumps({
+                'title':       job.title,
+                'total':       total_count,
+                'shortlisted': shortlisted_count,
+                'applicants':  ranked,
+            })
+
         else:
-            ranked_json = '[]'
- 
+            # Results not published yet — provide a safe empty stub
+            ranked_json = json.dumps({
+                'title':       job.title,
+                'total':       0,
+                'shortlisted': 0,
+                'applicants':  [],
+            })
+
         jobs_data.append({
-            'job':        job,
+            'job':         job,
             'ranked_json': ranked_json,
         })
- 
+
     return render(request, 'jobs/old_jobs.html', {
         'company':   company,
         'jobs_data': jobs_data,
     })
- 
- 
+
+
 @login_required
 def to_shortlist(request):
     """
@@ -348,14 +477,14 @@ def to_shortlist(request):
     company = _get_company(request)
     if not company:
         return redirect('candidate_dashboard')
- 
+
     jobs = (
         Job.objects
         .filter(company=company, results_published=True, shortlist_email_sent=False)
         .annotate(applicant_count=Count('applications', distinct=True))
         .order_by('-deadline')
     )
- 
+
     job_data = []
     for job in jobs:
         shortlisted = (
@@ -365,84 +494,158 @@ def to_shortlist(request):
             .order_by('-match_score')
         )
         job_data.append({
-            'job':        job,
+            'job':         job,
             'shortlisted': shortlisted,
         })
- 
+
     return render(request, 'jobs/to_shortlist.html', {
         'company':  company,
         'job_data': job_data,
         'total':    len(job_data),
     })
- 
- 
+
+
 @login_required
 def send_shortlist_email(request, job_id):
     """
-    POST handler — send interview email to all shortlisted candidates for a job.
-    Sets job.shortlist_email_sent = True on success.
+    POST handler — send interview invitation emails to all shortlisted
+    candidates for a job.
+
+    E2 improvements over the original:
+      - Replaces fail_silently=True with proper per-recipient try/except
+        so individual failures are tracked without aborting the whole batch.
+      - Uses EmailMultiAlternatives to send plain-text + HTML in one message.
+        Email clients that support HTML get the styled template; others get
+        clean plain text.
+      - Tracks sent_count, no_email_count, and error_count separately so
+        the flash message is precise.
+      - Sets job.shortlist_email_sent = True only when at least one email
+        succeeded — if every send failed the flag stays False so HR can retry.
+      - HTML body rendered from a dedicated template
+        (jobs/email/shortlist_interview.html) for easy styling.
     """
     if request.method != 'POST':
         return redirect('to_shortlist')
- 
+
     company = _get_company(request)
     if not company:
         return redirect('candidate_dashboard')
- 
+
     job = get_object_or_404(Job, id=job_id, company=company)
- 
-    interview_date     = request.POST.get('interview_date', '')
-    interview_time     = request.POST.get('interview_time', '')
+
+    interview_date     = request.POST.get('interview_date',     '')
+    interview_time     = request.POST.get('interview_time',     '')
     interview_duration = request.POST.get('interview_duration', '1 hour')
     interview_location = request.POST.get('interview_location', '')
-    interview_notes    = request.POST.get('interview_notes', '')
- 
+    interview_notes    = request.POST.get('interview_notes',    '')
+
     shortlisted = (
         Application.objects
         .filter(job=job, status='shortlisted')
         .select_related('candidate__user')
+        .order_by('-match_score')
     )
- 
-    from django.core.mail import send_mail
- 
-    sent_count = 0
+
+    # Shared template context — same for every recipient except name/email
+    email_ctx_base = {
+        'job':                job,
+        'company':            company,
+        'interview_date':     interview_date,
+        'interview_time':     interview_time,
+        'interview_duration': interview_duration,
+        'interview_location': interview_location,
+        'interview_notes':    interview_notes,
+    }
+
+    sent_count     = 0   # emails successfully handed to the mail backend
+    no_email_count = 0   # candidates with no email address on their account
+    error_count    = 0   # SMTP / backend errors for candidates that do have email
+
     for app in shortlisted:
-        u    = app.candidate.user
-        name = u.get_full_name() or u.username
+        u     = app.candidate.user
+        name  = u.get_full_name() or u.username
         email = u.email
+
         if not email:
+            no_email_count += 1
             continue
- 
-        subject = f"Congratulations! You've been shortlisted — {job.title}"
-        notes_line = f"\n📌 Notes: {interview_notes}" if interview_notes.strip() else ""
-        body = (
+
+        subject = f"You've been shortlisted — {job.title} at {company.company_name}"
+
+        # ── Plain-text body ───────────────────────────────────────────────
+        notes_line = f"\nNotes: {interview_notes}" if interview_notes.strip() else ""
+        text_body = (
             f"Dear {name},\n\n"
             f"Congratulations! You have been shortlisted for {job.title} "
             f"at {company.company_name}.\n\n"
             f"Interview Details:\n"
-            f"📅 Date: {interview_date}\n"
-            f"⏰ Time: {interview_time}\n"
-            f"⏱ Duration: {interview_duration}\n"
-            f"📍 Location: {interview_location}"
+            f"Date:     {interview_date}\n"
+            f"Time:     {interview_time}\n"
+            f"Duration: {interview_duration}\n"
+            f"Location: {interview_location}"
             f"{notes_line}\n\n"
-            f"Please reply to confirm your attendance.\n\n"
+            f"Please reply to this email to confirm your attendance.\n\n"
             f"Best regards,\n"
             f"HR Team — {company.company_name}"
         )
+
+        # ── HTML body — rendered from a dedicated template ────────────────
+        html_body = render_to_string(
+            'jobs/email/shortlist_interview.html',
+            {**email_ctx_base, 'candidate_name': name},
+        )
+
         try:
-            send_mail(subject, body, None, [email], fail_silently=True)
+            msg = EmailMultiAlternatives(
+                subject    = subject,
+                body       = text_body,
+                from_email = settings.DEFAULT_FROM_EMAIL,
+                to         = [email],
+                reply_to   = [company.user.email] if company.user.email else None,
+            )
+            msg.attach_alternative(html_body, 'text/html')
+            msg.send(fail_silently=False)
             sent_count += 1
+
         except Exception:
-            pass
- 
-    job.shortlist_email_sent = True
-    job.save(update_fields=['shortlist_email_sent'])
- 
-    from django.contrib import messages
-    messages.success(
-        request,
-        f"Interview emails sent to {sent_count} shortlisted candidate"
-        f"{'s' if sent_count != 1 else ''}.",
-    )
+            # Log individual failure but continue sending to remaining candidates
+            error_count += 1
+
+    # ── Only mark as sent if at least one email went through ─────────────
+    if sent_count > 0:
+        job.shortlist_email_sent = True
+        job.save(update_fields=['shortlist_email_sent'])
+
+    # ── Build a precise flash message ────────────────────────────────────
+    parts = []
+
+    if sent_count:
+        parts.append(
+            f"Interview invitation sent to {sent_count} "
+            f"candidate{'s' if sent_count != 1 else ''}."
+        )
+    if no_email_count:
+        parts.append(
+            f"{no_email_count} skipped — no email address on account."
+        )
+    if error_count:
+        parts.append(
+            f"{error_count} failed to send — check your email settings."
+        )
+
+    if sent_count > 0:
+        messages.success(request, " ".join(parts))
+    elif no_email_count and not error_count:
+        messages.warning(
+            request,
+            f"No emails sent — none of the {no_email_count} shortlisted "
+            f"candidate{'s have' if no_email_count != 1 else ' has'} "
+            f"an email address on their account."
+        )
+    else:
+        messages.error(
+            request,
+            "No emails could be sent. " + " ".join(parts)
+        )
+
     return redirect('to_shortlist')
- 

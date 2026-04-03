@@ -4,13 +4,6 @@
 {# ── Mark Manage Jobs active in navbar ── #}
 {% block nav_jobs %}active{% endblock %}
 
-{# ── Company initial in navbar avatar ── #}
-{% comment %} {% block nav_avatar %}
-<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-  {{ company.company_name|first|upper }}
-</div>
-{% endblock %} {% endcomment %}
-
 {% block extra_head %}
 <style>
   .job-row { transition: all 0.15s ease; }
@@ -50,7 +43,8 @@
   <div class="glass-card rounded-3xl p-6 w-80 text-center">
     <div class="w-12 h-12 rounded-full bg-red-500/20 border border-red-400/28 flex items-center justify-center mx-auto mb-4">
       <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
       </svg>
     </div>
     <p class="text-white font-semibold mb-1">Delete Job Post?</p>
@@ -84,27 +78,6 @@
       Post a New Job
     </a>
   </div>
-
-  {# Stats row #}
-  {% comment %} {% if jobs %}
-  <div class="grid grid-cols-3 gap-4 mb-7">
-    <div class="glass-card rounded-2xl p-4 text-center">
-      <p class="text-2xl font-bold text-emerald-300">{{ open_count }}</p>
-      <p class="text-xs text-white/45 mt-1">Open</p>
-      <div class="stat-bar mt-2"><div class="stat-bar-fill bg-emerald-400" style="width:{{ open_count|default:0 }}0%"></div></div>
-    </div>
-    <div class="glass-card rounded-2xl p-4 text-center">
-      <p class="text-2xl font-bold text-amber-300">{{ draft_count }}</p>
-      <p class="text-xs text-white/45 mt-1">Draft</p>
-      <div class="stat-bar mt-2"><div class="stat-bar-fill bg-amber-400" style="width:{{ draft_count|default:0 }}0%"></div></div>
-    </div>
-    <div class="glass-card rounded-2xl p-4 text-center">
-      <p class="text-2xl font-bold text-slate-300">{{ closed_count }}</p>
-      <p class="text-xs text-white/45 mt-1">Closed</p>
-      <div class="stat-bar mt-2"><div class="stat-bar-fill bg-slate-400" style="width:{{ closed_count|default:0 }}0%"></div></div>
-    </div>
-  </div>
-  {% endif %} {% endcomment %}
 
   {# Job list #}
   {% if jobs %}
@@ -140,7 +113,7 @@
                 {% if job.status == 'open' %}Open{% elif job.status == 'draft' %}Draft{% else %}Closed{% endif %}
               </span>
               <span class="text-xs text-white/55 bg-white/10 border border-white/18 px-2.5 py-0.5 rounded-full">
-                {{ job.application_count }} applicant{{ job.application_count|pluralize }}
+                {{ job.applicant_count }} applicant{{ job.applicant_count|pluralize }}
               </span>
             </div>
           </div>
@@ -148,18 +121,28 @@
           {# Tags row #}
           <div class="flex flex-wrap gap-2 mt-2.5">
             {% if job.salary_min or job.salary_max %}
-            <span class="text-xs bg-emerald-500/18 text-emerald-300 border border-emerald-400/28 px-2.5 py-0.5 rounded-full">{{ job.salary_display }}</span>
+            <span class="text-xs bg-emerald-500/18 text-emerald-300 border border-emerald-400/28 px-2.5 py-0.5 rounded-full">
+              {{ job.salary_display }}
+            </span>
             {% endif %}
             {% if job.deadline %}
-            <span class="text-xs bg-white/10 text-white/50 border border-white/18 px-2.5 py-0.5 rounded-full">Deadline: {{ job.deadline|date:"M j, Y" }}</span>
+            <span class="text-xs bg-white/10 text-white/50 border border-white/18 px-2.5 py-0.5 rounded-full">
+              Deadline: {{ job.deadline|date:"M j, Y" }}
+            </span>
             {% endif %}
             {% for skill in job.skills.all|slice:":4" %}
-            <span class="text-xs bg-white/8 text-white/40 border border-white/12 px-2.5 py-0.5 rounded-full">{{ skill.name }}</span>
+            <span class="text-xs bg-white/8 text-white/40 border border-white/12 px-2.5 py-0.5 rounded-full">
+              {{ skill.name }}
+            </span>
             {% endfor %}
             {% if job.skills.count > 4 %}
-            <span class="text-xs text-white/30 border border-white/10 px-2.5 py-0.5 rounded-full">+{{ job.skills.count|add:"-4" }} more</span>
+            <span class="text-xs text-white/30 border border-white/10 px-2.5 py-0.5 rounded-full">
+              +{{ job.skills.count|add:"-4" }} more
+            </span>
             {% endif %}
-            <span class="text-xs text-white/30 border border-white/8 px-2.5 py-0.5 rounded-full">Created {{ job.created_at|timesince }} ago</span>
+            <span class="text-xs text-white/30 border border-white/8 px-2.5 py-0.5 rounded-full">
+              Created {{ job.created_at|timesince }} ago
+            </span>
           </div>
         </div>
       </div>
@@ -167,49 +150,66 @@
       {# ── Action row ── #}
       <div class="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-white/10">
 
-        {# View Applicants — add href when applications app is ready #}
+        {% comment %} {#
+          FIX #10:
+          BEFORE — href="" went nowhere (current page reload):
+            <a href="" class="action-btn ...">Applicants (N)</a>
+
+          AFTER — points to the correct view_applicants URL:
+            <a href="{% url 'view_applicants' job.id %}" ...>Applicants (N)</a>
+
+          The view_applicants URL is defined in applications/urls.py as:
+            path("job/<int:job_id>/applicants/", views.view_applicants, name="view_applicants")
+          and has been working correctly throughout the rest of the project.
+          Only this template had the empty href stub left behind.
+        #} {% endcomment %}
         {% if job.status != 'draft' %}
-        <a href=""
+        <a href="{% url 'view_applicants' job.id %}"
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
-          Applicants ({{ job.application_count }})
+          Applicants ({{ job.applicant_count }})
         </a>
         {% endif %}
 
-        {# Edit — jobs app ✓ ready #}
+        {# Edit #}
         <a href="{% url 'edit_job' job.id %}"
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
           Edit
         </a>
 
-        {# View post — jobs app ✓ ready #}
+        {# View post #}
         <a href="{% url 'job_detail' job.id %}"
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
           </svg>
           View Post
         </a>
 
-        {# Toggle open/close — jobs app ✓ ready #}
+        {# Toggle open/close #}
         {% if job.status != 'draft' %}
         <form method="post" action="{% url 'toggle_job_status' job.id %}" class="inline">
           {% csrf_token %}
           <button type="submit" class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
             {% if job.status == 'open' %}
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
             </svg>
             Close Job
             {% else %}
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             Reopen Job
             {% endif %}
@@ -217,7 +217,7 @@
         </form>
         {% endif %}
 
-        {# Publish draft — jobs app ✓ ready #}
+        {# Publish draft #}
         {% if job.status == 'draft' %}
         <form method="post" action="{% url 'toggle_job_status' job.id %}" class="inline">
           {% csrf_token %}
@@ -231,13 +231,14 @@
         </form>
         {% endif %}
 
-        {# AI Screening — add href when screening app is ready #}
-        {% if job.status != 'draft' and job.application_count > 0 %}
-        <a href=""
+        {# AI Screening #}
+        {% if job.status != 'draft' and job.applicant_count > 0 %}
+        <a href="{% url 'screening_dashboard' job.id %}"
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl"
            style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.28);color:#a5b4fc;">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
           AI Screening
         </a>
@@ -245,11 +246,12 @@
 
         <div class="flex-1"></div>
 
-        {# Delete — FIX: pass URL directly via data attribute to avoid hardcoded path #}
+        {# Delete #}
         <button onclick="openDeleteModal('{{ job.title|escapejs }}', '{% url 'delete_job' job.id %}')"
                 class="action-btn-danger flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
           Delete
         </button>
@@ -282,7 +284,6 @@
 
 {% block extra_scripts %}
 <script>
-  /* FIX: delete URL is passed directly — no more hardcoded path strings */
   function openDeleteModal(jobTitle, deleteUrl) {
     document.getElementById('delete-job-name').textContent = '"' + jobTitle + '"';
     document.getElementById('delete-form').action = deleteUrl;
@@ -293,7 +294,7 @@
     document.getElementById('delete-modal').classList.add('hidden');
   }
 
-  document.getElementById('delete-modal').addEventListener('click', function (e) {
+  document.getElementById('delete-modal').addEventListener('click', function(e) {
     if (e.target === this) closeDeleteModal();
   });
 </script>

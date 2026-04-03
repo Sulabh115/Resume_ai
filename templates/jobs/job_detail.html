@@ -120,24 +120,24 @@
       </div>
 
       {# Responsibilities #}
-      {% if job.responsibilities %}
+      {% if responsibilities_list %}
       <div class="section-card rounded-3xl p-6">
         <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Responsibilities</p>
         <ul class="bullet-list space-y-1">
           {% for line in responsibilities_list %}
-              <li>{{ line }}</li>
+          <li>{{ line }}</li>
           {% endfor %}
         </ul>
       </div>
       {% endif %}
 
       {# Requirements #}
-      {% if job.requirements %}
+      {% if requirements_list %}
       <div class="section-card rounded-3xl p-6">
         <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Requirements</p>
         <ul class="bullet-list space-y-1">
-          {% for line in job.requirements_list %}
-            <li>{{line}}</li>
+          {% for line in requirements_list %}
+          <li>{{ line }}</li>
           {% endfor %}
         </ul>
       </div>
@@ -155,7 +155,7 @@
       </div>
       {% endif %}
 
-    </div>
+    </div>{# ← closes LEFT flex-1 #}
 
     {# ── RIGHT: Sidebar ── #}
     <div class="w-full lg:w-72 shrink-0 flex flex-col gap-4 lg:sticky lg:top-[12vh]">
@@ -194,12 +194,6 @@
             Edit This Posting
           </a>
 
-          {# View Applicants — add {% url 'view_applicants' job.id %} when applications app is ready #}
-          {# <a href=""
-             class="w-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-semibold py-2.5 rounded-2xl text-sm block text-center hover:bg-emerald-500/32 transition-all mb-2">
-            View Applicants ({{ job.application_count }})
-          </a> #}
-
           <form method="post" action="{% url 'toggle_job_status' job.id %}">
             {% csrf_token %}
             <button type="submit"
@@ -225,7 +219,6 @@
           </div>
 
           {% elif not has_resumes %}
-          {# Open job but no resume uploaded yet #}
           <a href="{% url 'resume_manager' %}"
              class="w-full flex items-center justify-center gap-2 bg-amber-500/15 border border-amber-400/30 text-amber-300 font-semibold py-3 rounded-2xl text-sm hover:bg-amber-500/25 transition-all mb-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,7 +229,6 @@
           <p class="text-xs text-white/35 text-center">You need a resume to apply.</p>
 
           {% else %}
-          {# Ready to apply #}
           <a href="{% url 'apply_job' job.id %}"
              class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center">
             Apply Now
@@ -317,8 +309,9 @@
       </a>
       {% endif %}
 
-    </div>
-  </div>
+    </div>{# ← closes RIGHT sidebar #}
+
+  </div>{# ← closes flex row #}
 
 </main>
 {% endblock %}

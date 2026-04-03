@@ -1,11 +1,7 @@
 {% extends "company_base.html" %}
 {% block title %}To Shortlist — hirepath{% endblock %}
 
-{% comment %} {% block nav_avatar %}
-<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-  {{ company.company_name|first|upper }}
-</div>
-{% endblock %} {% endcomment %}
+{% block nav_to_shortlist %}active{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -225,7 +221,7 @@
       </p>
     </div>
     <span class="text-xs text-white/45 bg-white/10 border border-white/18 px-3 py-1.5 rounded-full">
-      {{ jobs|length }} pending
+      {{ total }} pending
     </span>
   </div>
 
@@ -254,9 +250,11 @@
     </p>
   </div>
 
-  {% if jobs %}
+  {% if job_data %}
   <div class="flex flex-col gap-4" id="jobs-container">
-    {% for job in jobs %}
+
+    {% for item in job_data %}
+    {% with job=item.job %}
     <div class="job-card glass-card rounded-3xl px-5 py-5" id="job-card-{{ job.id }}">
       <div class="flex items-start gap-5">
 
@@ -287,19 +285,18 @@
 
           <div class="flex flex-wrap gap-2 mt-2.5">
             <span class="text-xs bg-white/10 text-white/60 border border-white/18 px-2.5 py-0.5 rounded-full">
-              {{ job.application_count }} applicant{{ job.application_count|pluralize }}
+              {{ job.applicant_count }} applicant{{ job.applicant_count|pluralize }}
             </span>
             <span class="text-xs bg-white/10 text-white/55 border border-white/15 px-2.5 py-0.5 rounded-full">
               {{ job.get_job_type_display }}{% if job.location %} · {{ job.location }}{% endif %}
             </span>
           </div>
 
-          {# Shortlisted candidates #}
-          {% if job.shortlisted_apps %}
+          {% if item.shortlisted %}
           <div class="mt-4">
             <p class="text-[10px] text-white/35 uppercase tracking-wider mb-2">Shortlisted for interview</p>
             <div class="flex flex-col gap-2">
-              {% for app in job.shortlisted_apps %}
+              {% for app in item.shortlisted %}
               <div class="candidate-chip">
                 <div class="w-7 h-7 rounded-full bg-white/20 border border-white/25 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                   {{ app.candidate.user.first_name|first|default:app.candidate.user.username|first|upper }}
@@ -325,7 +322,8 @@
         <a href="{% url 'view_applicants' job.id %}"
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
           </svg>
           Full Ranked List
         </a>
@@ -342,8 +340,11 @@
           Send Shortlist Email
         </button>
       </div>
-    </div>
+
+    </div>{# ← closes .job-card #}
+    {% endwith %}
     {% endfor %}
+
   </div>
 
   {% else %}
@@ -377,27 +378,32 @@ function openEmailModal(jobId, title, subtitle) {
   document.getElementById('prev-job-title').textContent  = title;
   document.getElementById('prev-job-title2').textContent = title;
 
-  // Build recipients from DOM
+  // Build recipients from candidate chips inside the job card
   const card = document.getElementById('job-card-' + jobId);
   const chips = card ? card.querySelectorAll('.candidate-chip') : [];
   const recipientsEl = document.getElementById('modal-recipients');
   recipientsEl.innerHTML = '';
-  chips.forEach(chip => {
-    const name  = chip.querySelector('.text-white.font-medium')?.textContent.trim() || '';
-    const score = chip.querySelector('.text-emerald-400')?.textContent.trim() || '';
-    recipientsEl.innerHTML += `
-      <div class="candidate-chip">
-        <div class="w-7 h-7 rounded-full bg-white/20 border border-white/25 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-          ${name.charAt(0).toUpperCase()}
-        </div>
-        <span class="text-sm text-white font-medium flex-1">${name}</span>
-        <span class="text-xs text-emerald-400 font-semibold">${score}</span>
-        <svg class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-        </svg>
-      </div>`;
-  });
+
+  if (chips.length === 0) {
+    recipientsEl.innerHTML = '<p style="color:rgba(255,255,255,0.35);font-size:13px;">No shortlisted candidates found.</p>';
+  } else {
+    chips.forEach(chip => {
+      const name  = chip.querySelector('.text-white.font-medium')?.textContent.trim() || '';
+      const score = chip.querySelector('.text-emerald-400')?.textContent.trim() || '';
+      recipientsEl.innerHTML += `
+        <div class="candidate-chip">
+          <div class="w-7 h-7 rounded-full bg-white/20 border border-white/25 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+            ${name.charAt(0).toUpperCase()}
+          </div>
+          <span class="text-sm text-white font-medium flex-1">${name}</span>
+          <span class="text-xs text-emerald-400 font-semibold">${score}</span>
+          <svg class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>`;
+    });
+  }
 
   // Reset fields
   ['e-date','e-time','e-location','e-notes'].forEach(id => {
@@ -410,7 +416,7 @@ function openEmailModal(jobId, title, subtitle) {
   document.getElementById('e-duration').value = '1 hour';
   updatePreview();
 
-  // Wire form action
+  // Wire form action to the correct send-email URL for this job
   document.getElementById('email-form').action = '/jobs/' + jobId + '/send-email/';
 
   document.getElementById('email-modal').classList.remove('hidden');
@@ -475,7 +481,7 @@ function submitEmail() {
   }
   if (!valid) return;
 
-  // Copy values into hidden form and submit
+  // Copy values into hidden form fields then submit
   document.getElementById('hf-date').value     = document.getElementById('e-date').value;
   document.getElementById('hf-time').value     = document.getElementById('e-time').value;
   document.getElementById('hf-duration').value = document.getElementById('e-duration').value;

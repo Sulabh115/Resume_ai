@@ -1,13 +1,7 @@
 {% extends "company_base.html" %}
 {% block title %}Old Jobs — hirepath{% endblock %}
 
-{% block nav_jobs %}active{% endblock %}
-
-{% comment %} {% block nav_avatar %}
-<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-  {{ company.company_name|first|upper }}
-</div>
-{% endblock %} {% endcomment %}
+{% block nav_old_jobs %}active{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -23,12 +17,6 @@
     color: rgba(255,255,255,0.75); font-size: 12px; font-weight: 500; transition: all 0.15s ease;
   }
   .action-btn:hover { background: rgba(255,255,255,0.22); color: #fff; border-color: rgba(255,255,255,0.42); }
-
-  .action-btn-amber {
-    background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.35);
-    color: #fcd34d; font-size: 12px; font-weight: 500; transition: all 0.15s ease;
-  }
-  .action-btn-amber:hover { background: rgba(251,191,36,0.28); }
 
   /* Results modal */
   .modal-overlay {
@@ -46,7 +34,6 @@
     display: flex; flex-direction: column;
   }
 
-  /* Rank rows */
   .rank-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 12px; transition: background 0.15s ease; }
   .rank-row:hover { background: rgba(255,255,255,0.06); }
   .medal-1 { background: rgba(251,191,36,0.25); color: #fcd34d; border: 1px solid rgba(251,191,36,0.4); }
@@ -125,9 +112,11 @@
   </div>
   {% endif %}
 
-  {% if jobs %}
+  {# ── FIX #3: loop over jobs_data (list of dicts), use item.job and item.ranked_json ── #}
+  {% if jobs_data %}
   <div class="flex flex-col gap-4">
-    {% for job in jobs %}
+    {% for item in jobs_data %}
+    {% with job=item.job %}
     <div class="job-card glass-card rounded-3xl px-5 py-5">
       <div class="flex items-start gap-5">
 
@@ -154,7 +143,6 @@
             </div>
 
             <div class="flex items-center gap-2 shrink-0">
-              {# Status badge #}
               {% if job.results_published %}
               <span class="badge-results text-[10px] px-2.5 py-0.5 rounded-full font-medium">Results Published</span>
               {% else %}
@@ -162,7 +150,6 @@
               {% endif %}
               <span class="badge-expired text-[10px] px-2.5 py-0.5 rounded-full font-medium">Expired</span>
 
-              {# Avg score mini ring #}
               {% if job.avg_score %}
               <div class="flex flex-col items-center">
                 <div class="relative w-11 h-11">
@@ -172,7 +159,7 @@
                       stroke="{% if job.avg_score >= 70 %}#34d399{% elif job.avg_score >= 45 %}#60a5fa{% else %}#f87171{% endif %}"
                       stroke-width="5" stroke-linecap="round"
                       stroke-dasharray="94.2"
-                      stroke-dashoffset="{{ job.avg_score_offset }}"/>
+                      stroke-dashoffset="{{ job.avg_score_offset|default:'94.2' }}"/>
                   </svg>
                   <div class="absolute inset-0 flex items-center justify-center">
                     <span class="text-[10px] font-bold text-white">{{ job.avg_score|floatformat:0 }}%</span>
@@ -186,12 +173,18 @@
 
           {# Tags #}
           <div class="flex flex-wrap gap-2 mt-2.5">
-            <span class="text-xs bg-white/10 text-white/60 border border-white/18 px-2.5 py-0.5 rounded-full">{{ job.application_count }} applicant{{ job.application_count|pluralize }}</span>
+            <span class="text-xs bg-white/10 text-white/60 border border-white/18 px-2.5 py-0.5 rounded-full">
+              {{ job.applicant_count }} applicant{{ job.applicant_count|pluralize }}
+            </span>
             {% if job.deadline %}
-            <span class="text-xs bg-white/10 text-white/45 border border-white/12 px-2.5 py-0.5 rounded-full">Deadline: {{ job.deadline|date:"M j, Y" }}</span>
+            <span class="text-xs bg-white/10 text-white/45 border border-white/12 px-2.5 py-0.5 rounded-full">
+              Deadline: {{ job.deadline|date:"M j, Y" }}
+            </span>
             {% endif %}
             {% if job.salary_min or job.salary_max %}
-            <span class="text-xs bg-emerald-500/18 text-emerald-300 border border-emerald-400/28 px-2.5 py-0.5 rounded-full">{{ job.salary_display }}</span>
+            <span class="text-xs bg-emerald-500/18 text-emerald-300 border border-emerald-400/28 px-2.5 py-0.5 rounded-full">
+              {{ job.salary_display }}
+            </span>
             {% endif %}
           </div>
 
@@ -227,16 +220,19 @@
         <a href="{% url 'view_applicants' job.id %}"
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
           {% if job.results_published %}View Results{% else %}Review & Publish{% endif %}
         </a>
 
         {% if job.results_published %}
+        {# FIX #3: pass job.id so openModal() can find the correct #ranked-data-{id} element #}
         <button onclick="openModal('{{ job.id }}')"
                 class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
           </svg>
           Ranked List
         </button>
@@ -245,7 +241,8 @@
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl"
            style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.28);color:#a5b4fc;">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
           AI Screening
         </a>
@@ -254,7 +251,8 @@
         <a href="{% url 'create_job' %}?repost={{ job.id }}"
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
           Repost
         </a>
@@ -262,9 +260,10 @@
       </div>
     </div>
 
-    {# Hidden ranked data for JS modal #}
-    <script type="application/json" id="ranked-data-{{ job.id }}">{{ job.ranked_json|safe }}</script>
+    {# FIX #3: ranked_json is now a dict — embedded here for JS to read #}
+    <script type="application/json" id="ranked-data-{{ job.id }}">{{ item.ranked_json|safe }}</script>
 
+    {% endwith %}
     {% endfor %}
   </div>
 
@@ -292,18 +291,37 @@
 
 {% block extra_scripts %}
 <script>
+/*
+  FIX #3 — openModal() rewritten to read the new dict structure:
+
+  BEFORE (broken): data was a bare array, so data.title / data.total /
+  data.shortlisted / data.applicants were all undefined.
+
+  AFTER (fixed): data is now a dict:
+    {
+      title:       "Senior Django Developer",
+      total:       12,
+      shortlisted: 4,
+      applicants:  [ { name, score, status, shortlisted }, ... ]
+    }
+
+  Also fixed: app.shortlisted is now a real boolean in the dict
+  (added in views.py) so badge rendering works correctly.
+*/
 function openModal(jobId) {
   const dataEl = document.getElementById('ranked-data-' + jobId);
   if (!dataEl) return;
+
   const data = JSON.parse(dataEl.textContent);
 
-  document.getElementById('modal-job-title').textContent = data.title;
+  // FIX #3: read correct keys from dict
+  document.getElementById('modal-job-title').textContent = data.title || '';
   document.getElementById('modal-stats').textContent =
     data.total + ' applicant' + (data.total !== 1 ? 's' : '') +
     ' · ' + data.shortlisted + ' shortlisted' +
-    ' · ' + (data.total - data.shortlisted) + ' rejected';
+    ' · ' + (data.total - data.shortlisted) + ' not shortlisted';
 
-  // Summary pills
+  // Summary strip
   document.getElementById('modal-summary').innerHTML = `
     <div class="text-center bg-white/8 rounded-2xl py-3">
       <p class="text-xl font-bold text-white">${data.total}</p>
@@ -315,21 +333,29 @@ function openModal(jobId) {
     </div>
     <div class="text-center rounded-2xl py-3" style="background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.18);">
       <p class="text-xl font-bold text-red-300">${data.total - data.shortlisted}</p>
-      <p class="text-[10px] text-white/40 uppercase tracking-wide mt-0.5">Rejected</p>
+      <p class="text-[10px] text-white/40 uppercase tracking-wide mt-0.5">Not shortlisted</p>
     </div>`;
 
   // Ranked list
+  // FIX #3: iterate data.applicants (correct key) not data directly
   const list = document.getElementById('modal-ranked-list');
   list.innerHTML = '';
 
+  if (!data.applicants || data.applicants.length === 0) {
+    list.innerHTML = '<p style="color:rgba(255,255,255,0.35);font-size:13px;text-align:center;padding:16px 0;">No applicants to display.</p>';
+    document.getElementById('results-modal').classList.remove('hidden');
+    return;
+  }
+
   data.applicants.forEach((app, idx) => {
-    const rank = idx + 1;
+    const rank       = idx + 1;
     const medalClass = rank === 1 ? 'medal-1' : rank === 2 ? 'medal-2' : rank === 3 ? 'medal-3' : 'medal-n';
-    const rowClass = app.shortlisted ? 'rank-shortlisted' : 'rank-rejected';
-    const barColor = app.score >= 70 ? '#34d399' : app.score >= 45 ? '#60a5fa' : '#f87171';
-    const badge = app.shortlisted
+    // FIX #3: app.shortlisted is now a real boolean (set in views.py)
+    const rowClass   = app.shortlisted ? 'rank-shortlisted' : 'rank-rejected';
+    const barColor   = app.score >= 70 ? '#34d399' : app.score >= 45 ? '#60a5fa' : '#f87171';
+    const badge      = app.shortlisted
       ? '<span style="background:rgba(52,211,153,0.18);border:1px solid rgba(52,211,153,0.38);color:#6ee7b7;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500;">Shortlisted</span>'
-      : '<span style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.28);color:#fca5a5;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500;">Rejected</span>';
+      : '<span style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.28);color:#fca5a5;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500;">Not shortlisted</span>';
 
     list.innerHTML += `
       <div class="rank-row ${rowClass}">
