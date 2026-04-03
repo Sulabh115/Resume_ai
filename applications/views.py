@@ -12,6 +12,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import Http404
+from datetime import date
 
 from .models import Application, Resume
 from .forms import ApplyJobForm, ResumeUploadForm, ApplicationStatusForm
@@ -151,9 +152,15 @@ def application_detail(request, application_id):
     else:
         form = ApplicationStatusForm(instance=application)
 
+    skills_list = [
+        s.strip()
+        for s in (application.candidate.skills or '').split(',')
+        if s.strip()
+    ]
     return render(request, "applications/application_detail.html", {
         "application": application,
         "form":        form,
+        "skills_list": skills_list,
     })
 
 
@@ -238,3 +245,66 @@ def set_default_resume(request, resume_id):
         messages.success(request, f'"{label}" set as default resume.')
 
     return redirect("resume_manager")
+
+# applications/views.py — add this
+
+@login_required
+def application_list(request):
+    """
+    Candidate's active applications —
+    excludes withdrawn, rejected, and jobs whose deadline has passed.
+    """
+    candidate = _get_candidate(request)
+    if not candidate:
+        return redirect("company_dashboard")
+ 
+    from django.db.models import Q
+    applications = (
+        Application.objects
+        .filter(candidate=candidate)
+        .exclude(status__in=[
+            Application.Status.WITHDRAWN,
+            Application.Status.REJECTED,
+        ])
+        .exclude(
+            # Exclude past-deadline jobs (null deadline = still active)
+            job__deadline__lt=date.today()
+        )
+        .select_related("job__company", "resume")
+        .order_by("-applied_at")
+    )
+ 
+    return render(request, "applications/application_list.html", {
+        "applications": applications,
+    })
+ 
+ 
+@login_required
+def old_application_list(request):
+    """
+    Candidate's old/inactive applications —
+    withdrawn, rejected, OR job deadline has passed.
+    """
+    candidate = _get_candidate(request)
+    if not candidate:
+        return redirect("company_dashboard")
+ 
+    from django.db.models import Q
+    applications = (
+        Application.objects
+        .filter(candidate=candidate)
+        .filter(
+            Q(status__in=[
+                Application.Status.WITHDRAWN,
+                Application.Status.REJECTED,
+            ]) |
+            Q(job__deadline__lt=date.today())
+        )
+        .select_related("job__company", "resume")
+        .order_by("-applied_at")
+    )
+ 
+    return render(request, "applications/old_application_list.html", {
+        "applications": applications,
+    })
+ 

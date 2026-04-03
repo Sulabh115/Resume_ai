@@ -1,0 +1,153 @@
+{% extends "candidate_base.html" %}
+{% block title %}Old Applications — hirepath{% endblock %}
+
+{% block nav_old_applications %}active{% endblock %}
+
+{% block nav_avatar %}
+{% if request.user.is_authenticated %}
+  <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+    {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .app-card {
+    transition: all 0.15s ease;
+    opacity: 0.80;
+  }
+  .app-card:hover {
+    background: rgba(255,255,255,0.16) !important;
+    border-color: rgba(255,255,255,0.35) !important;
+    opacity: 1;
+  }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<main class="max-w-4xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
+
+  {# Header #}
+  <div class="flex items-center justify-between mb-7">
+    <div>
+      <h1 class="font-serif-display text-2xl text-white">Old Applications</h1>
+      <p class="text-white/45 text-sm mt-1">
+        Withdrawn, rejected, and past-deadline applications ·
+        <span class="text-white/70 font-medium">{{ applications.count }}</span>
+      </p>
+    </div>
+    <a href="{% url 'application_list' %}"
+       class="btn-ghost px-4 py-2 rounded-2xl text-sm">
+      ← Active Applications
+    </a>
+  </div>
+
+  {% if applications %}
+  <div class="flex flex-col gap-3">
+    {% for app in applications %}
+    <div class="app-card glass-card rounded-3xl p-5">
+      <div class="flex items-start gap-4">
+
+        {# Company logo — greyscale tint for inactive feel #}
+        <div class="w-11 h-11 rounded-xl bg-white/10 border border-white/18 overflow-hidden flex items-center justify-center flex-shrink-0"
+             style="filter: grayscale(40%);">
+          {% if app.job.company.logo %}
+            <img src="{{ app.job.company.logo.url }}" alt="{{ app.job.company.company_name }}" class="w-full h-full object-cover"/>
+          {% else %}
+            <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ app.job.company.company_name|urlencode }}&backgroundColor=dbeafe&textColor=2563eb"
+                 alt="{{ app.job.company.company_name }}" class="w-full h-full object-cover"/>
+          {% endif %}
+        </div>
+
+        {# Main info #}
+        <div class="flex-1 min-w-0">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-white/70 font-semibold text-base truncate">{{ app.job.title }}</p>
+              <p class="text-white/40 text-sm mt-0.5">
+                {{ app.job.company.company_name }}
+                {% if app.job.location %} · {{ app.job.location }}{% endif %}
+              </p>
+            </div>
+            <span class="badge badge-{{ app.status }} flex-shrink-0">{{ app.get_status_display }}</span>
+          </div>
+
+          {# Meta row #}
+          <div class="flex flex-wrap items-center gap-2 mt-3">
+
+            <span class="text-xs text-white/28 bg-white/6 border border-white/10 px-2.5 py-0.5 rounded-full">
+              Applied {{ app.applied_at|timesince }} ago
+            </span>
+
+            <span class="text-xs text-white/35 bg-white/6 border border-white/10 px-2.5 py-0.5 rounded-full">
+              {{ app.job.get_job_type_display }}
+            </span>
+
+            {# Show why it's here #}
+            {% if app.status == 'withdrawn' %}
+            <span class="text-xs text-white/35 bg-white/6 border border-white/10 px-2.5 py-0.5 rounded-full">
+              You withdrew this application
+            </span>
+            {% elif app.status == 'rejected' %}
+            <span class="text-xs text-white/35 bg-white/6 border border-white/10 px-2.5 py-0.5 rounded-full">
+              Not selected for this role
+            </span>
+            {% elif app.job.deadline %}
+            <span class="text-xs text-white/35 bg-white/6 border border-white/10 px-2.5 py-0.5 rounded-full">
+              Deadline passed {{ app.job.deadline|date:"M j, Y" }}
+            </span>
+            {% endif %}
+
+            {# AI score if screened #}
+            {% if app.match_score %}
+            <span class="text-xs text-white/40 bg-white/6 border border-white/10 px-2.5 py-0.5 rounded-full">
+              {{ app.match_score|floatformat:0 }}% match score
+            </span>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+      {# Action row — minimal, read-only #}
+      <div class="flex items-center gap-2 mt-4 pt-4 border-t border-white/8">
+
+        {% if app.resume %}
+        <a href="{{ app.resume.file.url }}" target="_blank"
+           class="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs opacity-70 hover:opacity-100">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          View Resume Used
+        </a>
+        {% endif %}
+
+        <a href="{% url 'job_detail' app.job.id %}"
+           class="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs opacity-70 hover:opacity-100">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          View Job
+        </a>
+
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="glass-card rounded-3xl p-16 text-center">
+    <div class="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center bg-white/8 border border-white/12">
+      <svg class="w-8 h-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+      </svg>
+    </div>
+    <p class="text-white/45 font-semibold mb-2">Nothing here yet</p>
+    <p class="text-white/28 text-sm">Withdrawn, rejected, and expired applications will appear here.</p>
+  </div>
+  {% endif %}
+
+</main>
+{% endblock %}

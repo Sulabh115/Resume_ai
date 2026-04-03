@@ -5,11 +5,11 @@
 {% block nav_dashboard %}active{% endblock %}
 
 {# ── Show company initial in navbar avatar ── #}
-{% block nav_avatar %}
+{% comment %} {% block nav_avatar %}
 <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
   {{ company.company_name|first|upper }}
 </div>
-{% endblock %}
+{% endblock %} {% endcomment %}
 
 {% block extra_head %}
 <style>
@@ -56,13 +56,13 @@
       <p class="text-white/45 text-sm mt-1">Here's what's happening with your hiring pipeline.</p>
     </div>
     {# Post a Job — add href="{% url 'create_job' %}" when jobs app is ready #}
-    {# <a href=""
+    <a href=""
        class="btn-teal px-5 py-2.5 rounded-full text-sm flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
       Post a New Job
-    </a> #}
+    </a>
   </div>
 
   {# ── STATS ROW ── #}
@@ -215,8 +215,7 @@
           </svg>
           <p class="text-white/40 text-sm font-medium">No applicants yet</p>
           <p class="text-white/30 text-xs mt-1 mb-4">Post a job to start receiving applications.</p>
-          {# Add href="{% url 'create_job' %}" when jobs app is ready #}
-          {# <a href="" class="btn-teal px-5 py-2.5 text-sm rounded-2xl inline-block">Post a Job</a> #}
+            <a href="{% url 'create_job' %}" class="btn-teal px-5 py-2.5 text-sm rounded-2xl inline-block">Post a Job</a>
         </div>
         {% endif %}
       </div>
@@ -229,8 +228,7 @@
       <div class="glass rounded-3xl p-5">
         <div class="flex items-center justify-between mb-4">
           <p class="text-[10px] text-white/45 uppercase tracking-widest">Active Jobs</p>
-          {# Add href="{% url 'company_job_list' %}" when jobs app is ready #}
-          {# <a href="" class="text-white/45 hover:text-white transition-colors text-xs">View all →</a> #}
+            <a href="{% url 'company_job_list' %}" class="text-white/45 hover:text-white transition-colors text-xs">View all →</a>
         </div>
 
         {% if active_jobs %}
@@ -240,7 +238,7 @@
           <div class="job-row flex items-center justify-between">
             <div class="flex-1 min-w-0">
               <p class="text-white text-xs font-medium truncate">{{ job.title }}</p>
-              <p class="text-white/45 text-xs mt-0.5">{{ job.application_count }} applicant{{ job.application_count|pluralize }}</p>
+              <p class="text-white/45 text-xs mt-0.5">{{ job.app_count }} applicant{{ job.app_count|pluralize }}</p>
             </div>
             <svg class="w-3.5 h-3.5 text-white/40 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -251,7 +249,7 @@
         {% else %}
         <div class="text-center py-4">
           <p class="text-white/35 text-xs">No open jobs yet.</p>
-          {# Add href="{% url 'create_job' %}" when jobs app is ready #}
+          {% comment %} {# Add href="{% url 'create_job' %}" when jobs app is ready #} {% endcomment %}
           {# <a href="" class="text-teal-300 hover:text-white text-xs underline underline-offset-2 transition-colors mt-2 inline-block">Post your first job →</a> #}
         </div>
         {% endif %}
@@ -263,24 +261,24 @@
         <div class="flex flex-col gap-1">
 
           {# Post a Job — add href="{% url 'create_job' %}" when jobs app is ready #}
-          {# <a href=""
+          <a href="{% url 'create_job' %}"
              class="flex items-center gap-2.5 text-white/70 hover:text-white text-sm py-2.5 px-3 rounded-xl hover:bg-white/10 transition-all">
             <svg class="w-4 h-4 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
             Post a New Job
-          </a> #}
+          </a>
 
-          {# Manage Jobs — add href="{% url 'company_job_list' %}" when jobs app is ready #}
-          {# <a href=""
+          {% comment %} {# Manage Jobs — add href="{% url 'company_job_list' %}" when jobs app is ready #} {% endcomment %}
+          <a href="{% url 'company_job_list' %}"
              class="flex items-center gap-2.5 text-white/70 hover:text-white text-sm py-2.5 px-3 rounded-xl hover:bg-white/10 transition-all">
             <svg class="w-4 h-4 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
             </svg>
             Manage Jobs
-          </a> #}
+          </a>
 
-          {# Edit Company Profile — accounts app ✓ ready #}
+          {% comment %} {# Edit Company Profile — accounts app ✓ ready #} {% endcomment %}
           <a href="{% url 'company_edit_profile' %}"
              class="flex items-center gap-2.5 text-white/70 hover:text-white text-sm py-2.5 px-3 rounded-xl hover:bg-white/10 transition-all">
             <svg class="w-4 h-4 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

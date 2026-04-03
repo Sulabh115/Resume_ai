@@ -1,0 +1,492 @@
+{% extends "company_base.html" %}
+{% block title %}To Shortlist — hirepath{% endblock %}
+
+{% comment %} {% block nav_avatar %}
+<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+  {{ company.company_name|first|upper }}
+</div>
+{% endblock %} {% endcomment %}
+
+{% block extra_head %}
+<style>
+  .job-card { transition: all 0.15s ease; }
+  .job-card:hover { background: rgba(255,255,255,0.20) !important; }
+
+  .candidate-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(52,211,153,0.12);
+    border: 1px solid rgba(52,211,153,0.28);
+    border-radius: 12px; padding: 8px 12px;
+  }
+
+  .action-btn {
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
+    color: rgba(255,255,255,0.75); font-size: 12px; font-weight: 500; transition: all 0.15s ease;
+  }
+  .action-btn:hover { background: rgba(255,255,255,0.22); color: #fff; }
+
+  .btn-emerald {
+    background: rgba(52,211,153,0.22); border: 1px solid rgba(52,211,153,0.42);
+    color: #6ee7b7; font-weight: 600; transition: all 0.15s ease;
+  }
+  .btn-emerald:hover { background: rgba(52,211,153,0.35); box-shadow: 0 4px 16px rgba(52,211,153,0.2); }
+
+  .btn-send {
+    background: rgba(255,255,255,0.90); color: #065f46;
+    font-weight: 700; transition: all 0.15s ease;
+  }
+  .btn-send:hover { background: #fff; box-shadow: 0 4px 20px rgba(255,255,255,0.3); }
+
+  /* Email modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.65); backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-box {
+    background: rgba(5,40,50,0.94);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.22);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    border-radius: 28px; width: 100%; max-width: 560px;
+    max-height: 90vh; display: flex; flex-direction: column;
+  }
+
+  .field-input {
+    width: 100%; background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 12px; padding: 10px 14px;
+    font-size: 14px; color: #fff; outline: none;
+    transition: all 0.15s ease;
+  }
+  .field-input::placeholder { color: rgba(255,255,255,0.28); }
+  .field-input:focus { border-color: rgba(255,255,255,0.50); background: rgba(255,255,255,0.15); }
+  .field-input.err { border-color: rgba(248,113,113,0.60); }
+  .field-err { font-size: 11px; color: #fca5a5; margin-top: 4px; display: none; }
+  .field-err.show { display: block; }
+
+  .email-preview {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px; padding: 16px;
+    font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7;
+  }
+  .ph { color: #5eead4; font-style: italic; }
+
+  .section_label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.40); font-weight: 500; }
+
+  @keyframes fadeSlide { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
+  .fade-slide { animation: fadeSlide 0.25s ease; }
+</style>
+{% endblock %}
+
+{% block main_content %}
+
+{# ── Email modal ── #}
+<div id="email-modal" class="modal-overlay hidden">
+  <div class="modal-box fade-slide" id="modal-inner">
+
+    <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/12 flex-shrink-0">
+      <div>
+        <p class="text-white font-semibold text-base">Send Shortlist Email</p>
+        <p id="modal-subtitle" class="text-xs text-white/45 mt-0.5"></p>
+      </div>
+      <button onclick="closeEmailModal()" class="text-white/40 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+
+      {# Recipients #}
+      <div>
+        <label class="section_label mb-2 block">Recipients — Shortlisted Candidates</label>
+        <div id="modal-recipients" class="flex flex-col gap-2"></div>
+      </div>
+
+      {# Interview details #}
+      <div>
+        <label class="section_label mb-3 block">
+          Interview Details
+          <span style="text-transform:none;letter-spacing:0;font-size:9px;color:rgba(255,255,255,0.25);">— included in the email</span>
+        </label>
+        <div class="space-y-3">
+
+          <div>
+            <label class="section_label mb-1.5 block">Interview Date <span style="color:rgba(248,113,113,0.8)">*</span></label>
+            <input type="date" id="e-date" class="field-input" style="color-scheme:dark;"
+                   oninput="updatePreview(); clearFieldErr('e-date')"/>
+            <p id="e-date-err" class="field-err">Please set an interview date</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="section_label mb-1.5 block">Time <span style="color:rgba(248,113,113,0.8)">*</span></label>
+              <input type="time" id="e-time" class="field-input" style="color-scheme:dark;"
+                     oninput="updatePreview(); clearFieldErr('e-time')"/>
+              <p id="e-time-err" class="field-err">Please set a time</p>
+            </div>
+            <div>
+              <label class="section_label mb-1.5 block">Duration</label>
+              <select id="e-duration" class="field-input" style="color-scheme:dark;background:rgba(255,255,255,0.10);"
+                      onchange="updatePreview()">
+                <option value="30 minutes" style="background:#0e4f5f">30 minutes</option>
+                <option value="45 minutes" style="background:#0e4f5f">45 minutes</option>
+                <option value="1 hour" selected style="background:#0e4f5f">1 hour</option>
+                <option value="1.5 hours" style="background:#0e4f5f">1.5 hours</option>
+                <option value="2 hours" style="background:#0e4f5f">2 hours</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="section_label mb-1.5 block">Location / Platform <span style="color:rgba(248,113,113,0.8)">*</span></label>
+            <input type="text" id="e-location" class="field-input"
+                   placeholder="e.g. Office Floor 3  —  or  —  Google Meet (link will be sent)"
+                   oninput="updatePreview(); clearFieldErr('e-location')"/>
+            <p id="e-location-err" class="field-err">Please enter interview location or platform</p>
+          </div>
+
+          <div>
+            <label class="section_label mb-1.5 block">
+              Additional Notes
+              <span style="font-size:9px;color:rgba(255,255,255,0.25);text-transform:none;letter-spacing:0;">optional</span>
+            </label>
+            <textarea id="e-notes" class="field-input" style="min-height:60px;resize:vertical;"
+                      placeholder="e.g. Please bring your CV. Dress code: business casual."
+                      oninput="updatePreview()"></textarea>
+          </div>
+        </div>
+      </div>
+
+      {# Email preview #}
+      <div>
+        <label class="section_label mb-2 block">Email Preview</label>
+        <div class="email-preview">
+          <p class="text-white/80 font-medium mb-2">Subject: Congratulations! You have been shortlisted —
+            <span class="ph" id="prev-job-title"></span>
+          </p>
+          <p>Dear <span class="ph">[Candidate Name]</span>,</p><br/>
+          <p>We are pleased to inform you that you have been shortlisted for
+            <strong class="text-white/80" id="prev-job-title2"></strong>
+            at <strong class="text-white/80">{{ company.company_name }}</strong>.
+          </p><br/>
+          <p>We would like to invite you for an interview:</p><br/>
+          <p>📅 <strong class="text-white/70">Date:</strong> <span class="ph" id="prev-date">[ date ]</span></p>
+          <p>⏰ <strong class="text-white/70">Time:</strong> <span class="ph" id="prev-time">[ time ]</span></p>
+          <p>⏱ <strong class="text-white/70">Duration:</strong> <span class="ph" id="prev-duration">1 hour</span></p>
+          <p>📍 <strong class="text-white/70">Location:</strong> <span class="ph" id="prev-location">[ location ]</span></p><br/>
+          <div id="prev-notes-block" class="hidden">
+            <p>📌 <strong class="text-white/70">Notes:</strong> <span class="ph" id="prev-notes"></span></p><br/>
+          </div>
+          <p>Please reply to confirm your attendance.</p><br/>
+          <p>Best regards,<br/>
+            <strong class="text-white/70">HR Team — {{ company.company_name }}</strong>
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="px-6 py-4 border-t border-white/12 flex gap-3 flex-shrink-0">
+      <button onclick="closeEmailModal()" class="action-btn flex-1 px-4 py-3 rounded-2xl text-sm">Cancel</button>
+      <button onclick="submitEmail()" class="btn-send flex-1 px-4 py-3 rounded-2xl text-sm flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        Send to All Shortlisted
+      </button>
+    </div>
+
+    {# Hidden form — submits to Django #}
+    <form id="email-form" method="post" action="" class="hidden">
+      {% csrf_token %}
+      <input type="hidden" name="interview_date"     id="hf-date"/>
+      <input type="hidden" name="interview_time"     id="hf-time"/>
+      <input type="hidden" name="interview_duration" id="hf-duration"/>
+      <input type="hidden" name="interview_location" id="hf-location"/>
+      <input type="hidden" name="interview_notes"    id="hf-notes"/>
+    </form>
+
+  </div>
+</div>
+
+<main class="max-w-4xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
+
+  {# Header #}
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="font-serif-display text-2xl text-white">To Shortlist</h1>
+      <p class="text-white/45 text-sm mt-0.5">
+        Results published — send interview emails to shortlisted candidates
+      </p>
+    </div>
+    <span class="text-xs text-white/45 bg-white/10 border border-white/18 px-3 py-1.5 rounded-full">
+      {{ jobs|length }} pending
+    </span>
+  </div>
+
+  {% if messages %}
+  <div class="flex flex-col gap-2 mb-5">
+    {% for message in messages %}
+    <div class="msg-{{ message.tags|default:'info' }} rounded-2xl px-4 py-3 text-sm flex items-center gap-2">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="{% if message.tags == 'error' %}M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z{% else %}M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z{% endif %}"/>
+      </svg>
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Info banner #}
+  <div class="glass-card rounded-2xl px-5 py-3 mb-6 flex items-start gap-3">
+    <svg class="w-4 h-4 text-amber-300 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <p class="text-xs text-white/55 leading-relaxed">
+      Fill in the interview details and send the shortlist email to notify selected candidates.
+      Once sent, the job moves to <span class="text-white/80">Old Jobs</span>.
+    </p>
+  </div>
+
+  {% if jobs %}
+  <div class="flex flex-col gap-4" id="jobs-container">
+    {% for job in jobs %}
+    <div class="job-card glass-card rounded-3xl px-5 py-5" id="job-card-{{ job.id }}">
+      <div class="flex items-start gap-5">
+
+        <div class="w-12 h-12 rounded-2xl bg-white/15 border border-white/28 overflow-hidden flex items-center justify-center flex-shrink-0 mt-0.5">
+          {% if company.logo %}
+            <img src="{{ company.logo.url }}" alt="{{ company.company_name }}" class="w-full h-full object-cover"/>
+          {% else %}
+            <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ company.company_name|urlencode }}&backgroundColor=ccfbf1&textColor=0f766e"
+                 alt="{{ company.company_name }}" class="w-full h-full object-cover"/>
+          {% endif %}
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <a href="{% url 'job_detail' job.id %}"
+                 class="text-base font-semibold text-white hover:text-white/80 transition-colors block truncate">
+                {{ job.title }}
+              </a>
+              <p class="text-sm text-white/50 mt-0.5">
+                {{ job.get_job_type_display }}{% if job.location %} · {{ job.location }}{% endif %}
+              </p>
+            </div>
+            <span class="text-[10px] text-amber-300 bg-amber-500/15 border border-amber-400/28 px-2.5 py-0.5 rounded-full font-medium flex-shrink-0">
+              Email Pending
+            </span>
+          </div>
+
+          <div class="flex flex-wrap gap-2 mt-2.5">
+            <span class="text-xs bg-white/10 text-white/60 border border-white/18 px-2.5 py-0.5 rounded-full">
+              {{ job.application_count }} applicant{{ job.application_count|pluralize }}
+            </span>
+            <span class="text-xs bg-white/10 text-white/55 border border-white/15 px-2.5 py-0.5 rounded-full">
+              {{ job.get_job_type_display }}{% if job.location %} · {{ job.location }}{% endif %}
+            </span>
+          </div>
+
+          {# Shortlisted candidates #}
+          {% if job.shortlisted_apps %}
+          <div class="mt-4">
+            <p class="text-[10px] text-white/35 uppercase tracking-wider mb-2">Shortlisted for interview</p>
+            <div class="flex flex-col gap-2">
+              {% for app in job.shortlisted_apps %}
+              <div class="candidate-chip">
+                <div class="w-7 h-7 rounded-full bg-white/20 border border-white/25 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                  {{ app.candidate.user.first_name|first|default:app.candidate.user.username|first|upper }}
+                </div>
+                <span class="text-xs text-white font-medium flex-1 truncate">
+                  {{ app.candidate.user.get_full_name|default:app.candidate.user.username }}
+                </span>
+                <span class="text-[10px] text-emerald-400 font-semibold flex-shrink-0">
+                  Score {{ app.match_score|floatformat:0 }}%
+                </span>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% else %}
+          <p class="text-xs text-white/35 mt-3 italic">No candidates shortlisted yet.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Action row #}
+      <div class="flex items-center gap-2 mt-4 pt-4 border-t border-white/12">
+        <a href="{% url 'view_applicants' job.id %}"
+           class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+          Full Ranked List
+        </a>
+        <div class="flex-1"></div>
+        <button onclick="openEmailModal(
+                    '{{ job.id }}',
+                    '{{ job.title|escapejs }}',
+                    '{{ job.get_job_type_display|escapejs }}{% if job.location %} · {{ job.location|escapejs }}{% endif %}')"
+                class="btn-emerald flex items-center gap-2 px-5 py-2.5 rounded-full text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          Send Shortlist Email
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="glass-card rounded-3xl px-8 py-20 flex flex-col items-center gap-5 text-center">
+    <div class="w-16 h-16 rounded-2xl bg-white/10 border border-white/18 flex items-center justify-center">
+      <svg class="w-8 h-8 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </div>
+    <div>
+      <p class="text-white/65 font-semibold">All shortlist emails sent!</p>
+      <p class="text-white/40 text-sm mt-1">No pending notifications. Jobs with published results will appear here once emails are due.</p>
+    </div>
+    <a href="{% url 'old_jobs' %}"
+       class="bg-white/88 text-teal-700 font-semibold text-sm px-6 py-3 rounded-full hover:bg-white transition-all">
+      View Old Jobs
+    </a>
+  </div>
+  {% endif %}
+
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentJobId = null;
+
+function openEmailModal(jobId, title, subtitle) {
+  currentJobId = jobId;
+  document.getElementById('modal-subtitle').textContent = subtitle;
+  document.getElementById('prev-job-title').textContent  = title;
+  document.getElementById('prev-job-title2').textContent = title;
+
+  // Build recipients from DOM
+  const card = document.getElementById('job-card-' + jobId);
+  const chips = card ? card.querySelectorAll('.candidate-chip') : [];
+  const recipientsEl = document.getElementById('modal-recipients');
+  recipientsEl.innerHTML = '';
+  chips.forEach(chip => {
+    const name  = chip.querySelector('.text-white.font-medium')?.textContent.trim() || '';
+    const score = chip.querySelector('.text-emerald-400')?.textContent.trim() || '';
+    recipientsEl.innerHTML += `
+      <div class="candidate-chip">
+        <div class="w-7 h-7 rounded-full bg-white/20 border border-white/25 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+          ${name.charAt(0).toUpperCase()}
+        </div>
+        <span class="text-sm text-white font-medium flex-1">${name}</span>
+        <span class="text-xs text-emerald-400 font-semibold">${score}</span>
+        <svg class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+      </div>`;
+  });
+
+  // Reset fields
+  ['e-date','e-time','e-location','e-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.classList.remove('err'); }
+  });
+  ['e-date-err','e-time-err','e-location-err'].forEach(id => {
+    document.getElementById(id)?.classList.remove('show');
+  });
+  document.getElementById('e-duration').value = '1 hour';
+  updatePreview();
+
+  // Wire form action
+  document.getElementById('email-form').action = '/jobs/' + jobId + '/send-email/';
+
+  document.getElementById('email-modal').classList.remove('hidden');
+}
+
+function closeEmailModal() {
+  document.getElementById('email-modal').classList.add('hidden');
+}
+
+function clearFieldErr(id) {
+  document.getElementById(id)?.classList.remove('err');
+  document.getElementById(id + '-err')?.classList.remove('show');
+}
+
+function updatePreview() {
+  const dateVal     = document.getElementById('e-date').value;
+  const timeVal     = document.getElementById('e-time').value;
+  const durationVal = document.getElementById('e-duration').value;
+  const locationVal = document.getElementById('e-location').value;
+  const notesVal    = document.getElementById('e-notes').value;
+
+  document.getElementById('prev-date').textContent = dateVal
+    ? new Date(dateVal).toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'})
+    : '[ date ]';
+
+  if (timeVal) {
+    const [h, m] = timeVal.split(':');
+    const ampm = parseInt(h) >= 12 ? 'PM' : 'AM';
+    document.getElementById('prev-time').textContent = `${parseInt(h) % 12 || 12}:${m} ${ampm}`;
+  } else {
+    document.getElementById('prev-time').textContent = '[ time ]';
+  }
+
+  document.getElementById('prev-duration').textContent = durationVal;
+  document.getElementById('prev-location').textContent = locationVal || '[ location ]';
+
+  const notesBlock = document.getElementById('prev-notes-block');
+  if (notesVal.trim()) {
+    document.getElementById('prev-notes').textContent = notesVal;
+    notesBlock.classList.remove('hidden');
+  } else {
+    notesBlock.classList.add('hidden');
+  }
+}
+
+function submitEmail() {
+  let valid = true;
+  if (!document.getElementById('e-date').value) {
+    document.getElementById('e-date').classList.add('err');
+    document.getElementById('e-date-err').classList.add('show');
+    valid = false;
+  }
+  if (!document.getElementById('e-time').value) {
+    document.getElementById('e-time').classList.add('err');
+    document.getElementById('e-time-err').classList.add('show');
+    valid = false;
+  }
+  if (!document.getElementById('e-location').value.trim()) {
+    document.getElementById('e-location').classList.add('err');
+    document.getElementById('e-location-err').classList.add('show');
+    valid = false;
+  }
+  if (!valid) return;
+
+  // Copy values into hidden form and submit
+  document.getElementById('hf-date').value     = document.getElementById('e-date').value;
+  document.getElementById('hf-time').value     = document.getElementById('e-time').value;
+  document.getElementById('hf-duration').value = document.getElementById('e-duration').value;
+  document.getElementById('hf-location').value = document.getElementById('e-location').value;
+  document.getElementById('hf-notes').value    = document.getElementById('e-notes').value;
+
+  document.getElementById('email-form').submit();
+}
+
+document.getElementById('email-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEmailModal();
+});
+</script>
+{% endblock %}

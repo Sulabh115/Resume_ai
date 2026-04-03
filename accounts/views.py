@@ -311,7 +311,7 @@ def company_dashboard(request):
 
     active_jobs = (
         jobs.filter(status=Job.Status.OPEN)
-        .annotate(application_count=Count('applications'))
+        .annotate(app_count=Count('applications'))
     )
 
     return render(request, 'accounts/company_dashboard.html', {
@@ -341,11 +341,10 @@ def candidate_edit_profile(request):
         request.user.first_name = request.POST.get('first_name', '').strip()
         request.user.last_name  = request.POST.get('last_name',  '').strip()
         request.user.email      = request.POST.get('email',      '').strip()
-        request.user.save(update_fields=['first_name', 'last_name', 'email'])
 
-        candidate.phone      = request.POST.get('phone',     '').strip()
-        candidate.skills     = request.POST.get('skills',    '').strip()
-        candidate.education  = request.POST.get('education', '').strip()
+        candidate.phone     = request.POST.get('phone',     '').strip()
+        candidate.skills    = request.POST.get('skills',    '').strip()
+        candidate.education = request.POST.get('education', '').strip()
 
         raw_exp = request.POST.get('experience', '0').strip()
         candidate.experience = int(raw_exp) if raw_exp.isdigit() else 0
@@ -359,8 +358,7 @@ def candidate_edit_profile(request):
                 candidate.profile_picture.delete(save=False)
             candidate.profile_picture = None
 
-        candidate.save()
-
+        # ── Password validation FIRST, before any save ──────────────────
         curr_pw = request.POST.get('current_password', '')
         new_pw  = request.POST.get('new_password',     '')
         conf_pw = request.POST.get('confirm_password', '')
@@ -382,13 +380,19 @@ def candidate_edit_profile(request):
                     **error_ctx,
                     'password_error': 'Password must be at least 8 characters.',
                 })
+            # All good — save everything then change password
+            request.user.save(update_fields=['first_name', 'last_name', 'email'])
+            candidate.save()
             request.user.set_password(new_pw)
             request.user.save()
             update_session_auth_hash(request, request.user)
+        else:
+            # No password change — just save profile
+            request.user.save(update_fields=['first_name', 'last_name', 'email'])
+            candidate.save()
 
         messages.success(request, 'Profile updated successfully.')
         return redirect('candidate_dashboard')
-
     return render(request, 'accounts/candidate_edit_profile.html', {
         'candidate': candidate,
     })
@@ -420,7 +424,7 @@ def company_edit_profile(request):
         company.company_name = request.POST.get('company_name', '').strip()
         company.description  = request.POST.get('description',  '').strip()
         company.location     = request.POST.get('location',     '').strip()
-        company.phone        = request.POST.get('hr_phone',     '').strip()
+        company.phone        = request.POST.get('phone',     '').strip()
         website = request.POST.get('website', '').strip()
         company.website = website if website else None
         company.save()

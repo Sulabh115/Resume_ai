@@ -78,6 +78,8 @@ class Job(models.Model):
     created_at       = models.DateTimeField(auto_now_add=True)
     updated_at       = models.DateTimeField(auto_now=True)
 
+    results_published    = models.BooleanField(default=False)
+    shortlist_email_sent = models.BooleanField(default=False)
     class Meta:
         ordering = ["-created_at"]
 

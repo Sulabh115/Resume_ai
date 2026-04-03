@@ -203,7 +203,7 @@
       </div>
 
       {# ── ABOUT / SUMMARY ── #}
-      {% if candidate.about %}
+      {% comment %} {% if candidate.about %}
       <div class="glass rounded-3xl p-6">
         <div class="flex items-center justify-between mb-3">
           <p class="text-[10px] text-white/50 uppercase tracking-widest">About / Summary</p>
@@ -211,7 +211,7 @@
         </div>
         <p class="text-sm text-white/70 leading-relaxed">{{ candidate.about }}</p>
       </div>
-      {% endif %}
+      {% endif %} {% endcomment %}
 
       {# ── RECENT APPLICATIONS ── #}
       <div class="glass rounded-3xl p-6">

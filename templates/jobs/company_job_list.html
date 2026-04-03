@@ -5,11 +5,11 @@
 {% block nav_jobs %}active{% endblock %}
 
 {# ── Company initial in navbar avatar ── #}
-{% block nav_avatar %}
+{% comment %} {% block nav_avatar %}
 <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
   {{ company.company_name|first|upper }}
 </div>
-{% endblock %}
+{% endblock %} {% endcomment %}
 
 {% block extra_head %}
 <style>
@@ -45,7 +45,7 @@
 
 {% block main_content %}
 
-{# ── Delete confirm modal — outside main, z-index above everything ── #}
+{# ── Delete confirm modal ── #}
 <div id="delete-modal" class="confirm-overlay hidden">
   <div class="glass-card rounded-3xl p-6 w-80 text-center">
     <div class="w-12 h-12 rounded-full bg-red-500/20 border border-red-400/28 flex items-center justify-center mx-auto mb-4">
@@ -55,8 +55,8 @@
     </div>
     <p class="text-white font-semibold mb-1">Delete Job Post?</p>
     <p class="text-white/50 text-sm mb-5">
-      This will permanently delete <span id="delete-job-name" class="text-white/80 font-medium"></span> and all its applications.
-      This <strong>cannot</strong> be undone.
+      This will permanently delete <span id="delete-job-name" class="text-white/80 font-medium"></span>
+      and all its applications. This <strong>cannot</strong> be undone.
     </p>
     <div class="flex gap-3">
       <button onclick="closeDeleteModal()" class="action-btn flex-1 px-4 py-2.5 rounded-xl">Cancel</button>
@@ -76,18 +76,17 @@
       <h1 class="font-serif-display text-2xl text-white">Manage Jobs</h1>
       <p class="text-white/45 text-sm mt-0.5">{{ company.company_name }} · All job postings</p>
     </div>
-    {# Post a Job — add href="{% url 'create_job' %}" when jobs app form is ready #}
-    {# <a href=""
+    <a href="{% url 'create_job' %}"
        class="bg-white/88 text-teal-700 font-semibold text-sm px-5 py-2.5 rounded-full hover:bg-white transition-all shadow-sm flex items-center gap-2 self-start sm:self-auto">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
       Post a New Job
-    </a> #}
+    </a>
   </div>
 
   {# Stats row #}
-  {% if jobs %}
+  {% comment %} {% if jobs %}
   <div class="grid grid-cols-3 gap-4 mb-7">
     <div class="glass-card rounded-2xl p-4 text-center">
       <p class="text-2xl font-bold text-emerald-300">{{ open_count }}</p>
@@ -105,7 +104,7 @@
       <div class="stat-bar mt-2"><div class="stat-bar-fill bg-slate-400" style="width:{{ closed_count|default:0 }}0%"></div></div>
     </div>
   </div>
-  {% endif %}
+  {% endif %} {% endcomment %}
 
   {# Job list #}
   {% if jobs %}
@@ -165,30 +164,30 @@
         </div>
       </div>
 
-      {# Action row #}
+      {# ── Action row ── #}
       <div class="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-white/10">
 
-        {# View Applicants — add href="{% url 'view_applicants' job.id %}" when applications app is ready #}
+        {# View Applicants — add href when applications app is ready #}
         {% if job.status != 'draft' %}
-        {# <a href=""
+        <a href=""
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
           Applicants ({{ job.application_count }})
-        </a> #}
+        </a>
         {% endif %}
 
-        {# Edit Job — add href="{% url 'edit_job' job.id %}" when jobs form app is ready #}
-        {# <a href=""
+        {# Edit — jobs app ✓ ready #}
+        <a href="{% url 'edit_job' job.id %}"
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
           Edit
-        </a> #}
+        </a>
 
-        {# View Post — jobs app ✓ ready #}
+        {# View post — jobs app ✓ ready #}
         <a href="{% url 'job_detail' job.id %}"
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,50 +197,56 @@
           View Post
         </a>
 
-        {# Toggle open/close — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
+        {# Toggle open/close — jobs app ✓ ready #}
         {% if job.status != 'draft' %}
-        {# <form method="post" action="" class="inline">
+        <form method="post" action="{% url 'toggle_job_status' job.id %}" class="inline">
           {% csrf_token %}
           <button type="submit" class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">
             {% if job.status == 'open' %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+            </svg>
             Close Job
             {% else %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
             Reopen Job
             {% endif %}
           </button>
-        </form> #}
+        </form>
         {% endif %}
 
-        {# Publish draft — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
+        {# Publish draft — jobs app ✓ ready #}
         {% if job.status == 'draft' %}
-        {# <form method="post" action="" class="inline">
+        <form method="post" action="{% url 'toggle_job_status' job.id %}" class="inline">
           {% csrf_token %}
           <button type="submit"
                   class="bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-medium flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-emerald-500/32 transition-all">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
             Publish
           </button>
-        </form> #}
+        </form>
         {% endif %}
 
-        {# AI Screening — add href="{% url 'screening_dashboard' job.id %}" when screening app is ready #}
+        {# AI Screening — add href when screening app is ready #}
         {% if job.status != 'draft' and job.application_count > 0 %}
-        {# <a href=""
+        <a href=""
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl"
            style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.28);color:#a5b4fc;">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
           AI Screening
-        </a> #}
+        </a>
         {% endif %}
 
         <div class="flex-1"></div>
 
-        {# Delete — add delete URL to openDeleteModal when jobs app is ready #}
-        <button onclick="openDeleteModal('{{ job.id }}', '{{ job.title|escapejs }}')"
+        {# Delete — FIX: pass URL directly via data attribute to avoid hardcoded path #}
+        <button onclick="openDeleteModal('{{ job.title|escapejs }}', '{% url 'delete_job' job.id %}')"
                 class="action-btn-danger flex items-center gap-1.5 px-3 py-2 rounded-xl">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -254,7 +259,6 @@
   </div>
 
   {% else %}
-  {# Empty state #}
   <div class="glass-card rounded-3xl px-8 py-20 flex flex-col items-center gap-5 text-center">
     <div class="w-16 h-16 rounded-2xl bg-white/10 border border-white/18 flex items-center justify-center">
       <svg class="w-8 h-8 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,11 +270,10 @@
       <p class="text-white/70 font-semibold">No jobs posted yet</p>
       <p class="text-white/40 text-sm mt-1">Create your first job posting to start receiving applications.</p>
     </div>
-    {# Post first job — add href="{% url 'create_job' %}" when jobs form is ready #}
-    {# <a href=""
+    <a href="{% url 'create_job' %}"
        class="bg-white/88 text-teal-700 font-semibold text-sm px-6 py-3 rounded-full hover:bg-white transition-all">
       Post Your First Job
-    </a> #}
+    </a>
   </div>
   {% endif %}
 
@@ -279,10 +282,10 @@
 
 {% block extra_scripts %}
 <script>
-  function openDeleteModal(jobId, jobTitle) {
+  /* FIX: delete URL is passed directly — no more hardcoded path strings */
+  function openDeleteModal(jobTitle, deleteUrl) {
     document.getElementById('delete-job-name').textContent = '"' + jobTitle + '"';
-    {# Update this URL pattern when delete_job URL is confirmed: '/jobs/' + jobId + '/delete/' #}
-    document.getElementById('delete-form').action = '/jobs/' + jobId + '/delete/';
+    document.getElementById('delete-form').action = deleteUrl;
     document.getElementById('delete-modal').classList.remove('hidden');
   }
 

@@ -2,18 +2,11 @@
 {% block title %}{% if editing %}Edit Job{% else %}Post a Job{% endif %} — hirepath{% endblock %}
 
 {# ── Mark Post a Job active when creating, Manage Jobs active when editing ── #}
-{% if editing %}
+{% comment %} {% if editing %}
 {% block nav_jobs %}active{% endblock %}
-{% else %}
+{% else %} {% endcomment %}
 {% block nav_post_job %}active{% endblock %}
-{% endif %}
-
-{# ── Company initial in navbar avatar ── #}
-{% block nav_avatar %}
-<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-  {{ request.user.companyprofile.company_name|first|upper }}
-</div>
-{% endblock %}
+{% comment %} {% endif %} {% endcomment %}
 
 {% block extra_head %}
 <style>
@@ -270,11 +263,11 @@
           <div class="flex items-center gap-3">
             {% if editing %}
             {# Delete — add href="{% url 'delete_job' job.id %}" when jobs app is ready #}
-            {# <a href=""
+            <a href=""
                class="text-red-300 hover:text-red-200 text-sm transition-colors px-4 py-3"
                onclick="return confirm('Delete this job posting? This cannot be undone.')">
               Delete Posting
-            </a> #}
+            </a>
             {% endif %}
             <button type="submit" class="btn-teal px-8 py-3 rounded-2xl text-sm">
               {% if editing %}Save Changes{% else %}Publish Job{% endif %}

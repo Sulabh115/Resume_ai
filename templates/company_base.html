@@ -220,29 +220,30 @@
         </a>
 
         {# Manage Jobs — jobs app, partial. Add url 'job_list' or 'company_job_list' when ready #}
-        <a href=""
+        <a href="{% url 'company_job_list' %}"
            class="nav-link {% block nav_jobs %}{% endblock %} px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
-          Manage Jobs
+          Active Jobs
         </a>
 
         {# Post a Job — jobs app not built yet. Add url 'job_create' when ready #}
-        <a href=""
-           class="nav-link {% block nav_post_job %}{% endblock %} px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
-          Post Job
+         <a href="{% url 'create_job' %}"
+          class="nav-link {% block nav_post_job %}{% endblock %} px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
+          Post a Job
         </a>
 
         {# Applicants — applications app not built yet. Add url 'view_applicants' when ready #}
-        <a href=""
-           class="nav-link {% block nav_applicants %}{% endblock %} px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
-          Applicants
+        <a href="{% url 'old_jobs' %}"
+          class="nav-link {% block nav_old_jobs %}{% endblock %} px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
+          Old Jobs
         </a>
 
-        {# Screening — screening app not built yet. Add url 'screening_dashboard' when ready #}
-        <a href=""
-           class="nav-link {% block nav_screening %}{% endblock %} px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all">
-          Screening
+        <a href="{% url 'to_shortlist' %}"
+          class="nav-link {% block nav_to_shortlist %}{% endblock %} px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all flex items-center gap-2">
+          To Shortlist
+          {% if to_shortlist_count %}
+          <span class="bg-amber-400 text-amber-900 text-xs font-semibold rounded-full px-2 py-0.5 leading-none">{{ to_shortlist_count }}</span>
+          {% endif %}
         </a>
-
       </nav>
 
       {# Right — hamburger + avatar #}
@@ -257,14 +258,22 @@
           </svg>
         </button>
 
-        {# Company logo or initials #}
-        <a href="{% url 'company_edit_profile' %}" title="Edit Profile" class="flex-shrink-0">
-          {% block nav_avatar %}
-          <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-            {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
-          </div>
-          {% endblock %}
+        {# Company logo or initials change the block name to nav_avatar #}
+
+        {% block nav_avatar %}
+        <a href="{% url 'company_edit_profile' %}" title="Edit Profile" class="h-10 w-10 rounded-full overflow-hidden backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm flex items-center justify-center text-white text-sm font-bold">
+
+          {% if company and company.logo %}
+            <img src="{{ company.logo.url }}"
+                alt="Company Logo"
+                class="w-full h-full object-cover">
+          {% else %}
+            {{ request.user.first_name|first|default:request.user.username|first|upper }}
+            {{ request.user.last_name|first|upper }}
+          {% endif %}
+
         </a>
+        {% endblock %}
 
       </div>
     </div>
@@ -280,27 +289,28 @@
         </a>
 
         {# Manage Jobs — add href="{% url 'company_job_list' %}" when ready #}
-        <a href=""
+        <a href="{% url 'company_job_list' %}"
            class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">
-          Manage Jobs
+          Active Jobs
         </a>
+
 
         {# Post a Job — add href="{% url 'job_create' %}" when ready #}
-        <a href=""
-           class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">
-          Post Job
+        <a href="{% url 'create_job' %}"
+          class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">
+          Post a Job
         </a>
 
-        {# Applicants — add href="{% url 'view_applicants' %}" when ready #}
-        <a href=""
-           class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">
-          Applicants
+        <a href="{% url 'old_jobs' %}"
+          class="{% block mobile_nav_old_jobs %}{% endblock %} px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">
+          Old Jobs
         </a>
-
-        {# Screening — add href="{% url 'screening_dashboard' %}" when ready #}
-        <a href=""
-           class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">
-          Screening
+        <a href="{% url 'to_shortlist' %}"
+          class="{% block mobile_nav_to_shortlist %}{% endblock %} px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all flex items-center gap-2">
+          To Shortlist
+          {% if to_shortlist_count %}
+          <span class="bg-amber-400 text-amber-900 text-xs font-semibold rounded-full px-2 py-0.5 leading-none">{{ to_shortlist_count }}</span>
+          {% endif %}
         </a>
 
         <a href="{% url 'company_edit_profile' %}"

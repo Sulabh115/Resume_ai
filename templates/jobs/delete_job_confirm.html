@@ -4,11 +4,11 @@
 {# ── No nav item active on delete confirmation page ── #}
 
 {# ── Company initial in navbar avatar ── #}
-{% block nav_avatar %}
+{% comment %} {% block nav_avatar %}
 <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
   {{ request.user.companyprofile.company_name|first|upper }}
 </div>
-{% endblock %}
+{% endblock %} {% endcomment %}
 
 {% block extra_head %}
 <style>

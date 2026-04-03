@@ -4,7 +4,7 @@
 {# ── Mark Jobs active in navbar ── #}
 {% block nav_jobs %}active{% endblock %}
 
-{# ── Avatar: initials for candidate, first letter for company, or nothing for guests ── #}
+{# ── Avatar: initials for logged-in users, Register button for guests ── #}
 {% block nav_avatar %}
 {% if request.user.is_authenticated %}
   <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
@@ -33,6 +33,10 @@
     background: rgba(255,255,255,0.95); color: #2136f3;
     box-shadow: 0 4px 14px rgba(255,255,255,0.3);
   }
+  .apply-btn-warn { transition: all 0.15s ease; }
+  .apply-btn-warn:hover {
+    background: rgba(251,191,36,0.25); border-color: rgba(251,191,36,0.55);
+  }
 
   .job-tag {
     font-size: 11px; padding: 2px 10px; border-radius: 999px;
@@ -57,6 +61,17 @@
 {% block main_content %}
 <main class="max-w-5xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
 
+  {# ── No resume warning (candidate only) ── #}
+  {% if request.user.is_authenticated and request.user.candidateprofile and not has_resumes %}
+  <div class="flex items-start gap-3 bg-amber-500/15 border border-amber-400/30 rounded-2xl px-4 py-3 mb-5">
+    <svg class="w-4 h-4 text-amber-300 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <p class="text-amber-300 text-sm flex-1">You haven't uploaded a resume yet — you won't be able to apply until you do.</p>
+    <a href="{% url 'resume_manager' %}" class="text-amber-300 hover:text-white text-sm font-semibold underline underline-offset-2 flex-shrink-0">Upload →</a>
+  </div>
+  {% endif %}
+
   {# Page header #}
   <div class="flex items-center justify-between mb-5">
     <div>
@@ -65,16 +80,6 @@
         <span class="text-white/80 font-medium">{{ total }}</span> open position{{ total|pluralize }}
       </p>
     </div>
-    {# Company: Post a Job — add href="{% url 'create_job' %}" when jobs app is ready #}
-    {% if request.user.is_authenticated and request.user.companyprofile %}
-    {# <a href=""
-       class="bg-white/88 text-teal-700 font-semibold text-sm px-5 py-2.5 rounded-full hover:bg-white transition-all shadow-sm flex items-center gap-2">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-      </svg>
-      Post a Job
-    </a> #}
-    {% endif %}
   </div>
 
   {# Filter form #}
@@ -91,7 +96,7 @@
              class="w-full bg-white/10 border border-white/22 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/35 outline-none focus:border-white/50 focus:bg-white/15 transition-all"/>
     </div>
 
-    {# Job type dropdown #}
+    {# Job type #}
     <select name="job_type" onchange="this.form.submit()"
             class="filter-select rounded-xl px-4 py-2.5 text-sm cursor-pointer">
       <option value="">All Types</option>
@@ -102,7 +107,7 @@
       {% endfor %}
     </select>
 
-    {# Experience dropdown #}
+    {# Experience #}
     <select name="experience" onchange="this.form.submit()"
             class="filter-select rounded-xl px-4 py-2.5 text-sm cursor-pointer">
       {% for val, label in filter_form.fields.experience.choices %}
@@ -110,7 +115,7 @@
       {% endfor %}
     </select>
 
-    {# Location + search button #}
+    {# Location + search #}
     <div class="flex gap-2">
       <input type="text" name="location" value="{{ filter_form.location.value|default:'' }}"
              placeholder="Location…"
@@ -121,7 +126,7 @@
       </button>
     </div>
 
-    {# Clear filters #}
+    {# Clear #}
     {% if filter_form.q.value or filter_form.job_type.value or filter_form.experience.value or filter_form.location.value %}
     <a href="{% url 'job_list' %}"
        class="flex items-center gap-1.5 text-white/50 hover:text-white text-sm transition-colors px-3 py-2.5 rounded-xl hover:bg-white/10 shrink-0">
@@ -179,51 +184,63 @@
 
         <div class="flex items-center gap-2 mt-2 flex-wrap">
           <span class="job-tag bg-white/15 text-white border border-white/25">{{ job.get_job_type_display }}</span>
-
           {% if job.salary_min or job.salary_max %}
           <span class="job-tag bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">{{ job.salary_display }}</span>
           {% endif %}
-
           {% if job.experience_required %}
           <span class="job-tag bg-white/10 text-white/60 border border-white/18">{{ job.experience_required }}+ yrs</span>
           {% endif %}
-
           {% if job.qualification_required %}
           <span class="job-tag bg-violet-500/15 text-violet-300 border border-violet-400/20">{{ job.get_qualification_required_display }}</span>
           {% endif %}
-
           {% for skill in job.skills.all|slice:":3" %}
           <span class="job-tag bg-white/10 text-white/65 border border-white/18">{{ skill.name }}</span>
           {% endfor %}
           {% if job.skills.count > 3 %}
           <span class="job-tag bg-white/8 text-white/35 border border-white/12">+{{ job.skills.count|add:"-3" }}</span>
           {% endif %}
-
           {% if job.deadline %}
           <span class="job-tag bg-white/8 text-white/40 border border-white/12">Closes {{ job.deadline|date:"M j" }}</span>
           {% endif %}
-
           <span class="job-tag bg-white/6 text-white/30 border border-white/10">{{ job.created_at|timesince }} ago</span>
         </div>
       </div>
 
-      {# CTA button #}
+      {# ── CTA button ── #}
       {% if request.user.is_authenticated %}
+
         {% if request.user.candidateprofile %}
-        <a href="{% url 'apply_job' job.id %}"
-           class="apply-btn bg-white/20 border border-white/35 backdrop-blur-md text-white text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
-           onclick="event.stopPropagation()">
-          Apply
-        </a>
+          {% if has_resumes %}
+          {# Candidate with resume — apply #}
+          <a href="{% url 'apply_job' job.id %}"
+             class="apply-btn bg-white/20 border border-white/35 text-white text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
+             onclick="event.stopPropagation()">
+            Apply
+          </a>
+          {% else %}
+          {# Candidate without resume — prompt upload #}
+          <a href="{% url 'resume_manager' %}"
+             title="Upload a resume to apply"
+             class="apply-btn-warn bg-amber-500/15 border border-amber-400/30 text-amber-300 text-sm font-medium px-4 py-2.5 rounded-full shrink-0 flex items-center gap-1.5"
+             onclick="event.stopPropagation()">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Add Resume
+          </a>
+          {% endif %}
+
         {% elif request.user.companyprofile == job.company %}
-        {# Edit Job — add href="{% url 'edit_job' job.id %}" when jobs app is ready #}
-        {# <a href=""
+        {# Owning company — edit shortcut #}
+        <a href="{% url 'edit_job' job.id %}"
            class="apply-btn bg-white/15 border border-white/28 text-white/70 text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
            onclick="event.stopPropagation()">
           Edit
-        </a> #}
+        </a>
         {% endif %}
+
       {% else %}
+      {# Guest — sign in prompt #}
       <a href="{% url 'login' %}"
          class="apply-btn bg-white/18 border border-white/28 text-white text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
          onclick="event.stopPropagation()">
@@ -236,7 +253,6 @@
   </div>
 
   {% else %}
-  {# Empty state #}
   <div class="empty-state rounded-3xl px-8 py-20 flex flex-col items-center gap-4 text-center mt-4">
     <div class="w-16 h-16 rounded-2xl bg-white/10 border border-white/18 flex items-center justify-center">
       <svg class="w-8 h-8 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">

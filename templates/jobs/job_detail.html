@@ -4,20 +4,9 @@
 {# ── Mark Jobs active in navbar ── #}
 {% block nav_jobs %}active{% endblock %}
 
-{# ── Avatar: initials for authenticated users, nothing for guests ── #}
+{# ── Avatar ── #}
 {% block nav_avatar %}
 {% if request.user.is_authenticated %}
-  {# Company that owns this job: show Edit button beside avatar #}
-  {% if request.user.companyprofile == job.company %}
-  {# Add href="{% url 'edit_job' job.id %}" when jobs app is ready #}
-  {# <a href=""
-     class="hidden md:flex items-center gap-1.5 bg-white/18 border border-white/28 text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-white/88 hover:text-indigo-700 transition-all">
-    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-    </svg>
-    Edit
-  </a> #}
-  {% endif %}
   <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
     {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
   </div>
@@ -30,18 +19,15 @@
     font-size: 12px; padding: 4px 14px; border-radius: 999px;
     font-weight: 500; backdrop-filter: blur(8px);
   }
-
   .skill-chip {
     background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
     border: 1px solid rgba(255,255,255,0.28); color: #fff; transition: all 0.15s ease;
   }
   .skill-chip:hover { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.5); }
-
   .section-card {
     background: rgba(255,255,255,0.10);
     border: 1px solid rgba(255,255,255,0.18);
   }
-
   .apply-btn-large {
     background: rgba(255,255,255,0.20); border: 1px solid rgba(255,255,255,0.35);
     transition: all 0.15s ease;
@@ -50,7 +36,6 @@
     background: rgba(255,255,255,0.92); color: #2136f3;
     box-shadow: 0 4px 20px rgba(255,255,255,0.3);
   }
-
   .bullet-list li {
     position: relative; padding-left: 1.25rem;
     color: rgba(255,255,255,0.70); font-size: 0.875rem; line-height: 1.7;
@@ -82,7 +67,6 @@
       {# Header card #}
       <div class="glass-card rounded-3xl p-6">
         <div class="flex items-start gap-5">
-          {# Company logo #}
           <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md border border-white/30 flex items-center justify-center shrink-0 overflow-hidden">
             {% if job.company.logo %}
               <img src="{{ job.company.logo.url }}" alt="{{ job.company.company_name }}" class="w-full h-full object-cover"/>
@@ -91,7 +75,6 @@
                    alt="{{ job.company.company_name }}" class="w-full h-full object-cover"/>
             {% endif %}
           </div>
-          {# Title block #}
           <div class="flex-1 min-w-0">
             <p class="text-white/60 text-sm mb-0.5">{{ job.company.company_name }}</p>
             <h1 class="font-serif-display text-2xl text-white leading-snug">{{ job.title }}</h1>
@@ -110,27 +93,22 @@
         {# Meta tags #}
         <div class="flex flex-wrap gap-2 mt-5">
           <span class="detail-tag bg-white/15 text-white border border-white/25">{{ job.get_job_type_display }}</span>
-
           {% if job.salary_min or job.salary_max %}
           <span class="detail-tag bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">{{ job.salary_display }}</span>
           {% else %}
           <span class="detail-tag bg-white/10 text-white/55 border border-white/18">Salary not disclosed</span>
           {% endif %}
-
           {% if job.experience_required %}
           <span class="detail-tag bg-white/10 text-white/65 border border-white/20">{{ job.experience_required }}+ years experience</span>
           {% endif %}
-
           {% if job.qualification_required %}
           <span class="detail-tag bg-violet-500/20 text-violet-200 border border-violet-400/25">{{ job.get_qualification_required_display }}</span>
           {% endif %}
-
           {% if job.deadline %}
           <span class="detail-tag bg-amber-500/15 text-amber-300 border border-amber-400/25">
             Deadline: {{ job.deadline|date:"M j, Y" }}
           </span>
           {% endif %}
-
           <span class="detail-tag bg-white/8 text-white/40 border border-white/12">Posted {{ job.created_at|timesince }} ago</span>
         </div>
       </div>
@@ -146,10 +124,8 @@
       <div class="section-card rounded-3xl p-6">
         <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Responsibilities</p>
         <ul class="bullet-list space-y-1">
-          {% for line in job.responsibilities.splitlines %}
-            {% if line.strip %}
-            <li>{{ line|cut:"•"|cut:"-"|cut:"*"|strip }}</li>
-            {% endif %}
+          {% for line in responsibilities_list %}
+              <li>{{ line }}</li>
           {% endfor %}
         </ul>
       </div>
@@ -160,16 +136,14 @@
       <div class="section-card rounded-3xl p-6">
         <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Requirements</p>
         <ul class="bullet-list space-y-1">
-          {% for line in job.requirements.splitlines %}
-            {% if line.strip %}
-            <li>{{ line|cut:"•"|cut:"-"|cut:"*"|strip }}</li>
-            {% endif %}
+          {% for line in job.requirements_list %}
+            <li>{{line}}</li>
           {% endfor %}
         </ul>
       </div>
       {% endif %}
 
-      {# Skills #}
+      {# Required skills #}
       {% if job.skills.all %}
       <div class="section-card rounded-3xl p-6">
         <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Required Skills</p>
@@ -186,7 +160,7 @@
     {# ── RIGHT: Sidebar ── #}
     <div class="w-full lg:w-72 shrink-0 flex flex-col gap-4 lg:sticky lg:top-[12vh]">
 
-      {# Apply card #}
+      {# Apply / Management card #}
       <div class="glass-card rounded-3xl p-5">
 
         {# Salary #}
@@ -210,72 +184,83 @@
 
         <div class="h-px bg-white/12 mb-4"></div>
 
-        {# CTA button based on auth/role state #}
+        {# ── CTA — varies by who is viewing ── #}
         {% if request.user.is_authenticated %}
 
           {% if request.user.companyprofile == job.company %}
-            {# Owning company — management actions #}
-            {# Edit Job — add href="{% url 'edit_job' job.id %}" when jobs app is ready #}
-            {# <a href=""
-               class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center mb-2">
-              Edit This Posting
-            </a> #}
+          {# ── Owning company ── #}
+          <a href="{% url 'edit_job' job.id %}"
+             class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center mb-2">
+            Edit This Posting
+          </a>
 
-            {# View Applicants — add href="{% url 'view_applicants' job.id %}" when applications app is ready #}
-            {# <a href=""
-               class="w-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-semibold py-2.5 rounded-2xl text-sm block text-center hover:bg-emerald-500/32 transition-all mb-2">
-              View Applicants ({{ job.application_count }})
-            </a> #}
+          {# View Applicants — add {% url 'view_applicants' job.id %} when applications app is ready #}
+          {# <a href=""
+             class="w-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-semibold py-2.5 rounded-2xl text-sm block text-center hover:bg-emerald-500/32 transition-all mb-2">
+            View Applicants ({{ job.application_count }})
+          </a> #}
 
-            {# Toggle job status — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
-            {# <form method="post" action="">
-              {% csrf_token %}
-              <button type="submit"
-                      class="w-full bg-white/10 border border-white/18 text-white/65 text-sm py-2.5 rounded-2xl hover:bg-white/18 hover:text-white transition-all">
-                {% if job.status == 'open' %}Close Job{% elif job.status == 'closed' %}Reopen Job{% else %}Publish Job{% endif %}
-              </button>
-            </form> #}
+          <form method="post" action="{% url 'toggle_job_status' job.id %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="w-full bg-white/10 border border-white/18 text-white/65 text-sm py-2.5 rounded-2xl hover:bg-white/18 hover:text-white transition-all">
+              {% if job.status == 'open' %}Close Job{% elif job.status == 'closed' %}Reopen Job{% else %}Publish Job{% endif %}
+            </button>
+          </form>
 
           {% elif request.user.candidateprofile %}
-            {# Candidate apply flow #}
-            {% if already_applied %}
-            <div class="w-full bg-emerald-500/18 border border-emerald-400/30 text-emerald-300 font-semibold py-3 rounded-2xl text-sm flex items-center justify-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
-              Application Submitted
-            </div>
-            <p class="text-xs text-white/35 text-center mt-2">You've already applied for this role.</p>
-            {% elif job.is_open %}
-            {# Apply — add href="{% url 'apply_job' job.id %}" when applications app is ready #}
-            {# <a href=""
-               class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center">
-              Apply Now
-            </a> #}
-            {% else %}
-            <div class="w-full bg-white/8 border border-white/15 text-white/45 text-sm py-3 rounded-2xl text-center">
-              Applications Closed
-            </div>
-            {% endif %}
+          {# ── Candidate ── #}
+          {% if already_applied %}
+          <div class="w-full bg-emerald-500/18 border border-emerald-400/30 text-emerald-300 font-semibold py-3 rounded-2xl text-sm flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            Application Submitted
+          </div>
+          <p class="text-xs text-white/35 text-center mt-2">You've already applied for this role.</p>
+
+          {% elif not job.is_open %}
+          <div class="w-full bg-white/8 border border-white/15 text-white/45 text-sm py-3 rounded-2xl text-center">
+            Applications Closed
+          </div>
+
+          {% elif not has_resumes %}
+          {# Open job but no resume uploaded yet #}
+          <a href="{% url 'resume_manager' %}"
+             class="w-full flex items-center justify-center gap-2 bg-amber-500/15 border border-amber-400/30 text-amber-300 font-semibold py-3 rounded-2xl text-sm hover:bg-amber-500/25 transition-all mb-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Upload Resume First
+          </a>
+          <p class="text-xs text-white/35 text-center">You need a resume to apply.</p>
 
           {% else %}
-            {# Another company viewing #}
-            <a href="{% url 'job_list' %}"
-               class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center">
-              Browse All Jobs
-            </a>
+          {# Ready to apply #}
+          <a href="{% url 'apply_job' job.id %}"
+             class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center">
+            Apply Now
+          </a>
+          {% endif %}
+
+          {% else %}
+          {# Another company viewing #}
+          <a href="{% url 'job_list' %}"
+             class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center">
+            Browse All Jobs
+          </a>
           {% endif %}
 
         {% else %}
-          {# Not logged in #}
-          <a href="{% url 'login' %}"
-             class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center mb-3">
-            Sign in to Apply
-          </a>
-          <a href="{% url 'register' %}"
-             class="w-full bg-white/10 border border-white/18 text-white/70 text-sm py-2.5 rounded-2xl block text-center hover:bg-white/18 hover:text-white transition-all">
-            Create Account
-          </a>
+        {# Not logged in #}
+        <a href="{% url 'login' %}"
+           class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center mb-3">
+          Sign in to Apply
+        </a>
+        <a href="{% url 'register' %}"
+           class="w-full bg-white/10 border border-white/18 text-white/70 text-sm py-2.5 rounded-2xl block text-center hover:bg-white/18 hover:text-white transition-all">
+          Create Account
+        </a>
         {% endif %}
 
         {# Stats #}
@@ -324,12 +309,12 @@
         {% endif %}
       </div>
 
-      {# Company owner: delete button — add href="{% url 'delete_job' job.id %}" when jobs app is ready #}
+      {# Company owner: delete button #}
       {% if request.user.is_authenticated and request.user.companyprofile == job.company %}
-      {# <a href=""
+      <a href="{% url 'delete_job' job.id %}"
          class="w-full bg-red-500/12 border border-red-400/25 text-red-300 text-sm font-medium py-2.5 rounded-2xl block text-center hover:bg-red-500/22 transition-all">
         Delete This Posting
-      </a> #}
+      </a>
       {% endif %}
 
     </div>

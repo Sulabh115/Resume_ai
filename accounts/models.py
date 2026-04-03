@@ -5,6 +5,7 @@ from django.db import models
 class CandidateProfile(models.Model):
     user            = models.OneToOneField(User, on_delete=models.CASCADE)
     phone           = models.CharField(max_length=20, blank=True)
+    about           = models.TextField(blank=True)
     education       = models.TextField(blank=True)
     experience      = models.IntegerField(default=0)
     skills          = models.TextField(blank=True)
