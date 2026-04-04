@@ -130,20 +130,37 @@ def register(request):
 def user_login(request):
     """
     Authenticates by username + password.
-    Uses DB query (not hasattr) to detect profile type — avoids
-    the Django ORM cache bug where hasattr returns False on a fresh
-    user object even when the profile exists.
+
+    Role validation (fix for cross-role login confusion):
+        The login form submits a hidden 'role' field (updated by the JS
+        toggle to 'candidate' or 'company').  After successful auth, the
+        view checks that the authenticated user's actual profile type
+        matches the selected role.  If they don't match, the user is
+        logged back out and shown a specific, friendly error message —
+        rather than silently redirecting them to the wrong dashboard.
+
+        This prevents the confusing situation where:
+          · A company user logs in on the Candidate tab and sees
+            a partially-rendered candidate UI
+          · A candidate logs in on the HR tab and sees company UI
+
+        If no role is submitted (e.g. direct POST from tests or the
+        landing-page form), the check is skipped and the user is
+        redirected by their actual profile type as before.
     """
     if request.user.is_authenticated:
         response = _redirect_by_role(request.user)
         if response:
             return response
 
-    error = None
+    error     = None
+    role_hint = 'candidate'  # default for pre-selecting the toggle on re-render
 
     if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '')
+        username        = request.POST.get('username', '').strip()
+        password        = request.POST.get('password', '')
+        selected_role   = request.POST.get('role', '').strip()  # 'candidate' | 'company' | ''
+        role_hint       = selected_role or 'candidate'
 
         if not username or not password:
             error = 'Please enter both username and password.'
@@ -151,20 +168,44 @@ def user_login(request):
             user = authenticate(request, username=username, password=password)
 
             if user is not None:
-                login(request, user)
-                response = _redirect_by_role(user)
-                if response:
-                    return response
-                # User authenticated but has no profile
-                logout(request)
-                error = (
-                    'Your account has no candidate or company profile. '
-                    'Please register first or contact support.'
-                )
+                actual_role = _get_user_role(user)
+
+                # ── Role mismatch check ───────────────────────────────────
+                # Only enforce when the form actually submitted a role value.
+                # Skip silently if role was empty (API / direct POST).
+                if selected_role and actual_role and selected_role != actual_role:
+                    # Do NOT log the user in — just return a clear error.
+                    if selected_role == 'candidate':
+                        error = (
+                            'These credentials belong to a company / HR account. '
+                            'Please switch to the "HR / Recruiter" tab and sign in again.'
+                        )
+                        role_hint = 'candidate'   # keep the tab the user chose
+                    else:
+                        error = (
+                            'These credentials belong to a candidate account. '
+                            'Please switch to the "Candidate" tab and sign in again.'
+                        )
+                        role_hint = 'company'
+                else:
+                    # Credentials are valid and role matches (or no role was submitted)
+                    login(request, user)
+                    response = _redirect_by_role(user)
+                    if response:
+                        return response
+                    # Authenticated but no profile attached
+                    logout(request)
+                    error = (
+                        'Your account has no candidate or company profile. '
+                        'Please register first or contact support.'
+                    )
             else:
                 error = 'Incorrect username or password.'
 
-    return render(request, 'accounts/login.html', {'error': error})
+    return render(request, 'accounts/login.html', {
+        'error':     error,
+        'role_hint': role_hint,
+    })
 
 
 @login_required
