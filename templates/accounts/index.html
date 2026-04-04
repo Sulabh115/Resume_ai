@@ -2,32 +2,6 @@
 {% block title %}ResumeAI — Intelligent Resume Screening{% endblock %}
 
 {% block extra_head %}
-{% comment %} {#
-  VIEW — accounts/views.py
-  ─────────────────────────────────────────────────────────────────────────
-  def home(request):
-      if request.user.is_authenticated:
-          if hasattr(request.user, "candidateprofile"):
-              return redirect("candidate_dashboard")
-          if hasattr(request.user, "companyprofile"):
-              return redirect("company_dashboard")
-      # Pass error=None on GET so template doesn't crash on {{ error }} check
-      # The login form POSTs to accounts/login, which re-renders with error
-      # if credentials are wrong. To show that error on the landing page
-      # instead of a separate login page, you can either:
-      #   A) keep it as-is — failed logins redirect to /accounts/login/
-      #   B) handle POST here too and pass error back — your call later
-      return render(request, "accounts/home.html")
-
-  URL — accounts/urls.py
-  ─────────────────────────────────────────────────────────────────────────
-  path("", views.home, name="home"),
-
-  resume_ai/urls.py
-  ─────────────────────────────────────────────────────────────────────────
-  path("", include("accounts.urls")),   ← serves home at /
-  path("accounts/", include("accounts.urls")),
-#} {% endcomment %}
 <style>
   /* Landing page only.
      .glass, .bg-canvas, .bg-canvas.candidate, shapes, .nav-link → base.html */
@@ -158,9 +132,7 @@
 
         <p class="text-[10px] uppercase tracking-widest text-white/50 mb-4 text-center">Sign in to ResumeAI</p>
 
-        {% comment %} {# Role toggle — visual only.
-           Django's user_login view redirects based on which profile
-           the authenticated user has, regardless of this toggle. #} {% endcomment %}
+        {# Role toggle — synced to hidden input via setRole() #}
         <div class="role-toggle mb-2">
           <div class="role-opt active" id="role-candidate" onclick="setRole('candidate')">
             <svg class="w-3.5 h-3.5 inline mr-1.5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,9 +151,7 @@
           Sign in to browse jobs and track your applications
         </p>
 
-        {% comment %} {# Login error — shown when user_login view passes error back.
-           This only shows if you decide to handle POST in home() too.
-           For now, failed logins land on /accounts/login/ with the error. #} {% endcomment %}
+        {# Error banner — shown when login view passes error back #}
         {% if error %}
         <div class="bg-red-500/15 border border-red-400/30 text-red-300 rounded-2xl px-4 py-3 text-sm flex items-center gap-2 mb-4">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,9 +173,12 @@
           {% endfor %}
         {% endif %}
 
-        {# Login form — POSTs to accounts/login view #}
+        {# Login form — role hidden input is now included and kept in sync #}
         <form method="post" action="{% url 'login' %}" class="space-y-3" novalidate>
           {% csrf_token %}
+
+          {# FIX: hidden role field — synced by setRole() so the view enforces mismatch #}
+          <input type="hidden" name="role" id="home-role-input" value="candidate"/>
 
           <div>
             <label class="text-[10px] uppercase tracking-widest text-white/45 block mb-1.5">Username</label>
@@ -465,15 +438,26 @@
 
 {% block extra_scripts %}
 <script>
-  /* ── Role toggle — visual only ── */
+  /* ── Role toggle ── */
   function setRole(role) {
-    document.getElementById('role-candidate').classList.toggle('active', role === 'candidate');
-    document.getElementById('role-hr').classList.toggle('active', role === 'hr');
-    document.getElementById('role-hint').textContent = role === 'candidate'
+    const isCandidate = (role === 'candidate');
+
+    document.getElementById('role-candidate').classList.toggle('active',  isCandidate);
+    document.getElementById('role-hr').classList.toggle('active',        !isCandidate);
+
+    document.getElementById('role-hint').textContent = isCandidate
       ? 'Sign in to browse jobs and track your applications'
-      : 'Sign in to post jobs, manage applications and view ranked results';
-    document.getElementById('login-btn').textContent =
-      role === 'candidate' ? 'Sign in as Candidate' : 'Sign in as HR / Recruiter';
+      : 'Sign in to manage your jobs and review applicants';
+
+    document.getElementById('login-btn').textContent = isCandidate
+      ? 'Sign in as Candidate'
+      : 'Sign in as HR / Recruiter';
+
+    // FIX: keep hidden role field in sync so the view enforces the mismatch check.
+    // Without this, selected_role was always '' (empty) on the landing page,
+    // the mismatch guard in user_login was silently skipped, and HR users
+    // could log in via the Candidate tab (and vice versa).
+    document.getElementById('home-role-input').value = isCandidate ? 'candidate' : 'company';
   }
 
   /* ── Password show/hide ── */
