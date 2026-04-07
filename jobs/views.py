@@ -1,6 +1,22 @@
 """
 jobs/views.py
 
+FIX #16 (job_detail):
+    The template job_detail.html used:
+        {% if request.user.companyprofile == job.company %}
+
+    This crashes with AttributeError for any candidate user because
+    Django's ORM raises RelatedObjectDoesNotExist (a subclass of
+    AttributeError) when accessing a reverse OneToOne that doesn't exist.
+
+    Fix: compute a safe is_owner boolean in the view and pass it in
+    context.  The template then uses {% if is_owner %} everywhere.
+
+    is_owner is True only when:
+        - the user is authenticated
+        - the user has a CompanyProfile (DB query, avoids ORM cache bug)
+        - that profile is the one that owns this job
+
 FIXES vs previous:
   1. job_list:   passes has_resumes to template so Apply button
                  can warn candidates with no resume
@@ -111,6 +127,19 @@ def job_list(request):
 
 
 def job_detail(request, job_id):
+    """
+    FIX #16: compute is_owner safely via a DB query rather than
+    accessing request.user.companyprofile directly.
+
+    Accessing a missing reverse OneToOne relation raises
+    RelatedObjectDoesNotExist (subclass of AttributeError), which
+    crashes the page for any candidate or anonymous user.
+
+    is_owner is True iff:
+        - the request user is authenticated
+        - the user has a CompanyProfile in the DB
+        - that CompanyProfile is the one that owns this job
+    """
     job = get_object_or_404(
         Job.objects.select_related("company").prefetch_related("skills"),
         id=job_id
@@ -123,6 +152,15 @@ def job_detail(request, job_id):
     if candidate:
         already_applied = job.applications.filter(candidate=candidate).exists()
         has_resumes     = candidate.resumes.exists()
+
+    # ── FIX #16: safe ownership check ────────────────────────────────────
+    # Never use request.user.companyprofile — that raises for non-company users.
+    # Use the _get_company helper which does a filtered DB lookup instead.
+    is_owner = False
+    if request.user.is_authenticated:
+        viewer_company = _get_company(request)
+        if viewer_company is not None:
+            is_owner = (viewer_company.pk == job.company.pk)
 
     def clean_lines(text):
         return [
@@ -138,6 +176,7 @@ def job_detail(request, job_id):
         "job":                   job,
         "already_applied":       already_applied,
         "has_resumes":           has_resumes,
+        "is_owner":              is_owner,
         "responsibilities_list": responsibilities_list,
         "requirements_list":     requirements_list,
     })
@@ -202,11 +241,9 @@ def create_job(request):
             try:
                 repost_job = Job.objects.get(id=int(repost_id), company=company)
             except (Job.DoesNotExist, ValueError, TypeError):
-                # Invalid or foreign job id — silently fall through to blank form
                 repost_job = None
 
         if repost_job:
-            # Build initial data dict from the source job — reset volatile fields
             initial = {
                 "title":                  f"{repost_job.title}",
                 "description":            repost_job.description,
@@ -220,7 +257,7 @@ def create_job(request):
                 "salary_max":             repost_job.salary_max,
                 "salary_currency":        repost_job.salary_currency,
                 "status":                 Job.Status.OPEN,
-                "deadline":               None,   # must set a fresh deadline
+                "deadline":               None,
                 "skills_input":           ", ".join(
                                               repost_job.skills.values_list("name", flat=True)
                                           ),
@@ -287,7 +324,8 @@ def delete_job(request, job_id):
         messages.success(request, f'"{title}" has been deleted.')
         return redirect("company_dashboard")
 
-    return render(request, "jobs/delete_job_confirm.html", {"job": job})
+    # FIX #10: pass company so company_base.html navbar avatar renders correctly
+    return render(request, "jobs/delete_job_confirm.html", {"job": job, "company": company})
 
 
 @login_required
@@ -393,29 +431,14 @@ def old_jobs(request):
         .order_by('-deadline')
     )
 
-    # Pre-load ranked applicants for each job (used in "View Results" modal)
     jobs_data = []
     for job in jobs:
 
         # FIX #6: compute avg_score_offset for the SVG ring in old_jobs.html.
-        #
-        # The ring uses stroke-dasharray="94.2" (circumference of r=15 circle:
-        # 2 * π * 15 ≈ 94.25).  stroke-dashoffset controls how much of the
-        # ring is filled:
-        #   offset = circumference - (score / 100) * circumference
-        #   offset = 94.2 * (1 - score / 100)
-        #
-        # A score of 0   → offset 94.2  (ring fully empty)
-        # A score of 100 → offset 0.0   (ring fully filled)
-        # A score of 70  → offset 94.2 * 0.30 = 28.3
-        #
-        # avg_score is None when no applications have been screened yet —
-        # guard with "or 0" so the arithmetic never raises TypeError.
-        #
         if job.avg_score is not None:
             job.avg_score_offset = round(94.2 * (1 - job.avg_score / 100), 1)
         else:
-            job.avg_score_offset = 94.2   # ring stays empty when no score
+            job.avg_score_offset = 94.2
 
         if job.results_published:
             applicants_qs = (
@@ -433,14 +456,12 @@ def old_jobs(request):
                     'name':        u.get_full_name() or u.username,
                     'score':       round(app.match_score or 0),
                     'status':      app.status,
-                    # FIX #3: explicit boolean so JS badge logic works
                     'shortlisted': app.status == 'shortlisted',
                 })
 
             total_count       = len(ranked)
             shortlisted_count = sum(1 for a in ranked if a['shortlisted'])
 
-            # FIX #3: wrap in a dict with all keys openModal() expects
             ranked_json = json.dumps({
                 'title':       job.title,
                 'total':       total_count,
@@ -449,7 +470,6 @@ def old_jobs(request):
             })
 
         else:
-            # Results not published yet — provide a safe empty stub
             ranked_json = json.dumps({
                 'title':       job.title,
                 'total':       0,
@@ -515,14 +535,10 @@ def send_shortlist_email(request, job_id):
       - Replaces fail_silently=True with proper per-recipient try/except
         so individual failures are tracked without aborting the whole batch.
       - Uses EmailMultiAlternatives to send plain-text + HTML in one message.
-        Email clients that support HTML get the styled template; others get
-        clean plain text.
-      - Tracks sent_count, no_email_count, and error_count separately so
-        the flash message is precise.
+      - Tracks sent_count, no_email_count, and error_count separately.
       - Sets job.shortlist_email_sent = True only when at least one email
-        succeeded — if every send failed the flag stays False so HR can retry.
-      - HTML body rendered from a dedicated template
-        (jobs/email/shortlist_interview.html) for easy styling.
+        succeeded.
+      - HTML body rendered from a dedicated template.
     """
     if request.method != 'POST':
         return redirect('to_shortlist')
@@ -546,7 +562,6 @@ def send_shortlist_email(request, job_id):
         .order_by('-match_score')
     )
 
-    # Shared template context — same for every recipient except name/email
     email_ctx_base = {
         'job':                job,
         'company':            company,
@@ -557,9 +572,9 @@ def send_shortlist_email(request, job_id):
         'interview_notes':    interview_notes,
     }
 
-    sent_count     = 0   # emails successfully handed to the mail backend
-    no_email_count = 0   # candidates with no email address on their account
-    error_count    = 0   # SMTP / backend errors for candidates that do have email
+    sent_count     = 0
+    no_email_count = 0
+    error_count    = 0
 
     for app in shortlisted:
         u     = app.candidate.user
@@ -572,7 +587,6 @@ def send_shortlist_email(request, job_id):
 
         subject = f"You've been shortlisted — {job.title} at {company.company_name}"
 
-        # ── Plain-text body ───────────────────────────────────────────────
         notes_line = f"\nNotes: {interview_notes}" if interview_notes.strip() else ""
         text_body = (
             f"Dear {name},\n\n"
@@ -589,7 +603,6 @@ def send_shortlist_email(request, job_id):
             f"HR Team — {company.company_name}"
         )
 
-        # ── HTML body — rendered from a dedicated template ────────────────
         html_body = render_to_string(
             'jobs/email/shortlist_interview.html',
             {**email_ctx_base, 'candidate_name': name},
@@ -608,15 +621,12 @@ def send_shortlist_email(request, job_id):
             sent_count += 1
 
         except Exception:
-            # Log individual failure but continue sending to remaining candidates
             error_count += 1
 
-    # ── Only mark as sent if at least one email went through ─────────────
     if sent_count > 0:
         job.shortlist_email_sent = True
         job.save(update_fields=['shortlist_email_sent'])
 
-    # ── Build a precise flash message ────────────────────────────────────
     parts = []
 
     if sent_count:
@@ -649,3 +659,41 @@ def send_shortlist_email(request, job_id):
         )
 
     return redirect('to_shortlist')
+
+
+# ── FIX #2: Publish Results ──────────────────────────────────────────────────
+
+@login_required
+def publish_results(request, job_id):
+    """
+    POST only. Sets job.results_published = True and saves.
+
+    Once results are published:
+      - Candidates can see their rank and score on old_application_list (#3).
+      - The job appears in the "To Shortlist" queue for interview emails.
+      - The Publish Results button in view_applicants sidebar becomes disabled.
+
+    Only the owning company can publish results for a job.
+    Redirects back to view_applicants after saving.
+    """
+    if request.method != "POST":
+        return redirect("view_applicants", job_id=job_id)
+
+    company = _get_company(request)
+    if not company:
+        return redirect("candidate_dashboard")
+
+    job = get_object_or_404(Job, id=job_id, company=company)
+
+    if not job.results_published:
+        job.results_published = True
+        job.save(update_fields=["results_published"])
+        messages.success(
+            request,
+            f'Results for "{job.title}" have been published. '
+            f'Candidates can now see their ranking.'
+        )
+    else:
+        messages.info(request, "Results have already been published for this job.")
+
+    return redirect("view_applicants", job_id=job_id)

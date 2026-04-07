@@ -16,14 +16,19 @@ class ScreeningResult(models.Model):
                          related_name="screening_result"
                        )
 
-    # Core scores
+    # Core composite score
     similarity_score = models.FloatField(
                          default=0,
                          help_text="Cosine similarity score between resume and job description (0–100)"
                        )
 
+    # ── #9: Individual component scores ──────────────────────────────────
+    skill_score          = models.FloatField(default=0, help_text="Skill match component score (0–100)")
+    experience_score     = models.FloatField(default=0, help_text="Experience match component score (0–100)")
+    qualification_score  = models.FloatField(default=0, help_text="Qualification match component score (0–100)")
+    cosine_score         = models.FloatField(default=0, help_text="Raw cosine similarity component score (0–100)")
+
     # Skill analysis — stored as comma-separated strings for simplicity
-    # e.g. "Python,Django,PostgreSQL"
     extracted_skills = models.TextField(
                          blank=True,
                          help_text="Skills extracted from the candidate's resume"

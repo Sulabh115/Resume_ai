@@ -2,10 +2,6 @@ from django import forms
 from .models import Job, Skill
 
 
-# In jobs/forms.py — add qualification_required to JobForm fields
-
-# Find your existing fields list in JobForm and add "qualification_required":
-
 class JobForm(forms.ModelForm):
     """
     Form for creating / editing a Job posting.
@@ -32,7 +28,8 @@ class JobForm(forms.ModelForm):
             "requirements",
             "responsibilities",
             "experience_required",
-            "qualification_required",   # ← new
+            "qualification_required",
+            "open_positions",          # FIX #7
             "location",
             "job_type",
             "salary_min",
@@ -60,7 +57,11 @@ class JobForm(forms.ModelForm):
             "experience_required": forms.NumberInput(attrs={
                 "placeholder": "2", "min": 0
             }),
-            "qualification_required": forms.Select(),   # ← new
+            "qualification_required": forms.Select(),
+            # FIX #7: number input for open positions, min 1
+            "open_positions": forms.NumberInput(attrs={
+                "placeholder": "1", "min": 1
+            }),
             "location": forms.TextInput(attrs={
                 "placeholder": "Kathmandu, NP  or  Remote"
             }),

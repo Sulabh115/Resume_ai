@@ -187,7 +187,10 @@
         {# ── CTA — varies by who is viewing ── #}
         {% if request.user.is_authenticated %}
 
-          {% if request.user.companyprofile == job.company %}
+          {# FIX #16: use is_owner (passed from view) instead of
+             request.user.companyprofile == job.company which crashes
+             for any user that has no companyprofile attribute. #}
+          {% if is_owner %}
           {# ── Owning company ── #}
           <a href="{% url 'edit_job' job.id %}"
              class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center mb-2">
@@ -236,7 +239,7 @@
           {% endif %}
 
           {% else %}
-          {# Another company viewing #}
+          {# Another company viewing — not the owner #}
           <a href="{% url 'job_list' %}"
              class="apply-btn-large w-full text-white font-semibold py-3 rounded-2xl text-sm block text-center">
             Browse All Jobs
@@ -301,8 +304,8 @@
         {% endif %}
       </div>
 
-      {# Company owner: delete button #}
-      {% if request.user.is_authenticated and request.user.companyprofile == job.company %}
+      {# FIX #16: use is_owner instead of request.user.companyprofile == job.company #}
+      {% if is_owner %}
       <a href="{% url 'delete_job' job.id %}"
          class="w-full bg-red-500/12 border border-red-400/25 text-red-300 text-sm font-medium py-2.5 rounded-2xl block text-center hover:bg-red-500/22 transition-all">
         Delete This Posting

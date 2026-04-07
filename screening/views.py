@@ -1,3 +1,20 @@
+"""
+screening/views.py
+
+FIX #10:
+    company_base.html navbar avatar uses {{ company }} to render the
+    company logo or initials.  Views that extend company_base.html but
+    don't pass 'company' in their render context cause the avatar to
+    render blank.
+
+    Affected views in this file:
+        screening_dashboard      — added 'company': company to render context
+        screening_result_detail  — added 'company': company to render context
+
+    Views that only redirect (no render call) are unaffected:
+        run_screening  — redirects to view_applicants after processing
+"""
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -23,6 +40,7 @@ def run_screening(request, job_id):
     Triggers AI screening for all unscreened applications on a job.
     Only accessible by the company that owns the job.
     Redirects back to the applicants page with a summary message.
+    Only redirects — no render call — so no company context needed here.
     """
     company = _company_required(request)
     if not company:
@@ -65,13 +83,18 @@ def run_screening(request, job_id):
         try:
             score_data = compute_match_score(app.resume.file, job)
 
-            result.similarity_score = score_data["score"]
-            result.extracted_skills  = score_data.get("extracted_skills", "")
-            result.matched_skills    = score_data.get("matched_skills", "")
-            result.missing_skills    = score_data.get("missing_skills", "")
-            result.summary           = score_data.get("summary", "")
-            result.status            = ScreeningResult.Status.DONE
-            result.error_message     = ""
+            result.similarity_score     = score_data["score"]
+            result.extracted_skills     = score_data.get("extracted_skills", "")
+            result.matched_skills       = score_data.get("matched_skills", "")
+            result.missing_skills       = score_data.get("missing_skills", "")
+            result.summary              = score_data.get("summary", "")
+            result.status               = ScreeningResult.Status.DONE
+            result.error_message        = ""
+            # #9: save individual component scores
+            result.skill_score          = score_data.get("skill_score", 0)
+            result.experience_score     = score_data.get("experience_score", 0)
+            result.qualification_score  = score_data.get("qualification_score", 0)
+            result.cosine_score         = score_data.get("cosine_score", 0)
             result.save()
 
             # Push score back to Application for dashboard sorting
@@ -149,6 +172,8 @@ def screening_dashboard(request, job_id):
         "screened":     screened,
         "pending":      pending,
         "strong":       strong,
+        # FIX #10: pass company so company_base.html navbar avatar renders correctly
+        "company":      company,
     })
 
 
@@ -178,4 +203,6 @@ def screening_result_detail(request, application_id):
         "application": application,
         "result":      result,
         "job":         application.job,
+        # FIX #10: pass company so company_base.html navbar avatar renders correctly
+        "company":     company,
     })

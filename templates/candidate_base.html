@@ -309,19 +309,19 @@
         </a>
 
         {# Applications — add href="{% url 'application_list' %}" when ready #}
-        <a href=""
+        <a href="{% url 'application_list' %}"
            class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">
           Applications
         </a>
 
         {# Old Applications — add href="{% url 'old_application_list' %}" when ready #}
-        <a href=""
+        <a href="{% url 'old_application_list' %}"
            class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">
           Old Applications
         </a>
 
         {# Resumes — add href="{% url 'resume_manager' %}" when ready #}
-        {% comment %} {# <a href=""
+        {% comment %} {# <a href=" {% url 'resume_manager' %} "
            class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">
           Resumes
         </a> #} {% endcomment %}

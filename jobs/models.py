@@ -25,13 +25,12 @@ class Job(models.Model):
         CLOSED = "closed", "Closed"
         DRAFT  = "draft",  "Draft"
 
-    # ── New: qualification level choices ──────────────────────────────────
     class QualificationLevel(models.TextChoices):
-        ANY        = "",           "Any / Not specified"
-        DIPLOMA    = "diploma",    "Diploma"
-        BACHELOR   = "bachelor",   "Bachelor's Degree"
-        MASTER     = "master",     "Master's Degree"
-        PHD        = "phd",        "PhD / Doctorate"
+        ANY      = "",         "Any / Not specified"
+        DIPLOMA  = "diploma",  "Diploma"
+        BACHELOR = "bachelor", "Bachelor's Degree"
+        MASTER   = "master",   "Master's Degree"
+        PHD      = "phd",      "PhD / Doctorate"
 
     company          = models.ForeignKey(
                          CompanyProfile,
@@ -47,8 +46,6 @@ class Job(models.Model):
                                default=0,
                                help_text="Minimum years of experience required"
                              )
-
-    # ── New field ──────────────────────────────────────────────────────────
     qualification_required = models.CharField(
                                max_length=20,
                                choices=QualificationLevel.choices,
@@ -56,6 +53,14 @@ class Job(models.Model):
                                blank=True,
                                help_text="Minimum qualification level required"
                              )
+
+    # FIX #7: number of open positions for this role.
+    # Used to pre-fill the auto-shortlist count on the view_applicants page
+    # so HR can shortlist exactly as many candidates as there are openings.
+    open_positions   = models.PositiveIntegerField(
+                         default=1,
+                         help_text="Number of open positions for this role"
+                       )
 
     skills           = models.ManyToManyField(Skill, blank=True)
     location         = models.CharField(max_length=255, blank=True)
@@ -80,6 +85,7 @@ class Job(models.Model):
 
     results_published    = models.BooleanField(default=False)
     shortlist_email_sent = models.BooleanField(default=False)
+
     class Meta:
         ordering = ["-created_at"]
 
@@ -101,7 +107,7 @@ class Job(models.Model):
         if self.salary_min:
             return f"{self.salary_currency} {self.salary_min:,}+"
         return "Not disclosed"
-    
+
     @property
     def is_closing_soon(self):
         """True if deadline is within 3 days."""

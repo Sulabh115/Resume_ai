@@ -15,6 +15,12 @@ FIX #2:
     Passing a bare string caused iteration over individual characters ("b","a","c",...)
     so the qualification score was always 0.
     Fix: wrap in a list — [required_qualification] if non-empty, else [].
+
+FIX #9:
+    compute_match_score now returns individual component scores alongside the
+    overall score so they can be stored in ScreeningResult and displayed as
+    sub-bars in the view_applicants and screening_dashboard templates.
+    All component values are scaled to 0–100 for consistency with similarity_score.
 """
 
 from typing import Dict
@@ -54,19 +60,21 @@ def compute_match_score(resume_file, job) -> Dict:
 
     Returns:
         dict:
-            score            (float, 0–100)
-            extracted_skills (comma-separated string — found in resume)
-            matched_skills   (comma-separated string — matched to job)
-            missing_skills   (comma-separated string — in job but not resume)
-            summary          (human-readable string)
+            score               (float, 0–100)  — final weighted composite
+            skill_score         (float, 0–100)  — #9: skill match component
+            experience_score    (float, 0–100)  — #9: experience component
+            qualification_score (float, 0–100)  — #9: qualification component
+            cosine_score        (float, 0–100)  — #9: semantic similarity component
+            extracted_skills    (comma-separated string — found in resume)
+            matched_skills      (comma-separated string — matched to job)
+            missing_skills      (comma-separated string — in job but not resume)
+            summary             (human-readable string)
     """
 
     # ── 1. Extract raw text from resume PDF ───────────────────────────────
     raw_resume_text = extract_text_from_resume(resume_file)
 
     # ── 2. Build job text from DB fields ──────────────────────────────────
-    #    Combines description + requirements + responsibilities + skill names.
-    #    This is what gets compared semantically with the resume.
     raw_job_text = _build_job_text(job)
 
     # ── 3. Clean both texts ────────────────────────────────────────────────
@@ -78,7 +86,7 @@ def compute_match_score(resume_file, job) -> Dict:
     job_vector    = text_to_vector(cleaned_job)
 
     # ── 5. Cosine similarity (job description vs resume) ──────────────────
-    cosine_score = cosine_similarity_score(resume_vector, job_vector)
+    cosine_sc = cosine_similarity_score(resume_vector, job_vector)
 
     # ── 6. Skill matching (job.skills M2M from DB vs resume) ──────────────
     job_skill_names = list(job.skills.values_list("name", flat=True))
@@ -94,40 +102,27 @@ def compute_match_score(resume_file, job) -> Dict:
 
     # ── 8. Qualification (job.qualification_required from DB vs resume) ───
     #
-    #    FIX #2 is here.
-    #
-    #    job.qualification_required is a CharField with choices:
-    #    "" | "diploma" | "bachelor" | "master" | "phd"
-    #
-    #    calculate_qualification_score() signature:
-    #        def calculate_qualification_score(
-    #            candidate_quals: List[str],
-    #            job_qual_list:   List[str],   ← expects a LIST
-    #        ) -> float
-    #
-    #    BEFORE (broken):
-    #        qual_sc = calculate_qualification_score(
-    #            candidate_quals,
-    #            required_qualification        # bare string → iterates characters
-    #        )
-    #
-    #    AFTER (fixed):
-    #        Wrap the string in a list. If the field is blank (""), pass an
-    #        empty list so the function correctly returns a neutral score
-    #        rather than trying to match empty-string characters.
+    #    FIX #2: wrap qualification string in a list.
     #
     candidate_quals        = extract_candidate_qualifications(raw_resume_text)
     required_qualification = job.qualification_required or ""
-
     job_qual_list = [required_qualification] if required_qualification else []
-
     qual_sc = calculate_qualification_score(candidate_quals, job_qual_list)
 
     # ── 9. Final weighted score → 0–100 ───────────────────────────────────
-    raw_score = final_score(cosine_score, skill_sc, adj_exp_sc, qual_sc)
+    raw_score = final_score(cosine_sc, skill_sc, adj_exp_sc, qual_sc)
     score_pct = round(min(raw_score * 100, 100.0), 1)
 
-    # ── 10. Human-readable summary ─────────────────────────────────────────
+    # ── 10. Scale component scores to 0–100 for storage (#9) ──────────────
+    # cosine_sc and skill_sc are already in [0,1]; clamp to [0,100].
+    # adj_exp_sc may reach 1.15 (bonus); cap at 100.
+    # qual_sc may reach 1.10 (over-qualified bonus); cap at 100.
+    skill_score_pct  = round(min(skill_sc   * 100, 100.0), 1)
+    exp_score_pct    = round(min(adj_exp_sc * 100, 100.0), 1)
+    qual_score_pct   = round(min(qual_sc    * 100, 100.0), 1)
+    cosine_score_pct = round(min(cosine_sc  * 100, 100.0), 1)
+
+    # ── 11. Human-readable summary ─────────────────────────────────────────
     summary = _build_summary(
         score_pct,
         extracted,
@@ -139,11 +134,17 @@ def compute_match_score(resume_file, job) -> Dict:
     )
 
     return {
-        "score":            score_pct,
-        "extracted_skills": ", ".join(extracted),
-        "matched_skills":   ", ".join(extracted),
-        "missing_skills":   ", ".join(missing),
-        "summary":          summary,
+        "score":               score_pct,
+        # ── #9: individual component scores ──
+        "skill_score":         skill_score_pct,
+        "experience_score":    exp_score_pct,
+        "qualification_score": qual_score_pct,
+        "cosine_score":        cosine_score_pct,
+        # ── skill lists ──
+        "extracted_skills":    ", ".join(extracted),
+        "matched_skills":      ", ".join(extracted),
+        "missing_skills":      ", ".join(missing),
+        "summary":             summary,
     }
 
 

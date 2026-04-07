@@ -1,26 +1,30 @@
 """
 applications/views.py
 
+FIX #10:
+    company_base.html navbar avatar uses {{ company }} to render the
+    company logo or initials.  Views that extend company_base.html but
+    don't pass 'company' in their render context cause the avatar to
+    render blank (empty string, no logo, no initials).
+
+    Affected views in this file:
+        view_applicants      — added 'company': company to render context
+        application_detail   — added 'company': company to render context
+                               (both the GET render and the POST re-render
+                               on form invalid already redirect, but the
+                               GET path and the form-invalid re-render path
+                               both need the key)
+
+    Views that only redirect (no render call) are unaffected:
+        update_application_status  — redirects only
+        withdraw_application       — candidate-facing, uses candidate_base.html
+
 E3 — Status change notification emails:
     When a company updates an application status via either:
         - update_application_status  (inline dropdown in applicants table)
         - application_detail         (full status form on detail page)
 
     …the candidate receives an email notifying them of the change.
-
-    The email:
-        - Is only sent when the status actually changes (not on same-status saves)
-        - Uses EmailMultiAlternatives (plain-text + HTML)
-        - Has a per-status message:
-              pending     → "Your application is under review"
-              reviewed    → "Your application has been reviewed"
-              shortlisted → Congratulations message
-              rejected    → Thank you for applying message
-              hired       → Offer details will follow message
-              withdrawn   → Confirmation of withdrawal (candidate-initiated)
-        - Is sent fire-and-forget (try/except) — a broken email backend
-          never blocks the status update from saving
-        - HTML body rendered from applications/email/status_change.html
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -49,8 +53,6 @@ def _get_company(request):
 
 # ─── E3: Status notification email helper ───────────────────────────────────
 
-# Per-status copy shown in the email body.
-# Keys match Application.Status values exactly.
 _STATUS_MESSAGES = {
     Application.Status.PENDING: {
         "subject_suffix": "is under review",
@@ -59,7 +61,7 @@ _STATUS_MESSAGES = {
             "Thank you for your patience. Our team is currently reviewing "
             "your application and will be in touch with an update soon."
         ),
-        "color":  "#fcd34d",   # amber — mirrors .badge-pending
+        "color":  "#fcd34d",
         "border": "rgba(251,191,36,0.38)",
         "bg":     "rgba(251,191,36,0.15)",
     },
@@ -70,7 +72,7 @@ _STATUS_MESSAGES = {
             "Good news — our team has reviewed your application. "
             "We will contact you shortly with next steps."
         ),
-        "color":  "#a5b4fc",   # indigo — mirrors .badge-reviewed
+        "color":  "#a5b4fc",
         "border": "rgba(99,102,241,0.38)",
         "bg":     "rgba(99,102,241,0.15)",
     },
@@ -82,7 +84,7 @@ _STATUS_MESSAGES = {
             "for this role. Our hiring team will reach out soon with "
             "details about the next steps, including interview scheduling."
         ),
-        "color":  "#6ee7b7",   # emerald — mirrors .badge-shortlisted
+        "color":  "#6ee7b7",
         "border": "rgba(16,185,129,0.38)",
         "bg":     "rgba(16,185,129,0.15)",
     },
@@ -95,7 +97,7 @@ _STATUS_MESSAGES = {
             "the time and effort you put into applying and encourage "
             "you to apply for future openings that match your profile."
         ),
-        "color":  "#fca5a5",   # red — mirrors .badge-rejected
+        "color":  "#fca5a5",
         "border": "rgba(239,68,68,0.38)",
         "bg":     "rgba(239,68,68,0.15)",
     },
@@ -108,7 +110,7 @@ _STATUS_MESSAGES = {
             "touch shortly with your offer details and onboarding "
             "information. Welcome to the team!"
         ),
-        "color":  "#34d399",   # bright emerald — mirrors .badge-hired
+        "color":  "#34d399",
         "border": "rgba(52,211,153,0.45)",
         "bg":     "rgba(52,211,153,0.20)",
     },
@@ -120,7 +122,7 @@ _STATUS_MESSAGES = {
             "as requested. If you change your mind, feel free to apply "
             "again when a suitable opportunity arises."
         ),
-        "color":  "#d1d5db",   # slate — mirrors .badge-withdrawn
+        "color":  "#d1d5db",
         "border": "rgba(156,163,175,0.38)",
         "bg":     "rgba(156,163,175,0.15)",
     },
@@ -130,29 +132,23 @@ _STATUS_MESSAGES = {
 def _send_status_notification(application):
     """
     Send a status-change notification email to the candidate.
-
-    Called after application.status has been updated and saved.
     Silently swallows all exceptions so a broken email backend
     never prevents the status update from completing.
-
-    Args:
-        application: Application instance with the NEW status already saved.
     """
     candidate_user = application.candidate.user
     email          = candidate_user.email
 
     if not email:
-        return   # nothing to send to
+        return
 
-    copy    = _STATUS_MESSAGES.get(application.status)
+    copy = _STATUS_MESSAGES.get(application.status)
     if not copy:
-        return   # unknown status — skip
+        return
 
     name    = candidate_user.get_full_name() or candidate_user.username
     company = application.job.company
     subject = f"{application.job.title} at {company.company_name} {copy['subject_suffix']}"
 
-    # ── Plain-text body ───────────────────────────────────────────────────
     text_body = (
         f"Hi {name},\n\n"
         f"{copy['headline']}\n\n"
@@ -163,15 +159,14 @@ def _send_status_notification(application):
         f"— The hirepath team"
     )
 
-    # ── HTML body — rendered from dedicated template ──────────────────────
     html_body = render_to_string(
         "applications/email/status_change.html",
         {
-            "name":        name,
-            "application": application,
-            "job":         application.job,
-            "company":     company,
-            "copy":        copy,
+            "name":         name,
+            "application":  application,
+            "job":          application.job,
+            "company":      company,
+            "copy":         copy,
             "status_label": application.get_status_display(),
         },
     )
@@ -186,7 +181,7 @@ def _send_status_notification(application):
         msg.attach_alternative(html_body, "text/html")
         msg.send(fail_silently=False)
     except Exception:
-        pass   # never block the status save because of email failure
+        pass
 
 
 # ─── Candidate: Apply ───────────────────────────────────────────────────────
@@ -254,7 +249,6 @@ def withdraw_application(request, application_id):
         job_title = application.job.title
         application.status = Application.Status.WITHDRAWN
         application.save(update_fields=["status"])
-        # E3: notify candidate of withdrawal confirmation
         _send_status_notification(application)
         messages.info(request, f'Application to "{job_title}" withdrawn.')
         return redirect("candidate_dashboard")
@@ -271,24 +265,105 @@ def view_applicants(request, job_id):
         return redirect("candidate_dashboard")
 
     job = get_object_or_404(Job, id=job_id, company=company)
+
+    # All active (non-withdrawn) applications — used for counts
+    all_active = job.applications.exclude(status=Application.Status.WITHDRAWN)
+
     applications = (
-        job.applications
-           .select_related("candidate__user", "resume")
-           .exclude(status=Application.Status.WITHDRAWN)
-           .order_by("-match_score", "-applied_at")
+        all_active
+        .select_related("candidate__user", "resume")
+        .order_by("-match_score", "-applied_at")
     )
 
     status_filter = request.GET.get("status", "")
     if status_filter:
         applications = applications.filter(status=status_filter)
 
+    # FIX #1: count unscreened applications for the warning banner.
+    unscreened_count = all_active.filter(match_score=0).count()
+
+    # FIX #4: shortlisted candidates for the email composition modal
+    shortlisted_applications = (
+        job.applications
+           .filter(status=Application.Status.SHORTLISTED)
+           .select_related("candidate__user")
+           .order_by("-match_score")
+    )
+
     return render(request, "applications/view_applicants.html", {
-        "job":            job,
-        "applications":   applications,
-        "status_choices": Application.Status.choices,
-        "status_filter":  status_filter,
-        "total":          job.applications.exclude(status=Application.Status.WITHDRAWN).count(),
+        "job":                      job,
+        "applications":             applications,
+        "status_choices":           Application.Status.choices,
+        "status_filter":            status_filter,
+        "total":                    all_active.count(),
+        "company":                  company,
+        "open_positions":           job.open_positions,
+        "unscreened_count":         unscreened_count,
+        # FIX #4: used to populate the email modal recipient list
+        "shortlisted_applications": shortlisted_applications,
     })
+
+
+# FIX #1: Bulk auto-shortlist
+
+@login_required
+def bulk_shortlist(request, job_id):
+    """
+    POST only. Marks top N applications (by match_score desc) as SHORTLISTED
+    and the rest as REJECTED. HIRED applications are never overwritten.
+    """
+    if request.method != "POST":
+        return redirect("view_applicants", job_id=job_id)
+
+    company = _get_company(request)
+    if not company:
+        return redirect("candidate_dashboard")
+
+    job = get_object_or_404(Job, id=job_id, company=company)
+
+    try:
+        top_n = int(request.POST.get("top_n", 0))
+    except (ValueError, TypeError):
+        top_n = 0
+
+    if top_n <= 0:
+        messages.warning(request, "Please enter a number of candidates to shortlist (must be >= 1).")
+        return redirect("view_applicants", job_id=job_id)
+
+    eligible = (
+        job.applications
+           .exclude(status__in=[
+               Application.Status.WITHDRAWN,
+               Application.Status.HIRED,
+           ])
+           .order_by("-match_score", "-applied_at")
+    )
+
+    total_eligible = eligible.count()
+
+    if total_eligible == 0:
+        messages.info(request, "No eligible applications to shortlist.")
+        return redirect("view_applicants", job_id=job_id)
+
+    top_n = min(top_n, total_eligible)
+
+    all_ids       = list(eligible.values_list("id", flat=True))
+    shortlist_ids = all_ids[:top_n]
+    reject_ids    = all_ids[top_n:]
+
+    shortlisted_count = Application.objects.filter(id__in=shortlist_ids).update(
+        status=Application.Status.SHORTLISTED
+    )
+    rejected_count = Application.objects.filter(id__in=reject_ids).update(
+        status=Application.Status.REJECTED
+    )
+
+    messages.success(
+        request,
+        f"Auto-shortlist complete: {shortlisted_count} shortlisted, "
+        f"{rejected_count} marked as rejected."
+    )
+    return redirect("view_applicants", job_id=job_id)
 
 
 @login_required
@@ -310,7 +385,6 @@ def application_detail(request, application_id):
             updated = form.save()
             messages.success(request, "Application status updated.")
 
-            # E3: send notification only when the status actually changed
             if updated.status != old_status:
                 _send_status_notification(updated)
 
@@ -327,6 +401,8 @@ def application_detail(request, application_id):
         "application": application,
         "form":        form,
         "skills_list": skills_list,
+        # FIX #10: pass company so company_base.html navbar avatar renders correctly
+        "company":     company,
     })
 
 
@@ -335,6 +411,7 @@ def update_application_status(request, application_id):
     """
     Inline status update from the applicants table dropdown.
     E3: sends a notification email when the status changes.
+    Only redirects — no render call — so no company context needed.
     """
     company = _get_company(request)
     if not company:
@@ -354,9 +431,7 @@ def update_application_status(request, application_id):
                     request,
                     f"Status updated to '{application.get_status_display()}'."
                 )
-                # E3: notify candidate — only fires when status actually changed
                 _send_status_notification(application)
-            # If same status selected, skip save and notification silently
 
     return redirect(request.META.get("HTTP_REFERER", "view_applicants"))
 
@@ -458,7 +533,24 @@ def old_application_list(request):
     """
     Candidate's old/inactive applications —
     withdrawn, rejected, OR job deadline has passed.
+
+    FIX #3:
+    Each application is annotated with:
+        rank              — candidate's position among all non-withdrawn applicants
+                            for that job (ordered by match_score desc, 1-indexed).
+        total             — total non-withdrawn applicant count for that job.
+        shortlisted_count — number of shortlisted applicants for that job.
+        results_published — from job.results_published.
+        ranked_list       — when results_published, a JSON-safe list of all
+                            applicants ordered by score. The current candidate
+                            uses their real name; all others are anonymized as
+                            "Candidate #N" to preserve privacy.
+                            Empty list when results are not yet published.
+
+    To avoid N+1 queries (one per application), all per-job data is fetched
+    in a single pass grouped by job_id.
     """
+    import json as _json
     candidate = _get_candidate(request)
     if not candidate:
         return redirect("company_dashboard")
@@ -478,6 +570,83 @@ def old_application_list(request):
         .order_by("-applied_at")
     )
 
+    # ── Per-job data — one queryset per unique job ────────────────────────
+    # Collect unique job ids from the candidate's old applications.
+    job_ids = list(applications.values_list("job_id", flat=True).distinct())
+
+    # For each job, fetch ALL non-withdrawn applicants ordered by match_score.
+    # Store in a dict keyed by job_id so template annotation is O(1) lookup.
+    job_data_map = {}  # job_id → dict
+
+    for job_id in job_ids:
+        ranked_qs = (
+            Application.objects
+            .filter(job_id=job_id)
+            .exclude(status=Application.Status.WITHDRAWN)
+            .select_related("candidate__user")
+            .order_by("-match_score", "applied_at")
+        )
+
+        all_apps       = list(ranked_qs)
+        total          = len(all_apps)
+        shortlisted_count = sum(
+            1 for a in all_apps if a.status == Application.Status.SHORTLISTED
+        )
+
+        # Find this candidate's rank (1-indexed position in ranked list)
+        rank = None
+        for idx, a in enumerate(all_apps, start=1):
+            if a.candidate_id == candidate.pk:
+                rank = idx
+                break
+
+        # Build the published ranked list.
+        # Other candidates are anonymized as "Candidate #N" (by rank position)
+        # so no personal data about other applicants leaks to this candidate.
+        job_obj = Application.objects.filter(job_id=job_id).first().job if all_apps else None
+        results_published = job_obj.results_published if job_obj else False
+
+        if results_published:
+            ranked_list = []
+            for idx, a in enumerate(all_apps, start=1):
+                is_self = (a.candidate_id == candidate.pk)
+                name = (
+                    a.candidate.user.get_full_name() or a.candidate.user.username
+                    if is_self
+                    else f"Candidate #{idx}"
+                )
+                ranked_list.append({
+                    "rank":        idx,
+                    "name":        name,
+                    "score":       round(a.match_score or 0),
+                    "status":      a.status,
+                    "shortlisted": a.status == Application.Status.SHORTLISTED,
+                    "is_self":     is_self,
+                })
+        else:
+            ranked_list = []
+
+        job_data_map[job_id] = {
+            "rank":              rank,
+            "total":             total,
+            "shortlisted_count": shortlisted_count,
+            "results_published": results_published,
+            "ranked_list_json":  _json.dumps(ranked_list),
+        }
+
+    # ── Build app_data — one entry per application ────────────────────────
+    app_data = []
+    for app in applications:
+        jd = job_data_map.get(app.job_id, {})
+        app_data.append({
+            "app":              app,
+            "rank":             jd.get("rank"),
+            "total":            jd.get("total", 0),
+            "shortlisted_count": jd.get("shortlisted_count", 0),
+            "results_published": jd.get("results_published", False),
+            "ranked_list_json": jd.get("ranked_list_json", "[]"),
+        })
+
     return render(request, "applications/old_application_list.html", {
-        "applications": applications,
+        "app_data": app_data,
     })

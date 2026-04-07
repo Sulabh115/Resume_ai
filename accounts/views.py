@@ -1,17 +1,25 @@
 """
 accounts/views.py
 
-FIX #8:
+FIX #6 (company_edit_profile):
+    The template company_edit_profile.html has TWO phone inputs:
+        name="phone"    — in the Company Details section
+        name="hr_phone" — in the Your Account Details section
+
+    The view previously only read request.POST.get('phone', ''),
+    which meant the hr_phone field was silently ignored.
+
+    Fix: read both fields. hr_phone takes priority (it's the dedicated
+    HR contact field); fall back to phone if hr_phone is empty.
+    This matches the pattern used in CompanyRegistrationForm.save()
+    which also reads hr_phone into company.phone.
+
+FIX #8 (already present):
     company_edit_profile previously called company.save() and
     request.user.save() BEFORE the password validation block.
     If the user submitted a wrong current password, the profile
-    fields (company_name, description, location, phone, website)
-    were already written to the DB before the error was returned —
-    silently persisting a partial save.
-
-    Fix: mirror the pattern that candidate_edit_profile already uses
-    correctly — validate password first, then save everything together
-    in a single code path at the end.
+    fields were already written to the DB before the error returned.
+    Fix: validate password first, then save everything together.
 """
 
 from django.shortcuts import render, redirect
@@ -542,16 +550,38 @@ def company_edit_profile(request):
         # AFTER (fixed): all values are staged into Python variables here.
         # Nothing is written to the DB until we reach the save block at the
         # bottom, which only runs after ALL validation has passed.
-        #
+
         first_name   = request.POST.get('first_name',   '').strip()
         last_name    = request.POST.get('last_name',    '').strip()
         email        = request.POST.get('email',        '').strip()
         company_name = request.POST.get('company_name', '').strip()
         description  = request.POST.get('description',  '').strip()
         location     = request.POST.get('location',     '').strip()
-        phone        = request.POST.get('phone',        '').strip()
         website_raw  = request.POST.get('website',      '').strip()
         website      = website_raw if website_raw else None
+
+        # ── FIX #6: read both phone field names from the template ────────
+        #
+        # The template company_edit_profile.html has two phone inputs:
+        #
+        #   Section "Company Details":
+        #       <input type="tel" name="phone" …>
+        #
+        #   Section "Your Account Details":
+        #       <input type="tel" name="hr_phone" …>
+        #
+        # BEFORE (broken): only read request.POST.get('phone', ''),
+        # so whatever the user typed into "hr_phone" was silently ignored.
+        #
+        # AFTER (fixed): read both. hr_phone takes priority because it is
+        # the dedicated HR contact field (same precedence as in
+        # CompanyRegistrationForm.save() which also stores hr_phone into
+        # company.phone).  Fall back to the "phone" field when hr_phone
+        # is blank (supports templates that only have one phone field).
+        #
+        hr_phone     = request.POST.get('hr_phone', '').strip()
+        company_phone = request.POST.get('phone',   '').strip()
+        phone        = hr_phone if hr_phone else company_phone
 
         curr_pw = request.POST.get('current_password', '')
         new_pw  = request.POST.get('new_password',     '')

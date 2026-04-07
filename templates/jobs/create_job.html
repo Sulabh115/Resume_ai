@@ -133,6 +133,7 @@
               {% if form.title.errors %}<p class="field-error-msg show">{{ form.title.errors.0 }}</p>{% endif %}
             </div>
 
+            {# Row 1: Job Type / Min Experience / Location #}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
                 <label class="form-label block mb-1.5">Job Type</label>
@@ -156,7 +157,9 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {# Row 2: Qualification / Open Positions / Status / Deadline
+               FIX #7: added Open Positions field; grid expanded to 4 columns #}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label class="form-label block mb-1.5">Qualification Required</label>
                 <select name="qualification_required" class="form-input">
@@ -164,6 +167,20 @@
                   <option value="{{ val }}" {% if form.qualification_required.value == val %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
+              </div>
+              <div>
+                {# FIX #7: open_positions field — number of hires for this role.
+                   The value is passed to view_applicants so the auto-shortlist
+                   bar can be pre-filled with the correct candidate count. #}
+                <label class="form-label block mb-1.5">
+                  Open Positions
+                  <span class="normal-case tracking-normal text-white/25 text-[9px] font-normal ml-1">— used for auto-shortlist</span>
+                </label>
+                <input type="number" name="open_positions" min="1"
+                       value="{{ form.open_positions.value|default:'1' }}"
+                       class="form-input {% if form.open_positions.errors %}border-red-400/70{% endif %}"
+                       placeholder="1"/>
+                {% if form.open_positions.errors %}<p class="field-error-msg show">{{ form.open_positions.errors.0 }}</p>{% endif %}
               </div>
               <div>
                 <label class="form-label block mb-1.5">Status</label>
@@ -313,6 +330,10 @@
             <span class="text-white/40">Location</span>
             <span id="prev-location" class="text-white/65 text-right max-w-[100px] truncate">—</span>
           </div>
+          <div class="flex justify-between">
+            <span class="text-white/40">Positions</span>
+            <span id="prev-positions" class="text-white/65">—</span>
+          </div>
         </div>
       </div>
 
@@ -348,6 +369,7 @@
           <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Be explicit about minimum years of experience</li>
           <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Set the qualification level — scored directly against resumes</li>
           <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Longer, detailed description improves content similarity scoring</li>
+          <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Set Open Positions so the auto-shortlist bar is pre-filled correctly</li>
         </ul>
       </div>
 
@@ -420,10 +442,12 @@
 
 /* ── Live preview ── */
 function updatePreview() {
-  const title    = document.querySelector('[name="title"]').value || 'Job Title';
-  const jobType  = document.querySelector('[name="job_type"]');
-  const deadline = document.querySelector('[name="deadline"]').value;
-  const location = document.querySelector('[name="location"]').value;
+  const title     = document.querySelector('[name="title"]').value || 'Job Title';
+  const jobType   = document.querySelector('[name="job_type"]');
+  const deadline  = document.querySelector('[name="deadline"]').value;
+  const location  = document.querySelector('[name="location"]').value;
+  // FIX #7: reflect open_positions in the preview sidebar
+  const positions = document.querySelector('[name="open_positions"]').value;
 
   document.getElementById('prev-title').textContent = title;
 
@@ -443,6 +467,9 @@ function updatePreview() {
     ? new Date(deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—';
   document.getElementById('prev-location').textContent = location || '—';
+  document.getElementById('prev-positions').textContent = positions
+    ? (parseInt(positions) === 1 ? '1 position' : `${positions} positions`)
+    : '—';
 }
 
 
@@ -460,6 +487,10 @@ document.addEventListener('DOMContentLoaded', function () {
   updatePreview();
   const descEl = document.querySelector('[name="description"]');
   if (descEl && descEl.value) charCount(descEl, 'desc-count', 1500);
+
+  // FIX #7: keep preview updated when open_positions changes
+  const posEl = document.querySelector('[name="open_positions"]');
+  if (posEl) posEl.addEventListener('input', updatePreview);
 });
 </script>
 {% endblock %}
