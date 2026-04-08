@@ -14,6 +14,30 @@
   .score-yellow { background: linear-gradient(90deg,#eab308,#facc15); }
   .score-red    { background: linear-gradient(90deg,#ef4444,#f87171); }
 
+  /* ── #11: Rank medal column ── */
+  .rank-medal {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    font-size: 10px; font-weight: 700; flex-shrink: 0;
+  }
+  .rank-1 { background: rgba(251,191,36,0.28); border: 1px solid rgba(251,191,36,0.50); color: #fcd34d; font-size: 14px; }
+  .rank-2 { background: rgba(148,163,184,0.22); border: 1px solid rgba(148,163,184,0.42); color: #cbd5e1; font-size: 14px; }
+  .rank-3 { background: rgba(180,120,60,0.22);  border: 1px solid rgba(180,120,60,0.42);  color: #d4956a; font-size: 14px; }
+  .rank-n { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: rgba(255,255,255,0.45); }
+
+  /* ── #11: Shortlist cutoff separator row ── */
+  .cutoff-row td {
+    padding: 6px 24px;
+    background: rgba(52,211,153,0.06);
+    border-top: 1.5px dashed rgba(52,211,153,0.45);
+    border-bottom: 1.5px dashed rgba(52,211,153,0.45);
+  }
+  .cutoff-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.12em; color: rgba(52,211,153,0.70);
+    display: flex; align-items: center; gap: 8px;
+  }
+
   /* ── #9: 4-component sub-bars ── */
   .sub-bars { display: flex; flex-direction: column; gap: 2px; min-width: 100px; }
   .sub-bar-row { display: flex; align-items: center; gap: 4px; }
@@ -108,9 +132,7 @@
 
     <div class="flex items-center gap-3 flex-wrap">
 
-      {# Run AI Screening — POSTs to run_screening.
-         unscreened_count > 0 → screen only new ones
-         unscreened_count == 0 → ?force=1 re-screens everything #}
+      {# Run AI Screening #}
       {% if total > 0 %}
       <form method="post"
             action="{% url 'run_screening' job.id %}{% if unscreened_count == 0 %}?force=1{% endif %}">
@@ -234,6 +256,8 @@
         <table class="w-full">
           <thead>
             <tr class="border-b border-white/15">
+              {# #11: Rank column #}
+              <th class="text-left px-4 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider">#</th>
               <th class="text-left px-6 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider">Candidate</th>
               <th class="text-left px-4 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider hidden md:table-cell">AI Match</th>
               {# #9: component sub-bars column #}
@@ -244,9 +268,58 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-white/8">
+
+            {#
+              #11: Cutoff separator logic.
+
+              The applications queryset is already ordered by -match_score, -applied_at.
+              We insert a "Shortlist cutoff" separator row between rank open_positions
+              and rank open_positions+1 (i.e. after the last candidate that would be
+              auto-shortlisted and before the first that would be rejected).
+
+              We only show the separator when:
+                - No status filter is active (filtering would break positional meaning)
+                - open_positions > 0 and open_positions < total
+                - We are not on a filtered sub-view (all statuses shown)
+
+              The separator is injected BEFORE the row whose forloop.counter
+              equals open_positions + 1.
+            #}
+            {% with cutoff=open_positions show_cutoff=True %}
+            {% if status_filter %}{% with show_cutoff=False %}{% endwith %}{% endif %}
+
             {% for app in applications %}
-            {% with result=app.screening_result %}
+            {% with result=app.screening_result rank=forloop.counter %}
+
+            {# ── #11: inject cutoff separator before the (cutoff+1)-th row ── #}
+            {% if not status_filter and cutoff > 0 and cutoff < total and rank == cutoff|add:1 %}
+            <tr class="cutoff-row">
+              <td colspan="7">
+                <span class="cutoff-label">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M5 13l4 4L19 7"/>
+                  </svg>
+                  Shortlist cutoff — top {{ cutoff }} position{{ cutoff|pluralize }} filled · candidates below this line would be rejected
+                </span>
+              </td>
+            </tr>
+            {% endif %}
+
             <tr class="applicant-row">
+
+              {# #11: Rank medal cell #}
+              <td class="px-4 py-4">
+                {% if rank == 1 %}
+                <div class="rank-medal rank-1" title="Rank #1">🥇</div>
+                {% elif rank == 2 %}
+                <div class="rank-medal rank-2" title="Rank #2">🥈</div>
+                {% elif rank == 3 %}
+                <div class="rank-medal rank-3" title="Rank #3">🥉</div>
+                {% else %}
+                <div class="rank-medal rank-n" title="Rank #{{ rank }}">#{{ rank }}</div>
+                {% endif %}
+              </td>
 
               {# Candidate #}
               <td class="px-6 py-4">
@@ -364,6 +437,8 @@
             </tr>
             {% endwith %}
             {% endfor %}
+            {% endwith %}
+
           </tbody>
         </table>
       </div>
