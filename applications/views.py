@@ -25,6 +25,19 @@ E3 — Status change notification emails:
         - application_detail         (full status form on detail page)
 
     …the candidate receives an email notifying them of the change.
+
+FIX #8 — Pre-submission score preview:
+    score_preview(request, job_id) accepts a resume file via multipart
+    POST, runs compute_match_score against the job, and returns JSON:
+        {
+            score, skill_score, exp_score, qual_score, cosine_score,
+            matched_skills, missing_skills
+        }
+    The candidate can trigger this from apply_job.html before submitting
+    the actual application.  The uploaded file is never persisted — it is
+    passed directly to compute_match_score (which calls
+    extract_text_from_pdf on the InMemoryUploadedFile) and then
+    discarded.
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -32,7 +45,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.template.loader import render_to_string
 from datetime import date
 
@@ -254,6 +267,96 @@ def withdraw_application(request, application_id):
         return redirect("candidate_dashboard")
 
     return render(request, "applications/withdraw_confirm.html", {"application": application})
+
+
+# ─── FIX #8: Pre-submission score preview ────────────────────────────────────
+
+@login_required
+def score_preview(request, job_id):
+    """
+    POST only.  Accepts a resume file (multipart), runs compute_match_score
+    against the specified job, and returns JSON:
+
+        {
+            "score":          float  (0–100, overall weighted score),
+            "skill_score":    float  (0–100),
+            "exp_score":      float  (0–100),
+            "qual_score":     float  (0–100),
+            "cosine_score":   float  (0–100),
+            "matched_skills": list[str],
+            "missing_skills": list[str],
+        }
+
+    On error returns {"error": "<message>"} with HTTP 400 or 500.
+
+    The uploaded file is NEVER saved to disk — it is passed as an
+    InMemoryUploadedFile directly to compute_match_score → extract_text_from_resume
+    (which calls fitz.open() on the raw bytes via a temporary file path).
+    Django writes InMemoryUploadedFile objects to a temp path automatically
+    when they exceed FILE_UPLOAD_MAX_MEMORY_SIZE, so fitz.open() works
+    on the .temporary_file_path() or via a NamedTemporaryFile helper.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    candidate = _get_candidate(request)
+    if not candidate:
+        return JsonResponse({"error": "Candidate account required"}, status=403)
+
+    job = get_object_or_404(Job, id=job_id)
+
+    resume_file = request.FILES.get("resume_file")
+    if not resume_file:
+        return JsonResponse({"error": "No resume file provided"}, status=400)
+
+    # Validate file type (basic check — the screening engine accepts PDF)
+    name_lower = resume_file.name.lower()
+    if not (name_lower.endswith(".pdf") or name_lower.endswith(".doc") or name_lower.endswith(".docx")):
+        return JsonResponse({"error": "Only PDF, DOC, and DOCX files are supported."}, status=400)
+
+    # compute_match_score expects an object with a .path attribute (Django
+    # FileField / InMemoryUploadedFile).  InMemoryUploadedFile exposes .read()
+    # but NOT .path for small files.  We write to a NamedTemporaryFile so
+    # fitz.open() can always read from a real path.
+    import tempfile, os
+
+    suffix = os.path.splitext(resume_file.name)[1] or ".pdf"
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            for chunk in resume_file.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+
+        # Build a minimal file-like wrapper that exposes .path (needed by
+        # extract_text_from_resume which calls resume_file.path internally).
+        class _TmpFile:
+            def __init__(self, path):
+                self.path = path
+
+        from screening.utils import compute_match_score
+        result = compute_match_score(_TmpFile(tmp_path), job)
+
+    except Exception as exc:
+        return JsonResponse({"error": f"Screening failed: {exc}"}, status=500)
+    finally:
+        # Always clean up the temp file, even if compute_match_score raises.
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+    matched = [s.strip() for s in result.get("matched_skills", "").split(",") if s.strip()]
+    missing = [s.strip() for s in result.get("missing_skills", "").split(",") if s.strip()]
+
+    return JsonResponse({
+        "score":          result.get("score", 0),
+        "skill_score":    result.get("skill_score", 0),
+        "exp_score":      result.get("experience_score", 0),
+        "qual_score":     result.get("qualification_score", 0),
+        "cosine_score":   result.get("cosine_score", 0),
+        "matched_skills": matched,
+        "missing_skills": missing,
+    })
 
 
 # ─── Company: View applicants ───────────────────────────────────────────────

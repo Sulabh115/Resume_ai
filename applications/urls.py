@@ -10,6 +10,9 @@ urlpatterns = [
     path("my/",                              views.application_list,         name="application_list"),
     path("my/old/",                          views.old_application_list,     name="old_application_list"),
 
+    # FIX #8: pre-submission resume score preview (POST, returns JSON)
+    path("score-preview/<int:job_id>/",      views.score_preview,            name="score_preview"),
+
     # Company
     path("job/<int:job_id>/applicants/",     views.view_applicants,          name="view_applicants"),
     path("job/<int:job_id>/bulk-shortlist/", views.bulk_shortlist,           name="bulk_shortlist"),  # FIX #1

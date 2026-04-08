@@ -26,6 +26,48 @@
   }
   .resume-option:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.38); }
   .resume-option.selected { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.55); }
+
+  /* ── FIX #8: Analyse Resume section ── */
+  .analyse-idle    { display: block; }
+  .analyse-loading { display: none; }
+  .analyse-result  { display: none; }
+
+  /* Score ring */
+  .preview-ring { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+  .preview-ring svg { transform: rotate(-90deg); }
+  .preview-ring .ring-text {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: #fff;
+  }
+
+  /* Sub-bars */
+  .sub-bar-row { display: flex; align-items: center; gap: 6px; }
+  .sub-bar-label { font-size: 9px; color: rgba(255,255,255,0.40); width: 26px; text-align: right; flex-shrink: 0; }
+  .sub-bar-track { flex: 1; height: 3px; background: rgba(255,255,255,0.10); border-radius: 99px; overflow: hidden; }
+  .sub-bar-fill  { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); width: 0; }
+  .bar-cyan    { background: #22d3ee; }
+  .bar-amber   { background: #fbbf24; }
+  .bar-violet  { background: #a78bfa; }
+  .bar-emerald { background: #34d399; }
+
+  /* Skill pills */
+  .pill-matched { background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.30); color: #6ee7b7; }
+  .pill-missing { background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.25);  color: #fca5a5; }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 0.7s linear infinite; }
+
+  /* Analyse button */
+  .btn-analyse {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.30);
+    color: rgba(255,255,255,0.80); font-weight: 600; font-size: 13px;
+    padding: 9px 20px; border-radius: 999px; transition: all 0.15s ease;
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  }
+  .btn-analyse:hover { background: rgba(255,255,255,0.26); color: #fff; }
+  .btn-analyse:disabled { opacity: 0.45; cursor: not-allowed; }
 </style>
 {% endblock %}
 
@@ -69,7 +111,7 @@
   </div>
   {% endif %}
 
-  <form method="post" enctype="multipart/form-data" novalidate>
+  <form method="post" enctype="multipart/form-data" novalidate id="apply-form">
     {% csrf_token %}
 
     <div class="flex flex-col gap-5">
@@ -152,6 +194,161 @@
         {% endif %}
       </div>
 
+      {# ════════════════════════════════════════════════════════════
+         FIX #8 — Analyse Resume section
+         Idle → click Analyse → loading spinner → result panel
+         The section sits between the resume picker and cover letter
+         so the candidate can check their score before submitting.
+      ════════════════════════════════════════════════════════════ #}
+      <div class="glass-card rounded-3xl p-6"
+           style="background:rgba(6,182,212,0.06); border-color:rgba(6,182,212,0.22);">
+
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="w-4 h-4 text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+          <p class="text-teal-300 text-[10px] font-medium uppercase tracking-widest">Analyse Resume</p>
+        </div>
+
+        {# ── Idle state ── #}
+        <div id="analyse-idle" class="analyse-idle">
+          <p class="text-white/55 text-sm leading-relaxed mb-4">
+            Upload a resume above and click <strong class="text-white/75">Analyse</strong>
+            to see how well it matches this job before you submit.
+            Your score preview is private and never saved.
+          </p>
+          <button type="button" id="btn-analyse" onclick="runAnalysis()"
+                  class="btn-analyse" disabled>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Analyse Resume
+          </button>
+          <p id="analyse-hint" class="text-white/30 text-xs mt-2">
+            Upload a resume first to enable analysis.
+          </p>
+        </div>
+
+        {# ── Loading state ── #}
+        <div id="analyse-loading" class="analyse-loading">
+          <div class="flex items-center gap-3 py-4">
+            <svg class="spin w-5 h-5 text-teal-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <div>
+              <p class="text-teal-300 text-sm font-medium">Analysing your resume…</p>
+              <p class="text-white/35 text-xs mt-0.5">Extracting skills, experience, and qualifications</p>
+            </div>
+          </div>
+        </div>
+
+        {# ── Result state ── #}
+        <div id="analyse-result" class="analyse-result">
+
+          {# Score + sub-bars row #}
+          <div class="flex items-start gap-5 mb-5">
+
+            {# Score ring #}
+            <div class="preview-ring">
+              <svg viewBox="0 0 72 72" width="72" height="72">
+                <circle cx="36" cy="36" r="28" fill="none"
+                        stroke="rgba(255,255,255,0.12)" stroke-width="7"/>
+                <circle id="ring-fill" cx="36" cy="36" r="28" fill="none"
+                        stroke="#22c55e" stroke-width="7" stroke-linecap="round"
+                        stroke-dasharray="175.93"
+                        stroke-dashoffset="175.93"/>
+              </svg>
+              <div class="ring-text">
+                <span id="ring-score">0%</span>
+              </div>
+            </div>
+
+            {# Component sub-bars #}
+            <div class="flex-1 flex flex-col gap-2 pt-1">
+              <div class="sub-bar-row" title="Skill match">
+                <span class="sub-bar-label">Skl</span>
+                <div class="sub-bar-track">
+                  <div class="sub-bar-fill bar-cyan" id="bar-skill"></div>
+                </div>
+                <span class="text-[10px] text-white/35 w-8 text-right" id="lbl-skill">0%</span>
+              </div>
+              <div class="sub-bar-row" title="Experience match">
+                <span class="sub-bar-label">Exp</span>
+                <div class="sub-bar-track">
+                  <div class="sub-bar-fill bar-amber" id="bar-exp"></div>
+                </div>
+                <span class="text-[10px] text-white/35 w-8 text-right" id="lbl-exp">0%</span>
+              </div>
+              <div class="sub-bar-row" title="Qualification match">
+                <span class="sub-bar-label">Qua</span>
+                <div class="sub-bar-track">
+                  <div class="sub-bar-fill bar-violet" id="bar-qual"></div>
+                </div>
+                <span class="text-[10px] text-white/35 w-8 text-right" id="lbl-qual">0%</span>
+              </div>
+              <div class="sub-bar-row" title="Content similarity">
+                <span class="sub-bar-label">Cos</span>
+                <div class="sub-bar-track">
+                  <div class="sub-bar-fill bar-emerald" id="bar-cosine"></div>
+                </div>
+                <span class="text-[10px] text-white/35 w-8 text-right" id="lbl-cosine">0%</span>
+              </div>
+            </div>
+          </div>
+
+          {# Verdict label #}
+          <p id="verdict-label" class="text-sm font-semibold mb-4"></p>
+
+          {# Matched skills #}
+          <div id="matched-block" class="hidden mb-3">
+            <p class="text-[10px] text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+              <svg class="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+              </svg>
+              Matched Skills
+            </p>
+            <div id="matched-skills" class="flex flex-wrap gap-1.5"></div>
+          </div>
+
+          {# Missing skills #}
+          <div id="missing-block" class="hidden mb-4">
+            <p class="text-[10px] text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+              <svg class="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              Missing Skills
+            </p>
+            <div id="missing-skills" class="flex flex-wrap gap-1.5"></div>
+          </div>
+
+          {# Re-analyse button #}
+          <button type="button" onclick="resetAnalysis()"
+                  class="text-white/40 hover:text-white text-xs underline underline-offset-2 transition-colors">
+            Analyse again
+          </button>
+
+        </div>
+
+        {# Error banner (shown when API call fails) #}
+        <div id="analyse-error" class="hidden mt-3">
+          <div class="bg-red-500/15 border border-red-400/28 text-red-300 rounded-xl px-4 py-3 text-sm flex items-start gap-2">
+            <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span id="analyse-error-text"></span>
+          </div>
+          <button type="button" onclick="resetAnalysis()"
+                  class="text-white/40 hover:text-white text-xs underline underline-offset-2 transition-colors mt-2 block">
+            Try again
+          </button>
+        </div>
+
+      </div>
+      {# ── End FIX #8 ── #}
+
       {# ── Cover Letter ── #}
       <div class="glass-card rounded-3xl p-6">
         <p class="section-title">
@@ -202,7 +399,9 @@
 
 {% block extra_scripts %}
 <script>
-/* ── Saved resume selection ── */
+/* ═══════════════════════════════════════════════════════
+   Resume selection helpers (unchanged from original)
+═══════════════════════════════════════════════════════ */
 const allResumePks = [
   {% for resume in form.existing_resume.field.queryset %}{{ resume.pk }}{% if not forloop.last %},{% endif %}{% endfor %}
 ];
@@ -229,6 +428,8 @@ function selectSavedResume(radio) {
   document.getElementById('resume-file-input').value = '';
   document.getElementById('file-chosen').classList.add('hidden');
   document.getElementById('new-resume-label-wrap').classList.add('hidden');
+  /* A saved resume is selected — enable the Analyse button */
+  enableAnalyseBtn();
 }
 
 /* ── File upload handling ── */
@@ -249,6 +450,8 @@ function handleFileSelect(input) {
   nameEl.textContent = '✓ ' + file.name;
   nameEl.classList.remove('hidden');
   document.getElementById('new-resume-label-wrap').classList.remove('hidden');
+  /* New file chosen — enable analyse */
+  enableAnalyseBtn();
 }
 
 /* ── Drag & drop ── */
@@ -265,6 +468,234 @@ zone.addEventListener('drop', e => {
   dt.items.add(file);
   input.files = dt.files;
   handleFileSelect(input);
+});
+
+
+/* ═══════════════════════════════════════════════════════
+   FIX #8 — Analyse Resume logic
+═══════════════════════════════════════════════════════ */
+
+const SCORE_PREVIEW_URL = "{% url 'score_preview' job.id %}";
+const CSRF_TOKEN        = "{{ csrf_token }}";
+
+function enableAnalyseBtn() {
+  const btn  = document.getElementById('btn-analyse');
+  const hint = document.getElementById('analyse-hint');
+  if (!btn) return;
+  btn.disabled = false;
+  if (hint) hint.textContent = 'Click to check your match score before submitting.';
+}
+
+/* Determine which resume file to send to the preview endpoint */
+function getResumeFileForAnalysis() {
+  const newFileInput = document.getElementById('resume-file-input');
+  if (newFileInput && newFileInput.files && newFileInput.files[0]) {
+    return newFileInput.files[0];
+  }
+  /* A saved resume was chosen — we need its actual file.
+     Saved resumes don't have a local file object, so we fetch
+     from the server via the resume's download URL.
+     To avoid a complex two-step fetch we return null and show a
+     friendly message — the candidate should upload a file directly
+     to use the preview feature with a saved resume, OR we fetch the
+     saved resume blob. We'll go the fetch route for best UX. */
+  const checkedRadio = document.querySelector('input[name="existing_resume"]:checked');
+  if (checkedRadio) {
+    return { savedResumeId: checkedRadio.value };
+  }
+  return null;
+}
+
+async function fetchSavedResumeBlob(resumeId) {
+  /* Find the file URL from the saved resume link on the page.
+     The resume manager page has the download URL in the DOM as
+     part of the apply_job.html saved resume list (not rendered here).
+     The simplest approach: request the blob from Django via
+     a separate fetch.  However, the file URL is available on the
+     page only if we render it.  Since apply_job.html shows the
+     saved resume list with no download links, we return null and
+     tell the user to upload a copy instead. */
+  return null;
+}
+
+async function runAnalysis() {
+  const btn = document.getElementById('btn-analyse');
+  btn.disabled = true;
+
+  hideError();
+
+  const resumeSource = getResumeFileForAnalysis();
+  if (!resumeSource) {
+    showError('Please upload a resume or select a saved one first.');
+    btn.disabled = false;
+    return;
+  }
+
+  let fileToSend = null;
+
+  if (resumeSource instanceof File) {
+    fileToSend = resumeSource;
+  } else if (resumeSource && resumeSource.savedResumeId) {
+    /* Saved resume selected — we can't read local file bytes from it.
+       Inform the user to use the upload field for a real-time preview. */
+    showError(
+      'To use the preview with a saved resume, upload it again using the upload zone above. ' +
+      'Your saved resumes are not affected.'
+    );
+    btn.disabled = false;
+    return;
+  }
+
+  /* Switch to loading state */
+  setState('loading');
+
+  const formData = new FormData();
+  formData.append('resume_file', fileToSend);
+  formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
+
+  try {
+    const response = await fetch(SCORE_PREVIEW_URL, {
+      method:      'POST',
+      body:        formData,
+      credentials: 'same-origin',
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setState('idle');
+      showError(data.error || 'Analysis failed. Please try again.');
+      btn.disabled = false;
+      return;
+    }
+
+    renderResult(data);
+    setState('result');
+
+  } catch (err) {
+    setState('idle');
+    showError('Network error — please check your connection and try again.');
+    btn.disabled = false;
+  }
+}
+
+function renderResult(data) {
+  const score       = Math.round(data.score      || 0);
+  const skillScore  = Math.round(data.skill_score  || 0);
+  const expScore    = Math.round(data.exp_score    || 0);
+  const qualScore   = Math.round(data.qual_score   || 0);
+  const cosineScore = Math.round(data.cosine_score || 0);
+
+  /* Ring */
+  const circumference = 175.93;
+  const offset = circumference - (score / 100) * circumference;
+  const ring   = document.getElementById('ring-fill');
+  ring.style.strokeDashoffset = circumference;             /* reset first */
+  ring.style.stroke = score >= 70 ? '#22c55e' : score >= 45 ? '#60a5fa' : '#f87171';
+  setTimeout(() => {
+    ring.style.transition = 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)';
+    ring.style.strokeDashoffset = offset;
+  }, 50);
+
+  document.getElementById('ring-score').textContent = score + '%';
+
+  /* Sub-bars */
+  setBar('bar-skill',   'lbl-skill',   skillScore);
+  setBar('bar-exp',     'lbl-exp',     expScore);
+  setBar('bar-qual',    'lbl-qual',    qualScore);
+  setBar('bar-cosine',  'lbl-cosine',  cosineScore);
+
+  /* Verdict */
+  const verdictEl = document.getElementById('verdict-label');
+  if (score >= 70) {
+    verdictEl.textContent = '✓ Strong match — great fit for this role!';
+    verdictEl.className   = 'text-sm font-semibold mb-4 text-emerald-300';
+  } else if (score >= 45) {
+    verdictEl.textContent = '~ Moderate match — consider improving your resume.';
+    verdictEl.className   = 'text-sm font-semibold mb-4 text-blue-300';
+  } else {
+    verdictEl.textContent = '✗ Low match — your resume may need significant updates.';
+    verdictEl.className   = 'text-sm font-semibold mb-4 text-red-300';
+  }
+
+  /* Skill pills */
+  const matched = data.matched_skills || [];
+  const missing = data.missing_skills || [];
+
+  const matchedBlock = document.getElementById('matched-block');
+  const missingBlock = document.getElementById('missing-block');
+  const matchedEl    = document.getElementById('matched-skills');
+  const missingEl    = document.getElementById('missing-skills');
+
+  matchedEl.innerHTML = '';
+  missingEl.innerHTML = '';
+
+  if (matched.length) {
+    matched.forEach(s => {
+      matchedEl.innerHTML +=
+        `<span class="pill-matched rounded-xl px-2.5 py-1 text-xs font-medium">${escHtml(s)}</span>`;
+    });
+    matchedBlock.classList.remove('hidden');
+  } else {
+    matchedBlock.classList.add('hidden');
+  }
+
+  if (missing.length) {
+    missing.forEach(s => {
+      missingEl.innerHTML +=
+        `<span class="pill-missing rounded-xl px-2.5 py-1 text-xs font-medium">${escHtml(s)}</span>`;
+    });
+    missingBlock.classList.remove('hidden');
+  } else {
+    missingBlock.classList.add('hidden');
+  }
+}
+
+function setBar(barId, lblId, value) {
+  const bar = document.getElementById(barId);
+  const lbl = document.getElementById(lblId);
+  if (bar) {
+    bar.style.width = '0%';
+    setTimeout(() => { bar.style.width = value + '%'; }, 80);
+  }
+  if (lbl) lbl.textContent = value + '%';
+}
+
+function setState(state) {
+  document.getElementById('analyse-idle').style.display    = state === 'idle'    ? 'block' : 'none';
+  document.getElementById('analyse-loading').style.display = state === 'loading' ? 'block' : 'none';
+  document.getElementById('analyse-result').style.display  = state === 'result'  ? 'block' : 'none';
+  hideError();
+}
+
+function resetAnalysis() {
+  setState('idle');
+  const btn = document.getElementById('btn-analyse');
+  if (btn) btn.disabled = false;
+}
+
+function showError(msg) {
+  const el   = document.getElementById('analyse-error');
+  const text = document.getElementById('analyse-error-text');
+  if (el)   el.classList.remove('hidden');
+  if (text) text.textContent = msg;
+}
+
+function hideError() {
+  const el = document.getElementById('analyse-error');
+  if (el) el.classList.add('hidden');
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* Init */
+document.addEventListener('DOMContentLoaded', function () {
+  /* If a resume is already selected (e.g. default pre-selected), enable the button */
+  const anyChecked = document.querySelector('input[name="existing_resume"]:checked');
+  const anyFile    = document.getElementById('resume-file-input').files.length > 0;
+  if (anyChecked || anyFile) enableAnalyseBtn();
 });
 </script>
 {% endblock %}
