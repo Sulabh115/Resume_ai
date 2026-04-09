@@ -13,6 +13,12 @@ FIX #10:
 
     Views that only redirect (no render call) are unaffected:
         run_screening  — redirects to view_applicants after processing
+
+FIX #15:
+    screening/ranking.html existed but had no backing view or URL.
+    Added ranking(request, job_id) view that fetches all ScreeningResults
+    for a job ordered by similarity_score desc and renders ranking.html.
+    Only the owning company can access it.
 """
 
 from django.shortcuts import render, get_object_or_404, redirect
@@ -51,8 +57,6 @@ def run_screening(request, job_id):
     if request.method != "POST":
         return redirect("view_applicants", job_id=job.id)
 
-    # Only screen applications that haven't been screened yet
-    # (or re-screen all if ?force=1 is passed)
     force = request.GET.get("force") == "1"
     applications = job.applications.select_related("resume", "candidate__user")
 
@@ -75,7 +79,6 @@ def run_screening(request, job_id):
             defaults={"status": ScreeningResult.Status.PENDING}
         )
 
-        # If re-screening an existing result, reset it to PROCESSING first
         if not created:
             result.status = ScreeningResult.Status.PROCESSING
             result.save(update_fields=["status"])
@@ -90,14 +93,12 @@ def run_screening(request, job_id):
             result.summary              = score_data.get("summary", "")
             result.status               = ScreeningResult.Status.DONE
             result.error_message        = ""
-            # #9: save individual component scores
             result.skill_score          = score_data.get("skill_score", 0)
             result.experience_score     = score_data.get("experience_score", 0)
             result.qualification_score  = score_data.get("qualification_score", 0)
             result.cosine_score         = score_data.get("cosine_score", 0)
             result.save()
 
-            # Push score back to Application for dashboard sorting
             app.match_score = result.similarity_score
             app.score_notes = result.summary
             app.save(update_fields=["match_score", "score_notes"])
@@ -110,7 +111,6 @@ def run_screening(request, job_id):
             result.save(update_fields=["status", "error_message"])
             failed += 1
 
-    # Feedback message
     if failed and processed:
         messages.warning(
             request,
@@ -144,7 +144,6 @@ def screening_dashboard(request, job_id):
 
     job = get_object_or_404(Job, id=job_id, company=company)
 
-    # All applications with their screening result (if any)
     applications = (
         job.applications
            .select_related("candidate__user", "resume", "screening_result")
@@ -152,7 +151,6 @@ def screening_dashboard(request, job_id):
            .order_by("-match_score", "-applied_at")
     )
 
-    # Summary stats
     total    = applications.count()
     screened = ScreeningResult.objects.filter(
                     application__job=job,
@@ -205,4 +203,49 @@ def screening_result_detail(request, application_id):
         "job":         application.job,
         # FIX #10: pass company so company_base.html navbar avatar renders correctly
         "company":     company,
+    })
+
+
+# ─── FIX #15: Candidate Ranking (per job) ────────────────────────────────────
+
+@login_required
+def ranking(request, job_id):
+    """
+    FIX #15: screening/ranking.html existed as an orphaned template with no
+    backing view or URL registration.
+
+    This view:
+        - Guards to the owning company only.
+        - Fetches all ScreeningResults for the job ordered by similarity_score
+          desc (highest match first), excluding withdrawn applications.
+        - Passes 'results', 'job', and 'company' to the template so the
+          existing ranking.html design renders correctly without any changes.
+
+    The ranking page is linked from the screening_dashboard and
+    view_applicants pages via {% url 'ranking' job.id %}.
+    """
+    company = _company_required(request)
+    if not company:
+        return redirect("candidate_dashboard")
+
+    job = get_object_or_404(Job, id=job_id, company=company)
+
+    results = (
+        ScreeningResult.objects
+        .filter(
+            application__job=job,
+            status=ScreeningResult.Status.DONE,
+        )
+        .exclude(application__status="withdrawn")
+        .select_related(
+            "application__candidate__user",
+            "application__job",
+        )
+        .order_by("-similarity_score", "-screened_at")
+    )
+
+    return render(request, "screening/ranking.html", {
+        "job":     job,
+        "results": results,
+        "company": company,
     })

@@ -10,4 +10,7 @@ urlpatterns = [
 
     # Single application screening detail
     path("result/<int:application_id>/",   views.screening_result_detail,  name="screening_result_detail"),
+
+    # FIX #15: candidate ranking for a job (was orphaned — no view or URL existed)
+    path("job/<int:job_id>/ranking/",      views.ranking,                  name="ranking"),
 ]
