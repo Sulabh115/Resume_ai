@@ -20,6 +20,13 @@ FIX #8 (already present):
     If the user submitted a wrong current password, the profile
     fields were already written to the DB before the error returned.
     Fix: validate password first, then save everything together.
+
+FIX #12 (candidate_edit_profile):
+    The candidate.about field exists on the model (migration 0003)
+    but was never read from POST data or saved in the view.
+    Fix: read request.POST.get('about', '').strip() and assign it
+    to candidate.about before the save() calls, mirroring every
+    other candidate profile field.
 """
 
 from django.shortcuts import render, redirect
@@ -423,11 +430,6 @@ def company_dashboard(request):
         .order_by('-applied_at')[:8]
     )
 
-    # FIX #12: active_jobs previously showed every OPEN job regardless of
-    # deadline.  Expired-but-open jobs (deadline < today) were visible in the
-    # dashboard sidebar even though company_job_list correctly excluded them.
-    # Added the same deadline filter that company_job_list already uses so
-    # both views are consistent.
     today = timezone.now().date()
     active_jobs = (
         jobs
@@ -467,6 +469,11 @@ def candidate_edit_profile(request):
         candidate.phone     = request.POST.get('phone',     '').strip()
         candidate.skills    = request.POST.get('skills',    '').strip()
         candidate.education = request.POST.get('education', '').strip()
+
+        # FIX #12: read and save the about/summary field.
+        # The field was added to the model in migration 0003 but was
+        # never wired up in the view — so edits were silently discarded.
+        candidate.about = request.POST.get('about', '').strip()
 
         raw_exp = request.POST.get('experience', '0').strip()
         candidate.experience = int(raw_exp) if raw_exp.isdigit() else 0
@@ -541,16 +548,6 @@ def company_edit_profile(request):
     if request.method == 'POST':
 
         # ── FIX #8: collect all field values into local variables first ──
-        #
-        # BEFORE (broken): request.user.save() and company.save() were called
-        # immediately after reading POST data, BEFORE the password validation
-        # block below.  If the password check failed, the view returned an
-        # error response — but the profile changes were already in the DB.
-        #
-        # AFTER (fixed): all values are staged into Python variables here.
-        # Nothing is written to the DB until we reach the save block at the
-        # bottom, which only runs after ALL validation has passed.
-
         first_name   = request.POST.get('first_name',   '').strip()
         last_name    = request.POST.get('last_name',    '').strip()
         email        = request.POST.get('email',        '').strip()
@@ -561,27 +558,9 @@ def company_edit_profile(request):
         website      = website_raw if website_raw else None
 
         # ── FIX #6: read both phone field names from the template ────────
-        #
-        # The template company_edit_profile.html has two phone inputs:
-        #
-        #   Section "Company Details":
-        #       <input type="tel" name="phone" …>
-        #
-        #   Section "Your Account Details":
-        #       <input type="tel" name="hr_phone" …>
-        #
-        # BEFORE (broken): only read request.POST.get('phone', ''),
-        # so whatever the user typed into "hr_phone" was silently ignored.
-        #
-        # AFTER (fixed): read both. hr_phone takes priority because it is
-        # the dedicated HR contact field (same precedence as in
-        # CompanyRegistrationForm.save() which also stores hr_phone into
-        # company.phone).  Fall back to the "phone" field when hr_phone
-        # is blank (supports templates that only have one phone field).
-        #
-        hr_phone     = request.POST.get('hr_phone', '').strip()
-        company_phone = request.POST.get('phone',   '').strip()
-        phone        = hr_phone if hr_phone else company_phone
+        hr_phone      = request.POST.get('hr_phone', '').strip()
+        company_phone = request.POST.get('phone',    '').strip()
+        phone         = hr_phone if hr_phone else company_phone
 
         curr_pw = request.POST.get('current_password', '')
         new_pw  = request.POST.get('new_password',     '')

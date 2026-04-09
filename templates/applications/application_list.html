@@ -22,6 +22,30 @@
   .deadline-urgent { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.28); color: #fca5a5; }
   .deadline-soon   { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.28); color: #fde68a; }
   .deadline-ok     { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.45); }
+
+  /* ── #13: Score ring ── */
+  .score-ring-wrap {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+  .score-ring-wrap svg {
+    display: block;
+    transform: rotate(-90deg);
+  }
+  .score-ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    pointer-events: none;
+  }
 </style>
 {% endblock %}
 
@@ -108,17 +132,7 @@
               {{ app.job.get_job_type_display }}
             </span>
 
-            {# AI score if screened #}
-            {% if app.match_score %}
-            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full
-              {% if app.score_color == 'green' %}bg-emerald-500/15 text-emerald-300 border border-emerald-400/28
-              {% elif app.score_color == 'yellow' %}bg-amber-500/15 text-amber-300 border border-amber-400/28
-              {% else %}bg-red-500/15 text-red-300 border border-red-400/28{% endif %}">
-              {{ app.match_score|floatformat:0 }}% match
-            </span>
-            {% endif %}
-
-            {# Deadline #}
+            {# Deadline — from fix #17 context (today passed from view) #}
             {% if app.job.deadline %}
               {% if app.job.is_closing_soon %}
               <span class="text-xs px-2.5 py-0.5 rounded-full deadline-urgent">
@@ -133,6 +147,57 @@
 
           </div>
         </div>
+
+        {# ── FIX #13: 48×48 SVG score ring ──────────────────────────────
+           Ring geometry:  r=15, viewBox 0 0 48 48, centre (24,24)
+           Circumference:  2 × π × 15 ≈ 94.25
+           stroke-dasharray is always 94.25 (full circumference).
+           stroke-dashoffset starts at 94.25 (empty) and JS animates it
+           to  94.25 × (1 − score/100)  after the page loads.
+
+           Colour rules (match application_detail.html):
+             score ≥ 70  → emerald  (#22c55e)
+             score ≥ 45  → blue     (#60a5fa)
+             otherwise   → red      (#f87171)
+
+           Neutral ring shown when match_score is 0 / not yet screened.
+        ── #}
+        <div class="score-ring-wrap">
+          {% if app.match_score %}
+          <svg viewBox="0 0 48 48" width="48" height="48">
+            <circle cx="24" cy="24" r="15"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.12)"
+                    stroke-width="5"/>
+            <circle cx="24" cy="24" r="15"
+                    fill="none"
+                    stroke="{% if app.match_score >= 70 %}#22c55e{% elif app.match_score >= 45 %}#60a5fa{% else %}#f87171{% endif %}"
+                    stroke-width="5"
+                    stroke-linecap="round"
+                    stroke-dasharray="94.25"
+                    stroke-dashoffset="94.25"
+                    class="score-arc"
+                    data-score="{{ app.match_score|floatformat:1 }}"/>
+          </svg>
+          <div class="score-ring-text">{{ app.match_score|floatformat:0 }}%</div>
+          {% else %}
+          {# Neutral ring — not yet screened #}
+          <svg viewBox="0 0 48 48" width="48" height="48">
+            <circle cx="24" cy="24" r="15"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.12)"
+                    stroke-width="5"/>
+            <circle cx="24" cy="24" r="15"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.18)"
+                    stroke-width="5"
+                    stroke-dasharray="94.25"
+                    stroke-dashoffset="94.25"/>
+          </svg>
+          <div class="score-ring-text" style="color:rgba(255,255,255,0.28);font-size:9px;">—</div>
+          {% endif %}
+        </div>
+
       </div>
 
       {# Action row #}
@@ -191,4 +256,27 @@
   {% endif %}
 
 </main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+/*
+  FIX #13 — animate score ring arcs after page load.
+
+  Django templates cannot compute  94.25 × (1 − score/100)  in-place,
+  so the arc is rendered with  stroke-dashoffset="94.25"  (fully empty)
+  and JS sets the correct offset here.
+
+  class="score-arc"  data-score="<float>"  on each filled circle.
+*/
+document.addEventListener('DOMContentLoaded', function () {
+  var CIRC = 94.25;
+  document.querySelectorAll('.score-arc').forEach(function (arc) {
+    var score = parseFloat(arc.dataset.score) || 0;
+    var offset = CIRC * (1 - score / 100);
+    arc.style.transition = 'stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1) 0.15s';
+    arc.style.strokeDashoffset = offset.toFixed(2);
+  });
+});
+</script>
 {% endblock %}

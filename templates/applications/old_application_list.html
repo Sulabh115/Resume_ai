@@ -49,6 +49,35 @@
     width: 100%; max-width: 520px; max-height: 84vh;
     display: flex; flex-direction: column;
   }
+
+  /* ── #13: Score ring ── */
+  .score-ring-wrap {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    /* Match the card's muted opacity feel for old applications */
+    opacity: 0.75;
+  }
+  .app-card:hover .score-ring-wrap {
+    opacity: 1;
+  }
+  .score-ring-wrap svg {
+    display: block;
+    transform: rotate(-90deg);
+  }
+  .score-ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    pointer-events: none;
+  }
 </style>
 {% endblock %}
 
@@ -205,15 +234,59 @@
             </span>
             {% endif %}
 
-            {# AI score pill — same style as old code #}
-            {% if app.match_score %}
-            <span class="text-xs text-white/40 bg-white/6 border border-white/10 px-2.5 py-0.5 rounded-full">
-              {{ app.match_score|floatformat:0 }}% match score
-            </span>
-            {% endif %}
-
           </div>
         </div>
+
+        {# ── FIX #13: 48×48 SVG score ring ──────────────────────────────
+           Ring geometry:  r=15, viewBox 0 0 48 48, centre (24,24)
+           Circumference:  2 × π × 15 ≈ 94.25
+           stroke-dashoffset starts at 94.25 (empty); JS fills it in.
+
+           Colour rules identical to application_list.html:
+             score ≥ 70  → emerald (#22c55e)
+             score ≥ 45  → blue    (#60a5fa)
+             otherwise   → red     (#f87171)
+
+           Withdrawn applications always show the neutral ring since
+           the score isn't meaningful to display (the application never
+           completed the hiring process).
+        ── #}
+        <div class="score-ring-wrap">
+          {% if app.match_score and app.status != 'withdrawn' %}
+          <svg viewBox="0 0 48 48" width="48" height="48">
+            <circle cx="24" cy="24" r="15"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.10)"
+                    stroke-width="5"/>
+            <circle cx="24" cy="24" r="15"
+                    fill="none"
+                    stroke="{% if app.match_score >= 70 %}#22c55e{% elif app.match_score >= 45 %}#60a5fa{% else %}#f87171{% endif %}"
+                    stroke-width="5"
+                    stroke-linecap="round"
+                    stroke-dasharray="94.25"
+                    stroke-dashoffset="94.25"
+                    class="score-arc"
+                    data-score="{{ app.match_score|floatformat:1 }}"/>
+          </svg>
+          <div class="score-ring-text">{{ app.match_score|floatformat:0 }}%</div>
+          {% else %}
+          {# Neutral ring — withdrawn or not screened #}
+          <svg viewBox="0 0 48 48" width="48" height="48">
+            <circle cx="24" cy="24" r="15"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.10)"
+                    stroke-width="5"/>
+            <circle cx="24" cy="24" r="15"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.14)"
+                    stroke-width="5"
+                    stroke-dasharray="94.25"
+                    stroke-dashoffset="94.25"/>
+          </svg>
+          <div class="score-ring-text" style="color:rgba(255,255,255,0.22);font-size:9px;">—</div>
+          {% endif %}
+        </div>
+
       </div>
 
       {# Action row #}
@@ -279,12 +352,27 @@
 
 {% block extra_scripts %}
 <script>
+/*
+  FIX #13 — animate score ring arcs after page load.
+  Identical pattern to application_list.html.
+*/
+document.addEventListener('DOMContentLoaded', function () {
+  var CIRC = 94.25;
+  document.querySelectorAll('.score-arc').forEach(function (arc) {
+    var score = parseFloat(arc.dataset.score) || 0;
+    var offset = CIRC * (1 - score / 100);
+    arc.style.transition = 'stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1) 0.15s';
+    arc.style.strokeDashoffset = offset.toFixed(2);
+  });
+});
+
+/* ── Results modal (unchanged from original) ── */
 function openModal(ranked, title, total, shortlisted, selfRank) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-stats').textContent =
-    `${total} applicant${total !== 1 ? 's' : ''} · ` +
-    `${shortlisted} shortlisted · ` +
-    (selfRank ? `You ranked #${selfRank}` : 'Your rank unavailable');
+    total + ' applicant' + (total !== 1 ? 's' : '') + ' · ' +
+    shortlisted + ' shortlisted · ' +
+    (selfRank ? 'You ranked #' + selfRank : 'Your rank unavailable');
 
   document.getElementById('modal-summary').innerHTML = `
     <div style="text-align:center;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:12px 8px;">
@@ -300,7 +388,7 @@ function openModal(ranked, title, total, shortlisted, selfRank) {
       <p style="font-size:9px;text-transform:uppercase;letter-spacing:0.10em;color:rgba(255,255,255,0.40);margin-top:3px;">Your Rank</p>
     </div>`;
 
-  const list = document.getElementById('modal-list');
+  var list = document.getElementById('modal-list');
   list.innerHTML = '';
 
   if (!ranked || ranked.length === 0) {
@@ -309,11 +397,11 @@ function openModal(ranked, title, total, shortlisted, selfRank) {
     return;
   }
 
-  ranked.forEach(function(entry) {
-    const rank = entry.rank;
-    const medalMap = { 1: '🥇', 2: '🥈', 3: '🥉' };
-    const rankLabel = medalMap[rank] || `#${rank}`;
-    const rankStyle = rank === 1
+  ranked.forEach(function (entry) {
+    var rank = entry.rank;
+    var medalMap = { 1: '🥇', 2: '🥈', 3: '🥉' };
+    var rankLabel = medalMap[rank] || ('#' + rank);
+    var rankStyle = rank === 1
       ? 'background:rgba(251,191,36,0.22);border:1px solid rgba(251,191,36,0.40);color:#fcd34d;'
       : rank === 2
       ? 'background:rgba(148,163,184,0.18);border:1px solid rgba(148,163,184,0.35);color:#cbd5e1;'
@@ -321,17 +409,17 @@ function openModal(ranked, title, total, shortlisted, selfRank) {
       ? 'background:rgba(180,120,60,0.18);border:1px solid rgba(180,120,60,0.35);color:#d4956a;'
       : 'background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.40);';
 
-    const barColor   = entry.score >= 70 ? '#34d399' : entry.score >= 45 ? '#60a5fa' : '#f87171';
-    const scoreColor = entry.score >= 70 ? '#34d399' : entry.score >= 45 ? '#60a5fa' : '#f87171';
+    var barColor   = entry.score >= 70 ? '#34d399' : entry.score >= 45 ? '#60a5fa' : '#f87171';
+    var scoreColor = entry.score >= 70 ? '#34d399' : entry.score >= 45 ? '#60a5fa' : '#f87171';
 
-    const badge = entry.shortlisted
+    var badge = entry.shortlisted
       ? '<span style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.35);color:#6ee7b7;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500;flex-shrink:0;">Shortlisted</span>'
       : '<span style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.28);color:#fca5a5;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500;flex-shrink:0;">Not selected</span>';
 
-    const rowStyle = entry.is_self
+    var rowStyle = entry.is_self
       ? 'background:rgba(99,102,241,0.14);border:1px solid rgba(99,102,241,0.25);border-radius:12px;'
       : '';
-    const selfTag = entry.is_self
+    var selfTag = entry.is_self
       ? '<span style="background:rgba(99,102,241,0.22);border:1px solid rgba(99,102,241,0.38);color:#a5b4fc;font-size:9px;padding:1px 7px;border-radius:999px;font-weight:600;flex-shrink:0;">You</span>'
       : '';
 
@@ -365,8 +453,8 @@ function closeModal() {
   document.getElementById('results-modal').classList.add('hidden');
 }
 
-document.getElementById('results-modal').addEventListener('click', function(e) {
+document.getElementById('results-modal').addEventListener('click', function (e) {
   if (e.target === this) closeModal();
 });
 </script>
-{% endblock %}
+{% endblock %}s

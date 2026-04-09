@@ -168,6 +168,16 @@
     <div class="glass-card rounded-3xl p-6">
       <p class="section-title">Profile Details</p>
 
+      {# FIX #12: About / Summary textarea — new field, positioned first in the section #}
+      <div class="mb-5">
+        <label class="form-label block mb-1.5">
+          About / Summary
+          <span class="normal-case tracking-normal text-white/25 text-[9px] font-normal ml-1">— shown on your dashboard</span>
+        </label>
+        <textarea name="about" class="form-input" rows="3" oninput="markDirty()"
+                  placeholder="A brief professional summary — e.g. Full-stack developer with 3 years of Django experience. Passionate about clean code and user experience.">{{ candidate.about|default:'' }}</textarea>
+      </div>
+
       {# Skills — tag input synced to hidden field #}
       <div class="mb-5">
         <label class="form-label block mb-1.5">

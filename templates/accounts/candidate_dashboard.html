@@ -202,8 +202,8 @@
         </a>
       </div>
 
-      {# ── ABOUT / SUMMARY ── #}
-      {% comment %} {% if candidate.about %}
+      {# ── ABOUT / SUMMARY — FIX #12: uncommented ── #}
+      {% if candidate.about %}
       <div class="glass rounded-3xl p-6">
         <div class="flex items-center justify-between mb-3">
           <p class="text-[10px] text-white/50 uppercase tracking-widest">About / Summary</p>
@@ -211,14 +211,12 @@
         </div>
         <p class="text-sm text-white/70 leading-relaxed">{{ candidate.about }}</p>
       </div>
-      {% endif %} {% endcomment %}
+      {% endif %}
 
       {# ── RECENT APPLICATIONS ── #}
       <div class="glass rounded-3xl p-6">
         <div class="flex items-center justify-between mb-4">
           <p class="text-[10px] text-white/50 uppercase tracking-widest">Recent Applications</p>
-          {# Add href="{% url 'application_list' %}" when applications app is ready #}
-          {# <a href="" class="text-xs text-white/50 hover:text-white transition-colors">View all →</a> #}
         </div>
         {% if recent_applications %}
         <div class="space-y-2">
@@ -275,7 +273,7 @@
               <svg class="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M12 14l9-5-9-5-9 5 9 5z"/>
                 <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0112 20.055a11.952 11.952 0 01-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/>
               </svg>
             </div>
             <div class="flex-1">
