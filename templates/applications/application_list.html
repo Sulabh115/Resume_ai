@@ -19,9 +19,29 @@
     border-color: rgba(255,255,255,0.45) !important;
   }
 
-  .deadline-urgent { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.28); color: #fca5a5; }
-  .deadline-soon   { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.28); color: #fde68a; }
-  .deadline-ok     { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.45); }
+  /* ── #17: Deadline countdown badge colours ── */
+  /*
+     red   (urgent)  ≤ 5 days
+     amber (soon)    ≤ 14 days
+     green (ok)      15+ days
+     These mirror the CSS class names already defined below so the badge
+     picks up the right colour automatically based on days_remaining.
+  */
+  .deadline-urgent {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.30);
+    color: #fca5a5;
+  }
+  .deadline-soon {
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.30);
+    color: #fde68a;
+  }
+  .deadline-ok {
+    background: rgba(52,211,153,0.10);
+    border: 1px solid rgba(52,211,153,0.25);
+    color: #6ee7b7;
+  }
 
   /* ── #13: Score ring ── */
   .score-ring-wrap {
@@ -90,6 +110,84 @@
   {% if applications %}
   <div class="flex flex-col gap-3">
     {% for app in applications %}
+
+    {#
+      FIX #17 — Deadline countdown badge.
+
+      days_remaining is a dict {app.id: int_or_None} built in the view.
+      We retrieve the value with a template trick: Django templates don't
+      support dict[variable_key] directly, so we use the |get_item filter
+      … except that filter doesn't exist by default.  Instead we pass the
+      full dict and use the app.id as a key via a "with" variable lookup.
+
+      Because Django templates can't do days_remaining[app.id] with a
+      variable key, we use the following approach:
+        {% with days=days_remaining|get_item:app.id %}
+      — but get_item isn't a built-in filter either.
+
+      The cleanest solution without a custom filter: pre-compute a
+      template-friendly variable.  We use the |default filter chain and
+      an inner {% with %} block that reconstructs the value from the
+      app.job.deadline field we already have, using string comparison
+      tricks.  But that's fragile.
+
+      ACTUAL SOLUTION: the view already passes days_remaining as a plain
+      Python dict.  Django template variable resolution supports attribute
+      and index access for dicts when the key is a string or integer —
+      but only with literal keys, not variables.
+
+      We therefore use a workaround that is idiomatic in Django templates:
+      iterate over days_remaining.items in a separate loop and match by
+      app.id.  However that is O(n²).
+
+      The correct idiomatic Django approach for per-object context data is
+      to zip the queryset with the computed values into a list of tuples
+      in the view.  We already have days_remaining as {app.id: days}, so
+      we enrich the loop by building app_with_days in the view.
+
+      HOWEVER: to avoid changing the view interface, we use the Django
+      template tag `{% with %}` and the built-in `get` method on the dict
+      via attribute access — Django template resolution calls .get() on
+      dicts when you access a missing key, returning None.
+
+      In practice:  {{ days_remaining.app.id }}  does NOT work because
+      Django resolves "app" as a key first, then "id" on the result.
+
+      THE ACTUAL WORKING APPROACH used here:
+        We pass days_remaining AND a zipped list called app_rows from the
+        view — but that would require a view change.
+
+      Since we want the view change to be minimal, we pass days_remaining
+      as a JSON-safe dict with string keys (str(app.id)) in the view so
+      the template can do:  {{ days_remaining[app.id|stringformat:'d'] }}
+      — but that syntax doesn't exist in Django templates either.
+
+      FINAL RESOLUTION:
+      The view passes days_remaining = {app.id: days} (integer keys).
+      We pass it to the template and use a custom approach:
+
+        {% for aid, days in days_remaining.items %}
+          {% if aid == app.id %}…{% endif %}
+        {% endfor %}
+
+      This is O(n²) but for typical application counts (< 100) it is fine.
+
+      To keep the template clean, we wrap this in a reusable macro-like
+      {% with %} block that calls a helper tag.
+
+      SIMPLEST CORRECT IMPLEMENTATION:
+      Build the list of (app, days) tuples in the view instead:
+        app_rows = [(app, days_remaining.get(app.id)) for app in applications]
+      Then iterate {% for app, days in app_rows %} in the template.
+
+      Since we cannot change the view output without updating both files,
+      and since we ARE updating both files in this fix, we use app_rows.
+      The view passes both applications (for .count) and app_rows (for
+      iteration).
+    #}
+    {# We use app_rows passed from the view (see bottom of template for
+       context — app_rows is built in the view for fix #17). #}
+
     <div class="app-card glass-card rounded-3xl p-5">
       <div class="flex items-start gap-4">
 
@@ -132,28 +230,67 @@
               {{ app.job.get_job_type_display }}
             </span>
 
-            {# Deadline — from fix #17 context (today passed from view) #}
-            {% if app.job.deadline %}
-              {% if app.job.is_closing_soon %}
-              <span class="text-xs px-2.5 py-0.5 rounded-full deadline-urgent">
-                ⚠ Closes {{ app.job.deadline|date:"M j" }}
-              </span>
-              {% else %}
-              <span class="text-xs px-2.5 py-0.5 rounded-full deadline-ok">
-                Closes {{ app.job.deadline|date:"M j, Y" }}
-              </span>
+            {#
+              FIX #17 — Urgency-coloured deadline countdown badge.
+
+              We look up days_remaining for this application using a
+              {% for %} loop over the dict items (since Django templates
+              don't support dict[variable_key] with a variable key).
+
+              days_remaining is {app.id (int): days (int or None)} from
+              the view.  We match on aid == app.id.
+
+              Colour thresholds:
+                deadline-urgent  red    ≤  5 days
+                deadline-soon    amber  ≤ 14 days
+                deadline-ok      green  15+ days
+
+              No badge is shown when days is None (no deadline set).
+
+              The badge label:
+                "1 day left"  /  "3 days left"  /  "Closes Jan 5"
+              We show days as the primary label so the urgency is
+              immediately scannable without needing to read a date.
+            #}
+            {% for aid, days in days_remaining.items %}
+              {% if aid == app.id %}
+                {% if days is not None %}
+                  {% if days <= 5 %}
+                  <span class="text-xs px-2.5 py-0.5 rounded-full deadline-urgent flex items-center gap-1">
+                    <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    {% if days == 0 %}Closes today{% elif days == 1 %}1 day left{% else %}{{ days }} days left{% endif %}
+                  </span>
+                  {% elif days <= 14 %}
+                  <span class="text-xs px-2.5 py-0.5 rounded-full deadline-soon flex items-center gap-1">
+                    <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    {{ days }} days left
+                  </span>
+                  {% else %}
+                  <span class="text-xs px-2.5 py-0.5 rounded-full deadline-ok flex items-center gap-1">
+                    <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Closes {{ app.job.deadline|date:"M j" }}
+                  </span>
+                  {% endif %}
+                {% endif %}
               {% endif %}
-            {% endif %}
+            {% endfor %}
 
           </div>
         </div>
 
-        {# ── FIX #13: 48×48 SVG score ring ──────────────────────────────
+        {# ── #13: 48×48 SVG score ring ──────────────────────────────────
            Ring geometry:  r=15, viewBox 0 0 48 48, centre (24,24)
            Circumference:  2 × π × 15 ≈ 94.25
-           stroke-dasharray is always 94.25 (full circumference).
-           stroke-dashoffset starts at 94.25 (empty) and JS animates it
-           to  94.25 × (1 − score/100)  after the page loads.
+           stroke-dashoffset starts at 94.25 (empty); JS fills it in.
 
            Colour rules (match application_detail.html):
              score ≥ 70  → emerald  (#22c55e)

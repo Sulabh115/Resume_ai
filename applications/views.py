@@ -38,6 +38,19 @@ FIX #8 — Pre-submission score preview:
     passed directly to compute_match_score (which calls
     extract_text_from_pdf on the InMemoryUploadedFile) and then
     discarded.
+
+FIX #17 — Deadline countdown badge on application_list:
+    Pass today=date.today() in the application_list render context so
+    the template can compute days remaining until each job's deadline.
+    The template uses this to colour-code a countdown badge:
+        red   — 5 days or fewer remaining
+        amber — 6–14 days remaining
+        green — 15+ days remaining
+    No badge is shown when the job has no deadline.
+    The days_remaining is computed per-application in the view and
+    passed as a mapping {app.id: days} so the template has a plain
+    integer to compare against thresholds — Django templates cannot
+    subtract date objects.
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -321,6 +334,7 @@ def score_preview(request, job_id):
     import tempfile, os
 
     suffix = os.path.splitext(resume_file.name)[1] or ".pdf"
+    tmp_path = None
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             for chunk in resume_file.chunks():
@@ -340,10 +354,11 @@ def score_preview(request, job_id):
         return JsonResponse({"error": f"Screening failed: {exc}"}, status=500)
     finally:
         # Always clean up the temp file, even if compute_match_score raises.
-        try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
 
     matched = [s.strip() for s in result.get("matched_skills", "").split(",") if s.strip()]
     missing = [s.strip() for s in result.get("missing_skills", "").split(",") if s.strip()]
@@ -608,12 +623,30 @@ def application_list(request):
     """
     Candidate's active applications —
     excludes withdrawn, rejected, and jobs whose deadline has passed.
+
+    FIX #17:
+    Passes today=date.today() and a days_remaining mapping so the
+    template can render urgency-coloured countdown badges without
+    needing to do date arithmetic (Django templates cannot subtract
+    date objects).
+
+    days_remaining mapping:  { application_id: int_or_None }
+        None  — job has no deadline
+        int   — calendar days from today until the deadline (≥ 0
+                because the queryset already filters out past-deadline jobs)
+
+    Colour thresholds used in the template:
+        ≤  5 days → red   (urgent)
+        ≤ 14 days → amber (soon)
+        else      → green (comfortable)
     """
     candidate = _get_candidate(request)
     if not candidate:
         return redirect("company_dashboard")
 
     from django.db.models import Q
+    today = date.today()
+
     applications = (
         Application.objects
         .filter(candidate=candidate)
@@ -621,13 +654,24 @@ def application_list(request):
             Application.Status.WITHDRAWN,
             Application.Status.REJECTED,
         ])
-        .exclude(job__deadline__lt=date.today())
+        .exclude(job__deadline__lt=today)
         .select_related("job__company", "resume")
         .order_by("-applied_at")
     )
 
+    # Build a {app.id: days_remaining} dict so the template has a plain
+    # integer to compare — Django templates cannot subtract date objects.
+    days_remaining = {}
+    for app in applications:
+        if app.job.deadline:
+            days_remaining[app.id] = (app.job.deadline - today).days
+        else:
+            days_remaining[app.id] = None
+
     return render(request, "applications/application_list.html", {
-        "applications": applications,
+        "applications":   applications,
+        "today":          today,
+        "days_remaining": days_remaining,
     })
 
 
@@ -659,6 +703,8 @@ def old_application_list(request):
         return redirect("company_dashboard")
 
     from django.db.models import Q
+    today = date.today()
+
     applications = (
         Application.objects
         .filter(candidate=candidate)
@@ -667,7 +713,7 @@ def old_application_list(request):
                 Application.Status.WITHDRAWN,
                 Application.Status.REJECTED,
             ]) |
-            Q(job__deadline__lt=date.today())
+            Q(job__deadline__lt=today)
         )
         .select_related("job__company", "resume")
         .order_by("-applied_at")
