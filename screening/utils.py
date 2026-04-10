@@ -20,7 +20,7 @@ FIX #9:
     compute_match_score now returns individual component scores alongside the
     overall score so they can be stored in ScreeningResult and displayed as
     sub-bars in the view_applicants and screening_dashboard templates.
-    All component values are scaled to 0–100 for consistency with similarity_score.
+    All component values are scaled to 0-100 for consistency with similarity_score.
 """
 
 from typing import Dict

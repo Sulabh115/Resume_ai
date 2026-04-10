@@ -237,20 +237,7 @@
           </div>
         </div>
 
-        {# ── FIX #13: 48×48 SVG score ring ──────────────────────────────
-           Ring geometry:  r=15, viewBox 0 0 48 48, centre (24,24)
-           Circumference:  2 × π × 15 ≈ 94.25
-           stroke-dashoffset starts at 94.25 (empty); JS fills it in.
-
-           Colour rules identical to application_list.html:
-             score ≥ 70  → emerald (#22c55e)
-             score ≥ 45  → blue    (#60a5fa)
-             otherwise   → red     (#f87171)
-
-           Withdrawn applications always show the neutral ring since
-           the score isn't meaningful to display (the application never
-           completed the hiring process).
-        ── #}
+        {# Score ring #}
         <div class="score-ring-wrap">
           {% if app.match_score and app.status != 'withdrawn' %}
           <svg viewBox="0 0 48 48" width="48" height="48">
@@ -457,4 +444,4 @@ document.getElementById('results-modal').addEventListener('click', function (e) 
   if (e.target === this) closeModal();
 });
 </script>
-{% endblock %}s
+{% endblock %}

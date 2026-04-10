@@ -3,12 +3,6 @@
 
 {% block nav_screening %}active{% endblock %}
 
-{% block nav_avatar %}
-<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-  {{ request.user.companyprofile.company_name|first|upper }}
-</div>
-{% endblock %}
-
 {% block extra_head %}
 <style>
   .skill-matched { background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.30); color:#6ee7b7; }
