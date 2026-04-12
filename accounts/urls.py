@@ -18,7 +18,9 @@ urlpatterns = [
     path("reset-password/<uidb64>/<token>/",
         auth_views.PasswordResetConfirmView.as_view(
             template_name="accounts/password_reset_confirm.html",
-            success_url="/accounts/login/"
+            success_url="/login/"          # FIX #2: was "/accounts/login/" which 404s because
+                                           # accounts URLs are mounted at "" (root), not "/accounts/".
+                                           # The login URL is therefore /login/, not /accounts/login/.
         ),
         name="password_reset_confirm",
 ),
