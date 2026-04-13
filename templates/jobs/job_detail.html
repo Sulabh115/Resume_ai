@@ -187,9 +187,9 @@
         {# ── CTA — varies by who is viewing ── #}
         {% if request.user.is_authenticated %}
 
-          {# FIX #16: use is_owner (passed from view) instead of
+          {% comment %} FIX #16: use is_owner (passed from view) instead of
              request.user.companyprofile == job.company which crashes
-             for any user that has no companyprofile attribute. #}
+             for any user that has no companyprofile attribute. {% endcomment %}
           {% if is_owner %}
           {# ── Owning company ── #}
           <a href="{% url 'edit_job' job.id %}"

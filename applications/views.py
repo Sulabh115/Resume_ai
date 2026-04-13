@@ -419,6 +419,8 @@ def view_applicants(request, job_id):
         "unscreened_count":         unscreened_count,
         # FIX #4: used to populate the email modal recipient list
         "shortlisted_applications": shortlisted_applications,
+        # FIX #5: quick stat for sidebar "Listed" count
+        "shortlisted_count":        shortlisted_applications.count(),
     })
 
 
@@ -475,6 +477,18 @@ def bulk_shortlist(request, job_id):
     rejected_count = Application.objects.filter(id__in=reject_ids).update(
         status=Application.Status.REJECTED
     )
+
+    # FIX #6: Send status-change notification emails for bulk-updated apps.
+    # .update() bypasses model save(), so _send_status_notification() is
+    # never called automatically — we do it explicitly here.
+    for app in Application.objects.filter(
+            id__in=shortlist_ids).select_related(
+            'candidate__user', 'job__company'):
+        _send_status_notification(app)
+    for app in Application.objects.filter(
+            id__in=reject_ids).select_related(
+            'candidate__user', 'job__company'):
+        _send_status_notification(app)
 
     messages.success(
         request,
@@ -727,6 +741,10 @@ def old_application_list(request):
     # Store in a dict keyed by job_id so template annotation is O(1) lookup.
     job_data_map = {}  # job_id → dict
 
+    # FIX #7A: Fetch all Job objects in one query instead of one per job_id.
+    from jobs.models import Job as JobModel
+    jobs_map = JobModel.objects.in_bulk(job_ids)
+
     for job_id in job_ids:
         ranked_qs = (
             Application.objects
@@ -752,7 +770,7 @@ def old_application_list(request):
         # Build the published ranked list.
         # Other candidates are anonymized as "Candidate #N" (by rank position)
         # so no personal data about other applicants leaks to this candidate.
-        job_obj = Application.objects.filter(job_id=job_id).first().job if all_apps else None
+        job_obj = jobs_map.get(job_id)
         results_published = job_obj.results_published if job_obj else False
 
         if results_published:

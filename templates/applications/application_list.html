@@ -5,18 +5,22 @@
 
 {% block nav_avatar %}
 {% if request.user.is_authenticated %}
-  <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-    {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
-  </div>
+<div
+  class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+  {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
+</div>
 {% endif %}
 {% endblock %}
 
 {% block extra_head %}
 <style>
-  .app-card { transition: all 0.15s ease; }
+  .app-card {
+    transition: all 0.15s ease;
+  }
+
   .app-card:hover {
-    background: rgba(255,255,255,0.22) !important;
-    border-color: rgba(255,255,255,0.45) !important;
+    background: rgba(255, 255, 255, 0.22) !important;
+    border-color: rgba(255, 255, 255, 0.45) !important;
   }
 
   /* ── #17: Deadline countdown badge colours ── */
@@ -28,18 +32,20 @@
      picks up the right colour automatically based on days_remaining.
   */
   .deadline-urgent {
-    background: rgba(239,68,68,0.12);
-    border: 1px solid rgba(239,68,68,0.30);
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.30);
     color: #fca5a5;
   }
+
   .deadline-soon {
-    background: rgba(245,158,11,0.12);
-    border: 1px solid rgba(245,158,11,0.30);
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.30);
     color: #fde68a;
   }
+
   .deadline-ok {
-    background: rgba(52,211,153,0.10);
-    border: 1px solid rgba(52,211,153,0.25);
+    background: rgba(52, 211, 153, 0.10);
+    border: 1px solid rgba(52, 211, 153, 0.25);
     color: #6ee7b7;
   }
 
@@ -50,10 +56,12 @@
     height: 48px;
     flex-shrink: 0;
   }
+
   .score-ring-wrap svg {
     display: block;
     transform: rotate(-90deg);
   }
+
   .score-ring-text {
     position: absolute;
     inset: 0;
@@ -82,12 +90,10 @@
       </p>
     </div>
     <div class="flex items-center gap-3">
-      <a href="{% url 'old_application_list' %}"
-         class="btn-ghost px-4 py-2 rounded-2xl text-sm">
+      <a href="{% url 'old_application_list' %}" class="btn-ghost px-4 py-2 rounded-2xl text-sm">
         Old Applications →
       </a>
-      <a href="{% url 'job_list' %}"
-         class="btn-white px-4 py-2 rounded-2xl text-sm">
+      <a href="{% url 'job_list' %}" class="btn-white px-4 py-2 rounded-2xl text-sm">
         Browse Jobs
       </a>
     </div>
@@ -99,7 +105,8 @@
     {% for message in messages %}
     <div class="msg-{{ message.tags|default:'info' }} rounded-2xl px-4 py-3 text-sm flex items-center gap-2">
       <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       {{ message }}
     </div>
@@ -111,93 +118,21 @@
   <div class="flex flex-col gap-3">
     {% for app in applications %}
 
-    {#
-      FIX #17 — Deadline countdown badge.
 
-      days_remaining is a dict {app.id: int_or_None} built in the view.
-      We retrieve the value with a template trick: Django templates don't
-      support dict[variable_key] directly, so we use the |get_item filter
-      … except that filter doesn't exist by default.  Instead we pass the
-      full dict and use the app.id as a key via a "with" variable lookup.
-
-      Because Django templates can't do days_remaining[app.id] with a
-      variable key, we use the following approach:
-        {% with days=days_remaining|get_item:app.id %}
-      — but get_item isn't a built-in filter either.
-
-      The cleanest solution without a custom filter: pre-compute a
-      template-friendly variable.  We use the |default filter chain and
-      an inner {% with %} block that reconstructs the value from the
-      app.job.deadline field we already have, using string comparison
-      tricks.  But that's fragile.
-
-      ACTUAL SOLUTION: the view already passes days_remaining as a plain
-      Python dict.  Django template variable resolution supports attribute
-      and index access for dicts when the key is a string or integer —
-      but only with literal keys, not variables.
-
-      We therefore use a workaround that is idiomatic in Django templates:
-      iterate over days_remaining.items in a separate loop and match by
-      app.id.  However that is O(n²).
-
-      The correct idiomatic Django approach for per-object context data is
-      to zip the queryset with the computed values into a list of tuples
-      in the view.  We already have days_remaining as {app.id: days}, so
-      we enrich the loop by building app_with_days in the view.
-
-      HOWEVER: to avoid changing the view interface, we use the Django
-      template tag `{% with %}` and the built-in `get` method on the dict
-      via attribute access — Django template resolution calls .get() on
-      dicts when you access a missing key, returning None.
-
-      In practice:  {{ days_remaining.app.id }}  does NOT work because
-      Django resolves "app" as a key first, then "id" on the result.
-
-      THE ACTUAL WORKING APPROACH used here:
-        We pass days_remaining AND a zipped list called app_rows from the
-        view — but that would require a view change.
-
-      Since we want the view change to be minimal, we pass days_remaining
-      as a JSON-safe dict with string keys (str(app.id)) in the view so
-      the template can do:  {{ days_remaining[app.id|stringformat:'d'] }}
-      — but that syntax doesn't exist in Django templates either.
-
-      FINAL RESOLUTION:
-      The view passes days_remaining = {app.id: days} (integer keys).
-      We pass it to the template and use a custom approach:
-
-        {% for aid, days in days_remaining.items %}
-          {% if aid == app.id %}…{% endif %}
-        {% endfor %}
-
-      This is O(n²) but for typical application counts (< 100) it is fine.
-
-      To keep the template clean, we wrap this in a reusable macro-like
-      {% with %} block that calls a helper tag.
-
-      SIMPLEST CORRECT IMPLEMENTATION:
-      Build the list of (app, days) tuples in the view instead:
-        app_rows = [(app, days_remaining.get(app.id)) for app in applications]
-      Then iterate {% for app, days in app_rows %} in the template.
-
-      Since we cannot change the view output without updating both files,
-      and since we ARE updating both files in this fix, we use app_rows.
-      The view passes both applications (for .count) and app_rows (for
-      iteration).
-    #}
-    {# We use app_rows passed from the view (see bottom of template for
-       context — app_rows is built in the view for fix #17). #}
 
     <div class="app-card glass-card rounded-3xl p-5">
       <div class="flex items-start gap-4">
 
         {# Company logo #}
-        <div class="w-11 h-11 rounded-xl bg-white/15 border border-white/25 overflow-hidden flex items-center justify-center flex-shrink-0">
+        <div
+          class="w-11 h-11 rounded-xl bg-white/15 border border-white/25 overflow-hidden flex items-center justify-center flex-shrink-0">
           {% if app.job.company.logo %}
-            <img src="{{ app.job.company.logo.url }}" alt="{{ app.job.company.company_name }}" class="w-full h-full object-cover"/>
+          <img src="{{ app.job.company.logo.url }}" alt="{{ app.job.company.company_name }}"
+            class="w-full h-full object-cover" />
           {% else %}
-            <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ app.job.company.company_name|urlencode }}&backgroundColor=dbeafe&textColor=2563eb"
-                 alt="{{ app.job.company.company_name }}" class="w-full h-full object-cover"/>
+          <img
+            src="https://api.dicebear.com/7.x/initials/svg?seed={{ app.job.company.company_name|urlencode }}&backgroundColor=dbeafe&textColor=2563eb"
+            alt="{{ app.job.company.company_name }}" class="w-full h-full object-cover" />
           {% endif %}
         </div>
 
@@ -206,7 +141,7 @@
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <a href="{% url 'job_detail' app.job.id %}"
-                 class="text-white font-semibold text-base hover:text-white/80 transition-colors block truncate">
+                class="text-white font-semibold text-base hover:text-white/80 transition-colors block truncate">
                 {{ app.job.title }}
               </a>
               <p class="text-white/50 text-sm mt-0.5">
@@ -230,106 +165,69 @@
               {{ app.job.get_job_type_display }}
             </span>
 
-            {#
-              FIX #17 — Urgency-coloured deadline countdown badge.
 
-              We look up days_remaining for this application using a
-              {% for %} loop over the dict items (since Django templates
-              don't support dict[variable_key] with a variable key).
-
-              days_remaining is {app.id (int): days (int or None)} from
-              the view.  We match on aid == app.id.
-
-              Colour thresholds:
-                deadline-urgent  red    ≤  5 days
-                deadline-soon    amber  ≤ 14 days
-                deadline-ok      green  15+ days
-
-              No badge is shown when days is None (no deadline set).
-
-              The badge label:
-                "1 day left"  /  "3 days left"  /  "Closes Jan 5"
-              We show days as the primary label so the urgency is
-              immediately scannable without needing to read a date.
-            #}
             {% for aid, days in days_remaining.items %}
-              {% if aid == app.id %}
-                {% if days is not None %}
-                  {% if days <= 5 %}
-                  <span class="text-xs px-2.5 py-0.5 rounded-full deadline-urgent flex items-center gap-1">
-                    <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    {% if days == 0 %}Closes today{% elif days == 1 %}1 day left{% else %}{{ days }} days left{% endif %}
-                  </span>
-                  {% elif days <= 14 %}
-                  <span class="text-xs px-2.5 py-0.5 rounded-full deadline-soon flex items-center gap-1">
-                    <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                    {{ days }} days left
-                  </span>
-                  {% else %}
-                  <span class="text-xs px-2.5 py-0.5 rounded-full deadline-ok flex items-center gap-1">
-                    <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                    Closes {{ app.job.deadline|date:"M j" }}
-                  </span>
-                  {% endif %}
+            {% if aid == app.id %}
+            {% if days is not None %}
+            {% if days <= 5 %} <span class="text-xs px-2.5 py-0.5 rounded-full deadline-urgent flex items-center gap-1">
+              <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {% if days == 0 %}Closes today{% elif days == 1 %}1 day left{% else %}{{ days }} days left{% endif %}
+              </span>
+              {% elif days <= 14 %} <span
+                class="text-xs px-2.5 py-0.5 rounded-full deadline-soon flex items-center gap-1">
+                <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {{ days }} days left
+                </span>
+                {% else %}
+                <span class="text-xs px-2.5 py-0.5 rounded-full deadline-ok flex items-center gap-1">
+                  <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Closes {{ app.job.deadline|date:"M j" }}
+                </span>
                 {% endif %}
-              {% endif %}
-            {% endfor %}
+                {% endif %}
+                {% endif %}
+                {% endfor %}
 
           </div>
         </div>
 
-        {# ── #13: 48×48 SVG score ring ──────────────────────────────────
-           Ring geometry:  r=15, viewBox 0 0 48 48, centre (24,24)
-           Circumference:  2 × π × 15 ≈ 94.25
-           stroke-dashoffset starts at 94.25 (empty); JS fills it in.
+        {% comment %} ── #13: 48×48 SVG score ring ──────────────────────────────────
+        Ring geometry: r=15, viewBox 0 0 48 48, centre (24,24)
+        Circumference: 2 × π × 15 ≈ 94.25
+        stroke-dashoffset starts at 94.25 (empty); JS fills it in.
 
-           Colour rules (match application_detail.html):
-             score ≥ 70  → emerald  (#22c55e)
-             score ≥ 45  → blue     (#60a5fa)
-             otherwise   → red      (#f87171)
+        Colour rules (match application_detail.html):
+        score ≥ 70 → emerald (#22c55e)
+        score ≥ 45 → blue (#60a5fa)
+        otherwise → red (#f87171)
 
-           Neutral ring shown when match_score is 0 / not yet screened.
-        ── #}
+        Neutral ring shown when match_score is 0 / not yet screened.
+        ── {% endcomment %}
         <div class="score-ring-wrap">
           {% if app.match_score %}
           <svg viewBox="0 0 48 48" width="48" height="48">
-            <circle cx="24" cy="24" r="15"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.12)"
-                    stroke-width="5"/>
-            <circle cx="24" cy="24" r="15"
-                    fill="none"
-                    stroke="{% if app.match_score >= 70 %}#22c55e{% elif app.match_score >= 45 %}#60a5fa{% else %}#f87171{% endif %}"
-                    stroke-width="5"
-                    stroke-linecap="round"
-                    stroke-dasharray="94.25"
-                    stroke-dashoffset="94.25"
-                    class="score-arc"
-                    data-score="{{ app.match_score|floatformat:1 }}"/>
+            <circle cx="24" cy="24" r="15" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5" />
+            <circle cx="24" cy="24" r="15" fill="none"
+              stroke="{% if app.match_score >= 70 %}#22c55e{% elif app.match_score >= 45 %}#60a5fa{% else %}#f87171{% endif %}"
+              stroke-width="5" stroke-linecap="round" stroke-dasharray="94.25" stroke-dashoffset="94.25"
+              class="score-arc" data-score="{{ app.match_score|floatformat:1 }}" />
           </svg>
           <div class="score-ring-text">{{ app.match_score|floatformat:0 }}%</div>
           {% else %}
           {# Neutral ring — not yet screened #}
           <svg viewBox="0 0 48 48" width="48" height="48">
-            <circle cx="24" cy="24" r="15"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.12)"
-                    stroke-width="5"/>
-            <circle cx="24" cy="24" r="15"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.18)"
-                    stroke-width="5"
-                    stroke-dasharray="94.25"
-                    stroke-dashoffset="94.25"/>
+            <circle cx="24" cy="24" r="15" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5" />
+            <circle cx="24" cy="24" r="15" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="5"
+              stroke-dasharray="94.25" stroke-dashoffset="94.25" />
           </svg>
           <div class="score-ring-text" style="color:rgba(255,255,255,0.28);font-size:9px;">—</div>
           {% endif %}
@@ -342,19 +240,22 @@
 
         {% if app.resume %}
         <a href="{{ app.resume.file.url }}" target="_blank"
-           class="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs">
+          class="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           View Resume
         </a>
         {% endif %}
 
         <a href="{% url 'job_detail' app.job.id %}"
-           class="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs">
+          class="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
           View Job
         </a>
@@ -364,9 +265,9 @@
         {# Withdraw — only if still pending or reviewed #}
         {% if app.status == 'pending' or app.status == 'reviewed' %}
         <a href="{% url 'withdraw_application' app.id %}"
-           class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-red-300/70 hover:text-red-300 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-400/20">
+          class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-red-300/70 hover:text-red-300 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-400/20">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
           Withdraw
         </a>
@@ -381,7 +282,8 @@
   <div class="glass-card rounded-3xl p-16 text-center">
     <div class="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center bg-white/10 border border-white/18">
       <svg class="w-8 h-8 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
     </div>
     <p class="text-white/60 font-semibold mb-2">No active applications</p>
@@ -397,23 +299,23 @@
 
 {% block extra_scripts %}
 <script>
-/*
-  FIX #13 — animate score ring arcs after page load.
-
-  Django templates cannot compute  94.25 × (1 − score/100)  in-place,
-  so the arc is rendered with  stroke-dashoffset="94.25"  (fully empty)
-  and JS sets the correct offset here.
-
-  class="score-arc"  data-score="<float>"  on each filled circle.
-*/
-document.addEventListener('DOMContentLoaded', function () {
-  var CIRC = 94.25;
-  document.querySelectorAll('.score-arc').forEach(function (arc) {
-    var score = parseFloat(arc.dataset.score) || 0;
-    var offset = CIRC * (1 - score / 100);
-    arc.style.transition = 'stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1) 0.15s';
-    arc.style.strokeDashoffset = offset.toFixed(2);
+  /*
+    FIX #13 — animate score ring arcs after page load.
+  
+    Django templates cannot compute  94.25 × (1 − score/100)  in-place,
+    so the arc is rendered with  stroke-dashoffset="94.25"  (fully empty)
+    and JS sets the correct offset here.
+  
+    class="score-arc"  data-score="<float>"  on each filled circle.
+  */
+  document.addEventListener('DOMContentLoaded', function () {
+    var CIRC = 94.25;
+    document.querySelectorAll('.score-arc').forEach(function (arc) {
+      var score = parseFloat(arc.dataset.score) || 0;
+      var offset = CIRC * (1 - score / 100);
+      arc.style.transition = 'stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1) 0.15s';
+      arc.style.strokeDashoffset = offset.toFixed(2);
+    });
   });
-});
 </script>
 {% endblock %}

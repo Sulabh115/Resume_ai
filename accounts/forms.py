@@ -115,9 +115,3 @@ class ForgotPasswordForm(forms.Form):
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={"placeholder": "Enter your registered email"})
     )
-
-    def clean_email(self):
-        email = self.cleaned_data["email"]
-        if not User.objects.filter(email=email).exists():
-            raise forms.ValidationError("No account found with this email address.")
-        return email

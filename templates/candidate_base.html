@@ -181,10 +181,9 @@
 </head>
 
 <body class="min-h-screen">
-{% comment %} 
-  {# ══════════════════════════════
+  {% comment %} ══════════════════════════════
      GLOBAL FLASH TOASTS (auto-dismiss 4s)
-  ══════════════════════════════ #} {% endcomment %}
+  ══════════════════════════════ {% endcomment %} 
   {% if messages %}
   <div id="global-messages"
        class="fixed top-4 right-4 z-[999] flex flex-col gap-2 max-w-sm w-full pointer-events-none px-2">
@@ -206,20 +205,20 @@
   </div>
   {% endif %}
 
-  {% comment %} {# ══════════════════════════════
+  {% comment %}  ══════════════════════════════
      BACKGROUND CANVAS
-  ══════════════════════════════ #} {% endcomment %}
+  ══════════════════════════════ {% endcomment %} 
   <div class="bg-canvas">
     <div class="shape-bl"></div>
     <div class="shape-tr"></div>
     <div class="shape-mid"></div>
   </div>
 
-  {% comment %} {# ══════════════════════════════
+  {% comment %} ══════════════════════════════
      NAVBAR — CANDIDATE
      Active page: set class="nav-link active" on the matching link
      in child templates using {% block nav_active_* %}
-  ══════════════════════════════ #} {% endcomment %}
+  ══════════════════════════════ {% endcomment %}
   {% block navbar %}
   <header class="fixed top-0 left-0 w-full z-50">
     <div class="w-full px-4 md:px-8 flex items-center justify-between h-[10vh]">
@@ -320,11 +319,11 @@
           Old Applications
         </a>
 
-        {# Resumes — add href="{% url 'resume_manager' %}" when ready #}
-        {% comment %} {# <a href=" {% url 'resume_manager' %} "
+        {# Resumes #}
+        <a href="{% url 'resume_manager' %}"
            class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">
           Resumes
-        </a> #} {% endcomment %}
+        </a>
 
         <a href="{% url 'candidate_edit_profile' %}"
            class="px-4 py-2.5 rounded-xl font-medium text-white/80 hover:bg-white/15 transition-all">

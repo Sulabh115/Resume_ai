@@ -331,7 +331,8 @@
         <button onclick="openEmailModal(
                     '{{ job.id }}',
                     '{{ job.title|escapejs }}',
-                    '{{ job.get_job_type_display|escapejs }}{% if job.location %} · {{ job.location|escapejs }}{% endif %}')"
+                    '{{ job.get_job_type_display|escapejs }}{% if job.location %} · {{ job.location|escapejs }}{% endif %}',
+                    '{% url "send_shortlist_email" job.id %}')"
                 class="btn-emerald flex items-center gap-2 px-5 py-2.5 rounded-full text-sm">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -372,7 +373,7 @@
 <script>
 let currentJobId = null;
 
-function openEmailModal(jobId, title, subtitle) {
+function openEmailModal(jobId, title, subtitle, sendUrl) {
   currentJobId = jobId;
   document.getElementById('modal-subtitle').textContent = subtitle;
   document.getElementById('prev-job-title').textContent  = title;
@@ -416,8 +417,8 @@ function openEmailModal(jobId, title, subtitle) {
   document.getElementById('e-duration').value = '1 hour';
   updatePreview();
 
-  // Wire form action to the correct send-email URL for this job
-  document.getElementById('email-form').action = '/jobs/' + jobId + '/send-email/';
+  // FIX #8: Use Django-resolved URL instead of hardcoded path construction
+  document.getElementById('email-form').action = sendUrl;
 
   document.getElementById('email-modal').classList.remove('hidden');
 }

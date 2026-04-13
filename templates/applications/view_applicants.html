@@ -269,8 +269,7 @@
           </thead>
           <tbody class="divide-y divide-white/8">
 
-            {% with cutoff=open_positions show_cutoff=True %}
-            {% if status_filter %}{% with show_cutoff=False %}{% endwith %}{% endif %}
+            {% with cutoff=open_positions %}
 
             {% for app in applications %}
             {% with result=app.screening_result rank=forloop.counter %}
@@ -455,16 +454,16 @@
       <div class="glass-card rounded-3xl p-5">
         <p class="text-[10px] text-white/40 uppercase tracking-widest mb-4">Hiring Pipeline</p>
 
-        {% comment %} {# Quick stats — FIX #1: "Listed" now shows actual shortlisted count
+        {% comment %} Quick stats — FIX #1: "Listed" now shows actual shortlisted count
            (shortlisted_applications is passed from the view and contains only
-           applications with status=SHORTLISTED, so |length is the correct count) #} {% endcomment %}
+           applications with status=SHORTLISTED, so |length is the correct count) {% endcomment %}
         <div class="grid grid-cols-3 gap-2 mb-5">
           <div class="bg-white/8 border border-white/12 rounded-2xl p-2.5 text-center">
             <p class="text-white font-bold text-base">{{ total }}</p>
             <p class="text-white/35 text-[9px] uppercase tracking-wide mt-0.5">Applied</p>
           </div>
           <div class="bg-emerald-500/12 border border-emerald-400/22 rounded-2xl p-2.5 text-center">
-            <p class="text-emerald-300 font-bold text-base">{{ shortlisted_applications|length }}</p>
+            <p class="text-emerald-300 font-bold text-base">{{ shortlisted_count }}</p>
             <p class="text-white/35 text-[9px] uppercase tracking-wide mt-0.5">Listed</p>
           </div>
           <div class="bg-white/8 border border-white/12 rounded-2xl p-2.5 text-center">

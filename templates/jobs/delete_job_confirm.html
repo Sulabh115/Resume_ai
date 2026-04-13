@@ -105,21 +105,21 @@
       </div>
 
       {# Close instead of delete — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
-      {# <p class="text-white/28 text-xs mt-4">
+      {% comment %} <p class="text-white/28 text-xs mt-4">
         Changed your mind about closing applications?
         <a href="#" class="text-teal-300 hover:text-white underline underline-offset-2 transition-colors"
            onclick="event.preventDefault(); document.getElementById('close-form').submit()">
           Close the job instead →
         </a>
-      </p> #}
+      </p> {% endcomment %}
 
     </div>
   </div>
 </main>
 
 {# Hidden form for toggle — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
-{# <form id="close-form" method="post" action="">
+{% comment %} <form id="close-form" method="post" action="">
   {% csrf_token %}
-</form> #}
+</form> {% endcomment %}
 
 {% endblock %}

@@ -157,8 +157,8 @@
               </div>
             </div>
 
-            {# Row 2: Qualification / Open Positions / Status / Deadline
-               FIX #7: added Open Positions field; grid expanded to 4 columns #}
+            {% comment %} Row 2: Qualification / Open Positions / Status / Deadline
+               FIX #7: added Open Positions field; grid expanded to 4 columns {% endcomment %}
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label class="form-label block mb-1.5">Qualification Required</label>
@@ -169,9 +169,9 @@
                 </select>
               </div>
               <div>
-                {# FIX #7: open_positions field — number of hires for this role.
+                {% comment %} FIX #7: open_positions field — number of hires for this role.
                    The value is passed to view_applicants so the auto-shortlist
-                   bar can be pre-filled with the correct candidate count. #}
+                   bar can be pre-filled with the correct candidate count. {% endcomment %}
                 <label class="form-label block mb-1.5">
                   Open Positions
                   <span class="normal-case tracking-normal text-white/25 text-[9px] font-normal ml-1">— used for auto-shortlist</span>

@@ -614,7 +614,7 @@ def send_shortlist_email(request, job_id):
                 body       = text_body,
                 from_email = settings.DEFAULT_FROM_EMAIL,
                 to         = [email],
-                reply_to   = [company.user.email] if company.user.email else None,
+                reply_to   = [company.user.email] if (company.user.email and company.user.email.strip()) else None,
             )
             msg.attach_alternative(html_body, 'text/html')
             msg.send(fail_silently=False)

@@ -150,7 +150,7 @@
       {# ── Action row ── #}
       <div class="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-white/10">
 
-        {% comment %} {#
+        {% comment %}
           FIX #10:
           BEFORE — href="" went nowhere (current page reload):
             <a href="" class="action-btn ...">Applicants (N)</a>
@@ -162,7 +162,7 @@
             path("job/<int:job_id>/applicants/", views.view_applicants, name="view_applicants")
           and has been working correctly throughout the rest of the project.
           Only this template had the empty href stub left behind.
-        #} {% endcomment %}
+        {% endcomment %}
         {% if job.status != 'draft' %}
         <a href="{% url 'view_applicants' job.id %}"
            class="action-btn flex items-center gap-1.5 px-3 py-2 rounded-xl">

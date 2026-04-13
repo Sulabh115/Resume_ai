@@ -75,7 +75,7 @@
       <p class="text-xs text-white/50 mt-1">Open Job Posts</p>
       <div class="prog-bar mt-3">
         <div class="prog-fill bg-teal-400"
-             style="width: {% if total_jobs > 0 %}{{ open_jobs|floatformat:0 }}{% else %}0{% endif %}%"></div>
+             style="width: {% if total_jobs > 0 %}{% widthratio open_jobs total_jobs 100 %}{% else %}0{% endif %}%"></div>
       </div>
     </div>
 
@@ -91,7 +91,7 @@
       </div>
       <p class="text-3xl font-bold text-white">{{ total_applicants }}</p>
       <p class="text-xs text-white/50 mt-1">Total Applications</p>
-      <div class="prog-bar mt-3"><div class="prog-fill bg-cyan-400" style="width:60%"></div></div>
+      <div class="prog-bar mt-3"><div class="prog-fill bg-cyan-400" style="width:{% if total_applicants > 0 %}{% widthratio total_applicants 50 100 %}{% else %}0{% endif %}%"></div></div>
     </div>
 
     <div class="stat-card rounded-3xl p-5">
@@ -106,7 +106,7 @@
       </div>
       <p class="text-3xl font-bold text-white">{{ total_jobs }}</p>
       <p class="text-xs text-white/50 mt-1">Total Jobs Posted</p>
-      <div class="prog-bar mt-3"><div class="prog-fill bg-emerald-400" style="width:40%"></div></div>
+      <div class="prog-bar mt-3"><div class="prog-fill bg-emerald-400" style="width:{% if total_jobs > 0 %}{% widthratio total_jobs 20 100 %}{% else %}0{% endif %}%"></div></div>
     </div>
 
     <div class="stat-card rounded-3xl p-5">
@@ -126,7 +126,7 @@
       </p>
       <p class="text-xs text-white/50 mt-1">Pending Review</p>
       <div class="prog-bar mt-3">
-        <div class="prog-fill {% if pending_review > 0 %}bg-amber-400{% else %}bg-white/20{% endif %}" style="width:20%"></div>
+        <div class="prog-fill {% if pending_review > 0 %}bg-amber-400{% else %}bg-white/20{% endif %}" style="width:{% if total_applicants > 0 %}{% widthratio pending_review total_applicants 100 %}{% else %}0{% endif %}%"></div>
       </div>
     </div>
 
