@@ -134,7 +134,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # also expire on browser close
 #   EMAIL_USE_SSL=False
 #   EMAIL_HOST_USER=you@gmail.com
 #   EMAIL_HOST_PASSWORD=abcd efgh ijkl mnop    # 16-char App Password
-#   DEFAULT_FROM_EMAIL=hirepath <you@gmail.com>
+#   DEFAULT_FROM_EMAIL=YogyataRank <you@gmail.com>
 #
 #   IMPORTANT: Gmail requires an App Password, not your account password.
 #   Generate one at https://myaccount.google.com/apppasswords
@@ -148,7 +148,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # also expire on browser close
 #   EMAIL_USE_SSL=False
 #   EMAIL_HOST_USER=apikey
 #   EMAIL_HOST_PASSWORD=SG.xxxxxxxxxxxxxxxxxxxx
-#   DEFAULT_FROM_EMAIL=hirepath <noreply@yourdomain.com>
+#   DEFAULT_FROM_EMAIL=YogyataRank <noreply@yourdomain.com>
 #
 # Mailgun:
 #   EMAIL_BACKEND_TYPE=smtp
@@ -158,7 +158,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # also expire on browser close
 #   EMAIL_USE_SSL=False
 #   EMAIL_HOST_USER=postmaster@mg.yourdomain.com
 #   EMAIL_HOST_PASSWORD=your-mailgun-smtp-password
-#   DEFAULT_FROM_EMAIL=hirepath <noreply@yourdomain.com>
+#   DEFAULT_FROM_EMAIL=YogyataRank <noreply@yourdomain.com>
 #
 # AWS SES (SMTP interface):
 #   EMAIL_BACKEND_TYPE=smtp
@@ -168,11 +168,11 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # also expire on browser close
 #   EMAIL_USE_SSL=False
 #   EMAIL_HOST_USER=AKIA...          # SES SMTP username (not IAM key)
 #   EMAIL_HOST_PASSWORD=...          # SES SMTP password
-#   DEFAULT_FROM_EMAIL=hirepath <noreply@yourdomain.com>
+#   DEFAULT_FROM_EMAIL=YogyataRank <noreply@yourdomain.com>
 #
 # File backend (CI / integration testing):
 #   EMAIL_BACKEND_TYPE=file
-#   EMAIL_FILE_PATH=/tmp/hirepath-emails
+#   EMAIL_FILE_PATH=/tmp/YogyataRank-emails
 #
 # ── TLS vs SSL ────────────────────────────────────────────────────────────
 #
@@ -236,7 +236,7 @@ else:
 
 # ── Sender address ────────────────────────────────────────────────────────
 #
-# The From: header on all outgoing emails sent by hirepath:
+# The From: header on all outgoing emails sent by YogyataRank:
 #   - Password reset emails        (accounts/views.py forgot_password)
 #   - Shortlist interview emails   (jobs/views.py send_shortlist_email)
 #   - Application status emails    (applications/views.py _send_status_notification)
@@ -247,7 +247,7 @@ else:
 #
 DEFAULT_FROM_EMAIL = env(
     'DEFAULT_FROM_EMAIL',
-    default='hirepath <noreply@hirepath.local>',
+    default='YogyataRank <noreply@YogyataRank.local>',
 )
 
 # Address used for Django admin error emails (500 errors sent to ADMINS).
@@ -261,7 +261,7 @@ SERVER_EMAIL = env('SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
 # How long the reset link in the forgot-password email remains valid.
 #
 # Django default: 259200 seconds (3 days).
-# hirepath default: 86400 seconds (24 hours) — matches the "valid for
+# YogyataRank default: 86400 seconds (24 hours) — matches the "valid for
 # 24 hours" message shown in forgot_password.html and the email template.
 #
 # If you change this value, update the user-facing copy in:

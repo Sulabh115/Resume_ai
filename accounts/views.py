@@ -278,13 +278,13 @@ def forgot_password(request):
                 text_body = (
                     f"Hi {name},\n\n"
                     f"We received a request to reset the password for your "
-                    f"hirepath account.\n\n"
+                    f"YogyataRank account.\n\n"
                     f"Click the link below to choose a new password:\n"
                     f"{reset_url}\n\n"
                     f"This link is valid for 24 hours. If you did not request "
                     f"a password reset, you can safely ignore this email — "
                     f"your password will not change.\n\n"
-                    f"— The hirepath team"
+                    f"— The YogyataRank team"
                 )
 
                 # ── HTML body — rendered from a dedicated template ────────
@@ -299,7 +299,7 @@ def forgot_password(request):
 
                 # ── Send plain-text + HTML via EmailMultiAlternatives ─────
                 msg = EmailMultiAlternatives(
-                    subject    = 'Reset your hirepath password',
+                    subject    = 'Reset your YogyataRank password',
                     body       = text_body,
                     from_email = settings.DEFAULT_FROM_EMAIL,
                     to         = [email],
@@ -320,7 +320,7 @@ def forgot_password(request):
                 'submitted_email': email,
                 'steps': [
                     'Open your email inbox.',
-                    'Look for an email from hirepath.',
+                    'Look for an email from YogyataRank.',
                     "Click the reset link — it's valid for 24 hours.",
                     'Choose a new password and sign in.',
                 ],

@@ -182,7 +182,7 @@ def _send_status_notification(application):
         f"Company: {company.company_name}\n"
         f"Status:  {application.get_status_display()}\n\n"
         f"{copy['body']}\n\n"
-        f"— The hirepath team"
+        f"— The YogyataRank team"
     )
 
     html_body = render_to_string(
