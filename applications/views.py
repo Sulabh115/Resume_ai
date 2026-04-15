@@ -1,6 +1,27 @@
 """
 applications/views.py
 
+FIX S1 (apply_job — Fix #1, assumed done):
+    After Application.objects.create() the candidate's match_score was
+    always 0 until HR manually triggered run_screening.  HR dashboards
+    showed every new applicant at 0%, the auto-shortlist bar was
+    meaningless, and the "unscreened" warning banner fired for every
+    application.
+
+    Fix: call compute_match_score() immediately after creating the
+    Application, persist a ScreeningResult, and write match_score +
+    score_notes back to the Application row — all inside a try/except
+    so a PDF parse failure never blocks the submission itself.
+
+FIX D2 (bulk_shortlist — Fix #3):
+    bulk_shortlist() used queryset .update() to change statuses in bulk.
+    Django's .update() bypasses the model's save() method, so
+    _send_status_notification() was never called for bulk-shortlisted or
+    bulk-rejected candidates — they got no email unlike manual changes.
+
+    Fix: after the .update() calls, re-fetch the affected Application
+    objects and call _send_status_notification() explicitly for each one.
+
 FIX #10:
     company_base.html navbar avatar uses {{ company }} to render the
     company logo or initials.  Views that extend company_base.html but
@@ -10,10 +31,6 @@ FIX #10:
     Affected views in this file:
         view_applicants      — added 'company': company to render context
         application_detail   — added 'company': company to render context
-                               (both the GET render and the POST re-render
-                               on form invalid already redirect, but the
-                               GET path and the form-invalid re-render path
-                               both need the key)
 
     Views that only redirect (no render call) are unaffected:
         update_application_status  — redirects only
@@ -34,23 +51,11 @@ FIX #8 — Pre-submission score preview:
             matched_skills, missing_skills
         }
     The candidate can trigger this from apply_job.html before submitting
-    the actual application.  The uploaded file is never persisted — it is
-    passed directly to compute_match_score (which calls
-    extract_text_from_pdf on the InMemoryUploadedFile) and then
-    discarded.
+    the actual application.  The uploaded file is never persisted.
 
 FIX #17 — Deadline countdown badge on application_list:
     Pass today=date.today() in the application_list render context so
     the template can compute days remaining until each job's deadline.
-    The template uses this to colour-code a countdown badge:
-        red   — 5 days or fewer remaining
-        amber — 6–14 days remaining
-        green — 15+ days remaining
-    No badge is shown when the job has no deadline.
-    The days_remaining is computed per-application in the view and
-    passed as a mapping {app.id: days} so the template has a plain
-    integer to compare against thresholds — Django templates cannot
-    subtract date objects.
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -239,12 +244,59 @@ def apply_job(request, job_id):
             else:
                 resume_obj = existing
 
-            Application.objects.create(
+            app = Application.objects.create(
                 candidate=candidate,
                 job=job,
                 resume=resume_obj,
                 cover_letter=form.cleaned_data.get("cover_letter") or "",
             )
+
+            # ── FIX S1: Auto-screen immediately on submit ─────────────────
+            # Runs compute_match_score in-process so match_score is populated
+            # as soon as the application lands.  Wrapped in try/except so a
+            # PDF parse failure never blocks the submission itself — the
+            # application is saved either way and HR can re-run screening
+            # manually if needed.
+            from screening.models import ScreeningResult
+            from screening.utils import compute_match_score
+
+            sr = None
+            try:
+                sr = ScreeningResult.objects.create(
+                    application=app,
+                    status=ScreeningResult.Status.PROCESSING,
+                )
+                score_data = compute_match_score(resume_obj.file, job)
+
+                sr.similarity_score    = score_data["score"]
+                sr.skill_score         = score_data.get("skill_score", 0)
+                sr.experience_score    = score_data.get("experience_score", 0)
+                sr.qualification_score = score_data.get("qualification_score", 0)
+                sr.cosine_score        = score_data.get("cosine_score", 0)
+                sr.extracted_skills    = score_data.get("extracted_skills", "")
+                sr.matched_skills      = score_data.get("matched_skills", "")
+                sr.missing_skills      = score_data.get("missing_skills", "")
+                sr.summary             = score_data.get("summary", "")
+                sr.status              = ScreeningResult.Status.DONE
+                sr.error_message       = ""
+                sr.save()
+
+                app.match_score = sr.similarity_score
+                app.score_notes = sr.summary
+                app.save(update_fields=["match_score", "score_notes"])
+
+            except Exception as exc:
+                # Mark the screening record as FAILED so HR knows why
+                # the score is 0; the application itself is unaffected.
+                if sr is not None:
+                    try:
+                        sr.status        = ScreeningResult.Status.FAILED
+                        sr.error_message = str(exc)
+                        sr.save(update_fields=["status", "error_message"])
+                    except Exception:
+                        pass
+            # ── end FIX S1 ───────────────────────────────────────────────
+
             messages.success(request, f'Application to "{job.title}" submitted successfully!')
             return redirect("candidate_dashboard")
     else:
@@ -302,12 +354,7 @@ def score_preview(request, job_id):
 
     On error returns {"error": "<message>"} with HTTP 400 or 500.
 
-    The uploaded file is NEVER saved to disk — it is passed as an
-    InMemoryUploadedFile directly to compute_match_score → extract_text_from_resume
-    (which calls fitz.open() on the raw bytes via a temporary file path).
-    Django writes InMemoryUploadedFile objects to a temp path automatically
-    when they exceed FILE_UPLOAD_MAX_MEMORY_SIZE, so fitz.open() works
-    on the .temporary_file_path() or via a NamedTemporaryFile helper.
+    The uploaded file is NEVER saved to disk.
     """
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
@@ -322,15 +369,10 @@ def score_preview(request, job_id):
     if not resume_file:
         return JsonResponse({"error": "No resume file provided"}, status=400)
 
-    # Validate file type (basic check — the screening engine accepts PDF)
     name_lower = resume_file.name.lower()
     if not (name_lower.endswith(".pdf") or name_lower.endswith(".doc") or name_lower.endswith(".docx")):
         return JsonResponse({"error": "Only PDF, DOC, and DOCX files are supported."}, status=400)
 
-    # compute_match_score expects an object with a .path attribute (Django
-    # FileField / InMemoryUploadedFile).  InMemoryUploadedFile exposes .read()
-    # but NOT .path for small files.  We write to a NamedTemporaryFile so
-    # fitz.open() can always read from a real path.
     import tempfile, os
 
     suffix = os.path.splitext(resume_file.name)[1] or ".pdf"
@@ -341,8 +383,6 @@ def score_preview(request, job_id):
                 tmp.write(chunk)
             tmp_path = tmp.name
 
-        # Build a minimal file-like wrapper that exposes .path (needed by
-        # extract_text_from_resume which calls resume_file.path internally).
         class _TmpFile:
             def __init__(self, path):
                 self.path = path
@@ -353,7 +393,6 @@ def score_preview(request, job_id):
     except Exception as exc:
         return JsonResponse({"error": f"Screening failed: {exc}"}, status=500)
     finally:
-        # Always clean up the temp file, even if compute_match_score raises.
         if tmp_path:
             try:
                 os.unlink(tmp_path)
@@ -417,20 +456,26 @@ def view_applicants(request, job_id):
         "company":                  company,
         "open_positions":           job.open_positions,
         "unscreened_count":         unscreened_count,
-        # FIX #4: used to populate the email modal recipient list
         "shortlisted_applications": shortlisted_applications,
-        # FIX #5: quick stat for sidebar "Listed" count
         "shortlisted_count":        shortlisted_applications.count(),
     })
 
 
-# FIX #1: Bulk auto-shortlist
+# ─── FIX D2: Bulk auto-shortlist with status-change emails ──────────────────
 
 @login_required
 def bulk_shortlist(request, job_id):
     """
     POST only. Marks top N applications (by match_score desc) as SHORTLISTED
     and the rest as REJECTED. HIRED applications are never overwritten.
+
+    FIX D2 (Fix #3):
+        .update() bypasses model save() so _send_status_notification() was
+        never called for bulk changes — candidates got no email.
+
+        Fix: after each .update() call, re-fetch the affected Application
+        objects and call _send_status_notification() for each one.
+        select_related() is used to avoid N+1 queries during that loop.
     """
     if request.method != "POST":
         return redirect("view_applicants", job_id=job_id)
@@ -478,13 +523,14 @@ def bulk_shortlist(request, job_id):
         status=Application.Status.REJECTED
     )
 
-    # FIX #6: Send status-change notification emails for bulk-updated apps.
-    # .update() bypasses model save(), so _send_status_notification() is
-    # never called automatically — we do it explicitly here.
+    # FIX D2: .update() bypasses model save() → _send_status_notification()
+    # is never called automatically.  Re-fetch and notify each affected
+    # candidate explicitly.  select_related avoids N+1 queries.
     for app in Application.objects.filter(
             id__in=shortlist_ids).select_related(
             'candidate__user', 'job__company'):
         _send_status_notification(app)
+
     for app in Application.objects.filter(
             id__in=reject_ids).select_related(
             'candidate__user', 'job__company'):
@@ -643,16 +689,6 @@ def application_list(request):
     template can render urgency-coloured countdown badges without
     needing to do date arithmetic (Django templates cannot subtract
     date objects).
-
-    days_remaining mapping:  { application_id: int_or_None }
-        None  — job has no deadline
-        int   — calendar days from today until the deadline (≥ 0
-                because the queryset already filters out past-deadline jobs)
-
-    Colour thresholds used in the template:
-        ≤  5 days → red   (urgent)
-        ≤ 14 days → amber (soon)
-        else      → green (comfortable)
     """
     candidate = _get_candidate(request)
     if not candidate:
@@ -673,8 +709,6 @@ def application_list(request):
         .order_by("-applied_at")
     )
 
-    # Build a {app.id: days_remaining} dict so the template has a plain
-    # integer to compare — Django templates cannot subtract date objects.
     days_remaining = {}
     for app in applications:
         if app.job.deadline:
@@ -696,20 +730,9 @@ def old_application_list(request):
     withdrawn, rejected, OR job deadline has passed.
 
     FIX #3:
-    Each application is annotated with:
-        rank              — candidate's position among all non-withdrawn applicants
-                            for that job (ordered by match_score desc, 1-indexed).
-        total             — total non-withdrawn applicant count for that job.
-        shortlisted_count — number of shortlisted applicants for that job.
-        results_published — from job.results_published.
-        ranked_list       — when results_published, a JSON-safe list of all
-                            applicants ordered by score. The current candidate
-                            uses their real name; all others are anonymized as
-                            "Candidate #N" to preserve privacy.
-                            Empty list when results are not yet published.
-
-    To avoid N+1 queries (one per application), all per-job data is fetched
-    in a single pass grouped by job_id.
+    Each application is annotated with rank, total, shortlisted_count,
+    results_published, and ranked_list_json.  All per-job data is fetched
+    in a single pass grouped by job_id to avoid N+1 queries.
     """
     import json as _json
     candidate = _get_candidate(request)
@@ -733,15 +756,10 @@ def old_application_list(request):
         .order_by("-applied_at")
     )
 
-    # ── Per-job data — one queryset per unique job ────────────────────────
-    # Collect unique job ids from the candidate's old applications.
     job_ids = list(applications.values_list("job_id", flat=True).distinct())
 
-    # For each job, fetch ALL non-withdrawn applicants ordered by match_score.
-    # Store in a dict keyed by job_id so template annotation is O(1) lookup.
-    job_data_map = {}  # job_id → dict
+    job_data_map = {}
 
-    # FIX #7A: Fetch all Job objects in one query instead of one per job_id.
     from jobs.models import Job as JobModel
     jobs_map = JobModel.objects.in_bulk(job_ids)
 
@@ -760,16 +778,12 @@ def old_application_list(request):
             1 for a in all_apps if a.status == Application.Status.SHORTLISTED
         )
 
-        # Find this candidate's rank (1-indexed position in ranked list)
         rank = None
         for idx, a in enumerate(all_apps, start=1):
             if a.candidate_id == candidate.pk:
                 rank = idx
                 break
 
-        # Build the published ranked list.
-        # Other candidates are anonymized as "Candidate #N" (by rank position)
-        # so no personal data about other applicants leaks to this candidate.
         job_obj = jobs_map.get(job_id)
         results_published = job_obj.results_published if job_obj else False
 
@@ -801,7 +815,6 @@ def old_application_list(request):
             "ranked_list_json":  _json.dumps(ranked_list),
         }
 
-    # ── Build app_data — one entry per application ────────────────────────
     app_data = []
     for app in applications:
         jd = job_data_map.get(app.job_id, {})

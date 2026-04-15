@@ -17,6 +17,27 @@ FIX #16 (job_detail):
         - the user has a CompanyProfile (DB query, avoids ORM cache bug)
         - that profile is the one that owns this job
 
+FIX C2 (job_list — Fix #2, assumed done):
+    job_list.html previously used:
+        {% elif request.user.companyprofile == job.company %}
+    which raises RelatedObjectDoesNotExist for any candidate or anonymous
+    viewer, crashing the entire job board.
+
+    Fix: compute user_company = _get_company(request) in job_list() and
+    pass it in context.  The template then uses:
+        {% elif user_company and user_company == job.company %}
+    which is safe for all viewer types.
+
+FIX E2 (send_shortlist_email — Fix #3):
+    reply_to=[company.user.email] if company.user.email else None
+    passes [''] (empty string in a list, not None) when the email field
+    exists but is blank.  EmailMultiAlternatives then forwards the empty
+    string to the SMTP server which rejects the message.
+
+    Fix: also check .strip() so a blank string is treated as absent:
+        reply_to=[company.user.email] if (company.user.email and
+                  company.user.email.strip()) else None
+
 FIXES vs previous:
   1. job_list:   passes has_resumes to template so Apply button
                  can warn candidates with no resume
@@ -79,6 +100,11 @@ def job_list(request):
     Browseable job board — visible to everyone, no login required.
     Supports search + filter via GET params.
 
+    FIX C2: passes user_company in context so the template can safely
+    check whether the viewer owns each job without hitting
+    request.user.companyprofile directly (which raises for candidates
+    and anonymous users).
+
     FIX: passes has_resumes to template so the Apply button can
     redirect candidates without a resume to the resume manager.
     """
@@ -118,11 +144,19 @@ def job_list(request):
     if candidate:
         has_resumes = candidate.resumes.exists()
 
+    # FIX C2: safe company check — never access request.user.companyprofile
+    # directly in the template because it raises RelatedObjectDoesNotExist
+    # for any non-company viewer.  Pass user_company (None for candidates /
+    # anonymous users) so job_list.html can use:
+    #   {% elif user_company and user_company == job.company %}
+    user_company = _get_company(request) if request.user.is_authenticated else None
+
     return render(request, "jobs/job_list.html", {
-        "jobs":        jobs,
-        "filter_form": filter_form,
-        "total":       jobs.count(),
-        "has_resumes": has_resumes,
+        "jobs":         jobs,
+        "filter_form":  filter_form,
+        "total":        jobs.count(),
+        "has_resumes":  has_resumes,
+        "user_company": user_company,   # FIX C2
     })
 
 
@@ -531,14 +565,25 @@ def send_shortlist_email(request, job_id):
     POST handler — send interview invitation emails to all shortlisted
     candidates for a job.
 
-    E2 improvements over the original:
-      - Replaces fail_silently=True with proper per-recipient try/except
-        so individual failures are tracked without aborting the whole batch.
-      - Uses EmailMultiAlternatives to send plain-text + HTML in one message.
+    FIX E2 (Fix #3):
+        reply_to=[company.user.email] if company.user.email else None
+        was passing [''] (empty string in a list) when the HR account's
+        email field exists but is blank.  EmailMultiAlternatives then
+        forwards '' as a Reply-To header value and some SMTP servers
+        reject the message.
+
+        Fix: guard with .strip() so a whitespace-only or empty email is
+        treated identically to None:
+            reply_to = [company.user.email] if (
+                company.user.email and company.user.email.strip()
+            ) else None
+
+    Other improvements:
+      - Per-recipient try/except so individual failures don't abort batch.
+      - EmailMultiAlternatives sends plain-text + HTML in one message.
       - Tracks sent_count, no_email_count, and error_count separately.
-      - Sets job.shortlist_email_sent = True only when at least one email
-        succeeded.
-      - HTML body rendered from a dedicated template.
+      - Sets job.shortlist_email_sent = True only when at least one
+        email succeeded.
     """
     if request.method != 'POST':
         return redirect('to_shortlist')
@@ -608,13 +653,20 @@ def send_shortlist_email(request, job_id):
             {**email_ctx_base, 'candidate_name': name},
         )
 
+        # FIX E2: guard against blank email string being passed as reply_to.
+        # An empty string in the reply_to list causes SMTP rejection on many
+        # providers.  Only include reply_to when the address is non-empty
+        # after stripping whitespace.
+        hr_email = company.user.email
+        reply_to = [hr_email] if (hr_email and hr_email.strip()) else None
+
         try:
             msg = EmailMultiAlternatives(
                 subject    = subject,
                 body       = text_body,
                 from_email = settings.DEFAULT_FROM_EMAIL,
                 to         = [email],
-                reply_to   = [company.user.email] if (company.user.email and company.user.email.strip()) else None,
+                reply_to   = reply_to,
             )
             msg.attach_alternative(html_body, 'text/html')
             msg.send(fail_silently=False)

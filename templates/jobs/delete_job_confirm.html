@@ -3,12 +3,10 @@
 
 {# ── No nav item active on delete confirmation page ── #}
 
-{# ── Company initial in navbar avatar ── #}
-{% comment %} {% block nav_avatar %}
-<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-  {{ request.user.companyprofile.company_name|first|upper }}
-</div>
-{% endblock %} {% endcomment %}
+{# ── C1 FIX: nav_avatar block removed — company_base.html renders the
+   avatar correctly via {{ company }} which is already in context.
+   The previous override accessed request.user.companyprofile.company_name
+   directly, crashing for any non-company viewer. ── #}
 
 {% block extra_head %}
 <style>
@@ -55,20 +53,24 @@
         <strong class="text-white/80">This action cannot be undone.</strong>
       </p>
 
-      {# Job summary box #}
+      {# Job summary box — C1 FIX: use company.logo / company.company_name
+         instead of request.user.companyprofile.logo / .company_name.
+         'company' is already in the render context (passed from delete_job view).
+         Accessing request.user.companyprofile directly raises
+         RelatedObjectDoesNotExist for any non-company viewer. #}
       <div class="danger-card rounded-2xl p-4 mb-6 text-left">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-xl bg-white/12 border border-white/22 overflow-hidden flex items-center justify-center shrink-0">
-            {% if request.user.companyprofile.logo %}
-              <img src="{{ request.user.companyprofile.logo.url }}" alt="{{ request.user.companyprofile.company_name }}" class="w-full h-full object-cover"/>
+            {% if company.logo %}
+              <img src="{{ company.logo.url }}" alt="{{ company.company_name }}" class="w-full h-full object-cover"/>
             {% else %}
-              <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ request.user.companyprofile.company_name|urlencode }}&backgroundColor=ccfbf1&textColor=0f766e"
-                   alt="{{ request.user.companyprofile.company_name }}" class="w-full h-full object-cover"/>
+              <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ company.company_name|urlencode }}&backgroundColor=ccfbf1&textColor=0f766e"
+                   alt="{{ company.company_name }}" class="w-full h-full object-cover"/>
             {% endif %}
           </div>
           <div class="min-w-0">
             <p class="text-white font-semibold truncate">{{ job.title }}</p>
-            <p class="text-white/50 text-xs">{{ request.user.companyprofile.company_name }}{% if job.location %} · {{ job.location }}{% endif %}</p>
+            <p class="text-white/50 text-xs">{{ company.company_name }}{% if job.location %} · {{ job.location }}{% endif %}</p>
           </div>
         </div>
         <div class="grid grid-cols-3 gap-3 text-center text-xs">
@@ -104,22 +106,7 @@
         </form>
       </div>
 
-      {# Close instead of delete — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
-      {% comment %} <p class="text-white/28 text-xs mt-4">
-        Changed your mind about closing applications?
-        <a href="#" class="text-teal-300 hover:text-white underline underline-offset-2 transition-colors"
-           onclick="event.preventDefault(); document.getElementById('close-form').submit()">
-          Close the job instead →
-        </a>
-      </p> {% endcomment %}
-
     </div>
   </div>
 </main>
-
-{# Hidden form for toggle — add action="{% url 'toggle_job_status' job.id %}" when jobs app is ready #}
-{% comment %} <form id="close-form" method="post" action="">
-  {% csrf_token %}
-</form> {% endcomment %}
-
 {% endblock %}

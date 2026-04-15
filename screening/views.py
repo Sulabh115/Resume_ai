@@ -11,15 +11,33 @@ FIX #10:
         screening_dashboard      — added 'company': company to render context
         screening_result_detail  — added 'company': company to render context
 
-    Views that only redirect (no render call) are unaffected:
-        run_screening  — redirects to view_applicants after processing
-
 FIX #15:
     screening/ranking.html existed but had no backing view or URL.
-    Added ranking(request, job_id) view that fetches all ScreeningResults
-    for a job ordered by similarity_score desc and renders ranking.html.
-    Only the owning company can access it.
+    Added ranking(request, job_id) view.
+
+S2 — run_screening null-resume guard:
+    Application.resume is SET_NULL, so it can be None after a resume is
+    deleted.  Previously the loop hit app.resume.file → AttributeError,
+    which was silently caught, the ScreeningResult was marked FAILED, but
+    no error_message was set so HR had no idea why.
+
+    Fix: at the TOP of the loop, before touching app.resume.file, check
+    whether app.resume is None.  If so, record a clear error_message,
+    mark the result FAILED, and continue to the next application.
+
+S3 — run_screening file-existence guard:
+    Even when app.resume is not None, the physical PDF may have been moved
+    or wiped from disk (e.g. storage migration, manual cleanup).
+    fitz.open(missing_path) raises FileNotFoundError, which was caught
+    silently just like S2.
+
+    Fix: after confirming app.resume is not None, check
+    os.path.exists(app.resume.file.path) before calling
+    compute_match_score().  If the file is absent, mark FAILED with an
+    informative error_message and continue.
 """
+
+import os
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
@@ -43,10 +61,14 @@ def _company_required(request):
 @login_required
 def run_screening(request, job_id):
     """
-    Triggers AI screening for all unscreened applications on a job.
-    Only accessible by the company that owns the job.
-    Redirects back to the applicants page with a summary message.
-    Only redirects — no render call — so no company context needed here.
+    Triggers AI screening for all unscreened (or all, when force=1)
+    applications on a job.  Only accessible by the company that owns the job.
+
+    S2 guard: skips applications whose resume FK is None (deleted resume).
+    S3 guard: skips applications where the PDF file is missing from disk.
+
+    Both produce a FAILED ScreeningResult with a descriptive error_message
+    instead of the previous silent failure.
     """
     company = _company_required(request)
     if not company:
@@ -67,11 +89,15 @@ def run_screening(request, job_id):
         applications = applications.exclude(id__in=already_screened_ids)
 
     if not applications.exists():
-        messages.info(request, "All applications have already been screened. Use 'Re-screen all' to force re-run.")
+        messages.info(
+            request,
+            "All applications have already been screened. "
+            "Use 'Re-screen all' to force re-run."
+        )
         return redirect("view_applicants", job_id=job.id)
 
     processed = 0
-    failed = 0
+    failed    = 0
 
     for app in applications:
         result, created = ScreeningResult.objects.get_or_create(
@@ -83,6 +109,37 @@ def run_screening(request, job_id):
             result.status = ScreeningResult.Status.PROCESSING
             result.save(update_fields=["status"])
 
+        # ── S2: resume FK may be None when the Resume row was deleted ──────
+        if app.resume is None:
+            result.status        = ScreeningResult.Status.FAILED
+            result.error_message = (
+                "Resume is missing — the resume record was deleted after "
+                "this application was submitted. The candidate must re-apply "
+                "with a new resume, or HR can upload one on their behalf."
+            )
+            result.save(update_fields=["status", "error_message"])
+            failed += 1
+            continue
+
+        # ── S3: physical PDF file may be absent from disk ──────────────────
+        try:
+            pdf_path = app.resume.file.path
+        except Exception:
+            pdf_path = None
+
+        if not pdf_path or not os.path.exists(pdf_path):
+            result.status        = ScreeningResult.Status.FAILED
+            result.error_message = (
+                f"Resume PDF not found on disk "
+                f"(expected path: {pdf_path or 'unknown'}). "
+                f"The file may have been moved or deleted during a storage "
+                f"migration. Restore the file and re-run screening."
+            )
+            result.save(update_fields=["status", "error_message"])
+            failed += 1
+            continue
+
+        # ── Normal screening path ──────────────────────────────────────────
         try:
             score_data = compute_match_score(app.resume.file, job)
 
@@ -114,12 +171,15 @@ def run_screening(request, job_id):
     if failed and processed:
         messages.warning(
             request,
-            f"Screening complete. {processed} succeeded, {failed} failed."
+            f"Screening complete. {processed} succeeded, {failed} failed. "
+            f"Open the Screening Dashboard to see error details for failed applications."
         )
     elif failed and not processed:
         messages.error(
             request,
-            f"Screening failed for all {failed} application(s). Check resume files."
+            f"Screening failed for all {failed} application(s). "
+            f"Check the Screening Dashboard for error details "
+            f"(missing resumes or PDF files are the most common cause)."
         )
     else:
         messages.success(
@@ -170,7 +230,6 @@ def screening_dashboard(request, job_id):
         "screened":     screened,
         "pending":      pending,
         "strong":       strong,
-        # FIX #10: pass company so company_base.html navbar avatar renders correctly
         "company":      company,
     })
 
@@ -201,7 +260,6 @@ def screening_result_detail(request, application_id):
         "application": application,
         "result":      result,
         "job":         application.job,
-        # FIX #10: pass company so company_base.html navbar avatar renders correctly
         "company":     company,
     })
 
@@ -211,18 +269,7 @@ def screening_result_detail(request, application_id):
 @login_required
 def ranking(request, job_id):
     """
-    FIX #15: screening/ranking.html existed as an orphaned template with no
-    backing view or URL registration.
-
-    This view:
-        - Guards to the owning company only.
-        - Fetches all ScreeningResults for the job ordered by similarity_score
-          desc (highest match first), excluding withdrawn applications.
-        - Passes 'results', 'job', and 'company' to the template so the
-          existing ranking.html design renders correctly without any changes.
-
-    The ranking page is linked from the screening_dashboard and
-    view_applicants pages via {% url 'ranking' job.id %}.
+    Shows all ScreeningResults for a job ordered by similarity_score desc.
     """
     company = _company_required(request)
     if not company:
