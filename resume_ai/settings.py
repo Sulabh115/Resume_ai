@@ -19,6 +19,11 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
 # ── Application definition ────────────────────────────────────────────────
 
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

@@ -172,15 +172,15 @@ def user_login(request):
     role_hint = 'candidate'  # default for pre-selecting the toggle on re-render
 
     if request.method == 'POST':
-        username        = request.POST.get('username', '').strip()
+        email           = request.POST.get('email', '').strip()
         password        = request.POST.get('password', '')
         selected_role   = request.POST.get('role', '').strip()  # 'candidate' | 'company' | ''
         role_hint       = selected_role or 'candidate'
 
-        if not username or not password:
-            error = 'Please enter both username and password.'
+        if not email or not password:
+            error = 'Please enter both email and password.'
         else:
-            user = authenticate(request, username=username, password=password)
+            user = authenticate(request, email=email, password=password)
 
             if user is not None:
                 actual_role = _get_user_role(user)
@@ -215,7 +215,7 @@ def user_login(request):
                         'Please register first or contact support.'
                     )
             else:
-                error = 'Incorrect username or password.'
+                error = 'Incorrect email or password.'
 
     return render(request, 'accounts/login.html', {
         'error':     error,

@@ -181,11 +181,11 @@
           <input type="hidden" name="role" id="home-role-input" value="candidate"/>
 
           <div>
-            <label class="text-[10px] uppercase tracking-widest text-white/45 block mb-1.5">Username</label>
-            <input type="text" name="username"
-                   value="{{ request.POST.username|default:'' }}"
-                   class="form-input" placeholder="your_username"
-                   autocomplete="username" required autofocus/>
+            <label class="text-[10px] uppercase tracking-widest text-white/45 block mb-1.5">Email Address</label>
+            <input type="email" name="email"
+                   value="{{ request.POST.email|default:'' }}"
+                   class="form-input" placeholder="you@email.com"
+                   autocomplete="email" required autofocus/>
           </div>
 
           <div>

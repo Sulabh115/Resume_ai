@@ -130,11 +130,11 @@
                value="{{ role_hint|default:'candidate' }}"/>
 
         <div class="mb-4">
-          <label class="form-label block mb-1.5" for="username">Username</label>
-          <input type="text" id="username" name="username"
-                 value="{{ request.POST.username|default:'' }}"
-                 class="form-input" placeholder="your_username"
-                 autocomplete="username" autofocus required/>
+          <label class="form-label block mb-1.5" for="email">Email Address</label>
+          <input type="email" id="email" name="email"
+                 value="{{ request.POST.email|default:'' }}"
+                 class="form-input" placeholder="you@email.com"
+                 autocomplete="email" autofocus required/>
         </div>
 
         <div class="mb-5">

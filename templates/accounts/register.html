@@ -206,11 +206,11 @@
         </div>
 
         <div class="mb-4">
-          <label class="form-label">Email Address</label>
+          <label class="form-label">Email Address <span class="text-red-400">*</span></label>
           <input type="email" name="email"
                  value="{{ candidate_form.email.value|default:'' }}"
                  class="form-input {% if candidate_form.email.errors %}field-error{% endif %}"
-                 placeholder="you@email.com"/>
+                 placeholder="you@email.com" required/>
           {% if candidate_form.email.errors %}
             <p class="text-xs text-red-300 mt-1">{{ candidate_form.email.errors.0 }}</p>
           {% endif %}
@@ -372,11 +372,11 @@
         </div>
 
         <div class="mb-4">
-          <label class="form-label">Email Address</label>
+          <label class="form-label">Email Address <span class="text-red-400">*</span></label>
           <input type="email" name="email"
                  value="{{ company_form.email.value|default:'' }}"
                  class="form-input {% if company_form.email.errors %}field-error{% endif %}"
-                 placeholder="hr@company.com"/>
+                 placeholder="hr@company.com" required/>
           {% if company_form.email.errors %}
             <p class="text-xs text-red-300 mt-1">{{ company_form.email.errors.0 }}</p>
           {% endif %}

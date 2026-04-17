@@ -16,7 +16,7 @@ class CandidateRegistrationForm(UserCreationForm):
         widget=forms.TextInput(attrs={"placeholder": "Doe"})
     )
     email = forms.EmailField(
-        required=False,
+        required=True,
         widget=forms.EmailInput(attrs={"placeholder": "john@example.com"})
     )
     # Optional profile fields — saved to CandidateProfile after user creation
@@ -63,7 +63,7 @@ class CandidateRegistrationForm(UserCreationForm):
 
 class CompanyRegistrationForm(UserCreationForm):
     email = forms.EmailField(
-        required=False,
+        required=True,
         widget=forms.EmailInput(attrs={"placeholder": "hr@acme.com"})
     )
     # ── New: HR's own phone number ────────────────────────────────────────
