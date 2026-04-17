@@ -230,7 +230,10 @@
           </a>
           {% endif %}
 
-        {% elif request.user.companyprofile == job.company %}
+        {# FIX C2: use user_company (passed from view) instead of
+           request.user.companyprofile which raises RelatedObjectDoesNotExist
+           for candidates and anonymous users. #}
+        {% elif user_company and user_company == job.company %}
         {# Owning company — edit shortcut #}
         <a href="{% url 'edit_job' job.id %}"
            class="apply-btn bg-white/15 border border-white/28 text-white/70 text-sm font-medium px-5 py-2.5 rounded-full shrink-0"
