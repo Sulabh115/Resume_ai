@@ -59,7 +59,6 @@ class Application(models.Model):
                      null=True,
                      related_name="applications",
                    )
-    cover_letter  = models.TextField(blank=True, help_text="Optional cover letter")
     match_score   = models.FloatField(default=0)
     status        = models.CharField(
                       max_length=20,

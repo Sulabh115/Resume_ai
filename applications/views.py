@@ -248,7 +248,6 @@ def apply_job(request, job_id):
                 candidate=candidate,
                 job=job,
                 resume=resume_obj,
-                cover_letter=form.cleaned_data.get("cover_letter") or "",
             )
 
             # ── FIX S1: Auto-screen immediately on submit ─────────────────

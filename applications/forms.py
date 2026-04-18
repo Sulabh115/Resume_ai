@@ -6,7 +6,6 @@ class ApplyJobForm(forms.Form):
     """
     Candidate applies to a job.
     They can pick an existing resume OR upload a new one.
-    A cover letter is optional but encouraged.
     """
     # Populated dynamically in the view with the candidate's existing resumes
     existing_resume = forms.ModelChoiceField(
@@ -26,14 +25,6 @@ class ApplyJobForm(forms.Form):
         required=False,
         label="Label for new resume",
         widget=forms.TextInput(attrs={"placeholder": "e.g. Software Engineer Resume"})
-    )
-    cover_letter = forms.CharField(
-        required=False,
-        label="Cover Letter",
-        widget=forms.Textarea(attrs={
-            "rows": 5,
-            "placeholder": "Tell the company why you're a great fit for this role..."
-        })
     )
 
     def __init__(self, candidate, *args, **kwargs):
