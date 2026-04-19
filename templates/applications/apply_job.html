@@ -269,7 +269,7 @@
             {# Component sub-bars #}
             <div class="flex-1 flex flex-col gap-2 pt-1">
               <div class="sub-bar-row" title="Skill match">
-                <span class="sub-bar-label">Skl</span>
+                <span class="sub-bar-label">Ski</span>
                 <div class="sub-bar-track">
                   <div class="sub-bar-fill bar-cyan" id="bar-skill"></div>
                 </div>
@@ -289,8 +289,8 @@
                 </div>
                 <span class="text-[10px] text-white/35 w-8 text-right" id="lbl-qual">0%</span>
               </div>
-              <div class="sub-bar-row" title="Content similarity">
-                <span class="sub-bar-label">Cos</span>
+              <div class="sub-bar-row" title="Content relevance">
+                <span class="sub-bar-label">Rel</span>
                 <div class="sub-bar-track">
                   <div class="sub-bar-fill bar-emerald" id="bar-cosine"></div>
                 </div>
@@ -413,8 +413,7 @@ function selectSavedResume(radio) {
   document.getElementById('resume-file-input').value = '';
   document.getElementById('file-chosen').classList.add('hidden');
   document.getElementById('new-resume-label-wrap').classList.add('hidden');
-  /* A saved resume is selected — enable the Analyse button */
-  enableAnalyseBtn();
+  refreshAnalyseUx();
 }
 
 /* ── File upload handling ── */
@@ -435,8 +434,7 @@ function handleFileSelect(input) {
   nameEl.textContent = '✓ ' + file.name;
   nameEl.classList.remove('hidden');
   document.getElementById('new-resume-label-wrap').classList.remove('hidden');
-  /* New file chosen — enable analyse */
-  enableAnalyseBtn();
+  refreshAnalyseUx();
 }
 
 /* ── Drag & drop ── */
@@ -463,71 +461,55 @@ zone.addEventListener('drop', e => {
 const SCORE_PREVIEW_URL = "{% url 'score_preview' job.id %}";
 const CSRF_TOKEN        = "{{ csrf_token }}";
 
-function enableAnalyseBtn() {
+/**
+ * Preview only works with a freshly chosen file in the upload input (#6).
+ * Saved-resume radios stay valid for the real application submit.
+ */
+function refreshAnalyseUx() {
   const btn  = document.getElementById('btn-analyse');
   const hint = document.getElementById('analyse-hint');
   if (!btn) return;
-  btn.disabled = false;
-  if (hint) hint.textContent = 'Click to check your match score before submitting.';
+  const fileInput = document.getElementById('resume-file-input');
+  const hasFile   = fileInput && fileInput.files && fileInput.files[0];
+  const savedOn   = document.querySelector('input[name="existing_resume"]:checked');
+  if (hasFile) {
+    btn.disabled = false;
+    if (hint) hint.textContent = 'Click to check your match score before submitting.';
+  } else if (savedOn) {
+    btn.disabled = true;
+    if (hint) {
+      hint.textContent =
+        'Upload a new resume above to preview your score. ' +
+        'Your saved resume will still be used for the actual application.';
+    }
+  } else {
+    btn.disabled = true;
+    if (hint) hint.textContent = 'Upload a resume first to enable analysis.';
+  }
 }
 
-/* Determine which resume file to send to the preview endpoint */
 function getResumeFileForAnalysis() {
   const newFileInput = document.getElementById('resume-file-input');
   if (newFileInput && newFileInput.files && newFileInput.files[0]) {
     return newFileInput.files[0];
   }
-  /* A saved resume was chosen — we need its actual file.
-     Saved resumes don't have a local file object, so we fetch
-     from the server via the resume's download URL.
-     To avoid a complex two-step fetch we return null and show a
-     friendly message — the candidate should upload a file directly
-     to use the preview feature with a saved resume, OR we fetch the
-     saved resume blob. We'll go the fetch route for best UX. */
-  const checkedRadio = document.querySelector('input[name="existing_resume"]:checked');
-  if (checkedRadio) {
-    return { savedResumeId: checkedRadio.value };
-  }
-  return null;
-}
-
-async function fetchSavedResumeBlob(resumeId) {
-  /* Find the file URL from the saved resume link on the page.
-     The resume manager page has the download URL in the DOM as
-     part of the apply_job.html saved resume list (not rendered here).
-     The simplest approach: request the blob from Django via
-     a separate fetch.  However, the file URL is available on the
-     page only if we render it.  Since apply_job.html shows the
-     saved resume list with no download links, we return null and
-     tell the user to upload a copy instead. */
   return null;
 }
 
 async function runAnalysis() {
   const btn = document.getElementById('btn-analyse');
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
 
   hideError();
 
-  const resumeSource = getResumeFileForAnalysis();
-  if (!resumeSource) {
-    showError('Please upload a resume or select a saved one first.');
-    btn.disabled = false;
-    return;
-  }
-
-  let fileToSend = null;
-
-  if (resumeSource instanceof File) {
-    fileToSend = resumeSource;
-  } else if (resumeSource && resumeSource.savedResumeId) {
-    /* Saved resume selected — we can't read local file bytes from it.
-       Inform the user to use the upload field for a real-time preview. */
+  const fileToSend = getResumeFileForAnalysis();
+  if (!fileToSend) {
     showError(
-      'To use the preview with a saved resume, upload it again using the upload zone above. ' +
-      'Your saved resumes are not affected.'
+      'Score preview works with newly uploaded files. Select the upload zone above and ' +
+      'add your resume file to see your match score before submitting. ' +
+      'Your saved resume will still be used for the actual application.'
     );
-    btn.disabled = false;
+    refreshAnalyseUx();
     return;
   }
 
@@ -550,7 +532,7 @@ async function runAnalysis() {
     if (!response.ok) {
       setState('idle');
       showError(data.error || 'Analysis failed. Please try again.');
-      btn.disabled = false;
+      refreshAnalyseUx();
       return;
     }
 
@@ -560,7 +542,7 @@ async function runAnalysis() {
   } catch (err) {
     setState('idle');
     showError('Network error — please check your connection and try again.');
-    btn.disabled = false;
+    refreshAnalyseUx();
   }
 }
 
@@ -655,8 +637,7 @@ function setState(state) {
 
 function resetAnalysis() {
   setState('idle');
-  const btn = document.getElementById('btn-analyse');
-  if (btn) btn.disabled = false;
+  refreshAnalyseUx();
 }
 
 function showError(msg) {
@@ -677,10 +658,7 @@ function escHtml(str) {
 
 /* Init */
 document.addEventListener('DOMContentLoaded', function () {
-  /* If a resume is already selected (e.g. default pre-selected), enable the button */
-  const anyChecked = document.querySelector('input[name="existing_resume"]:checked');
-  const anyFile    = document.getElementById('resume-file-input').files.length > 0;
-  if (anyChecked || anyFile) enableAnalyseBtn();
+  refreshAnalyseUx();
 });
 </script>
 {% endblock %}

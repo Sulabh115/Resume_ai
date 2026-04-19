@@ -118,23 +118,20 @@
           <td class="px-4 py-4">
             <div class="flex items-center gap-2 min-w-[100px]">
               <span class="font-bold text-sm w-10 shrink-0
-                {% if result.similarity_score >= 75 %}text-emerald-400
-                {% elif result.similarity_score >= 50 %}text-amber-400
+                {% if result.score_band == 'green' %}text-emerald-400
+                {% elif result.score_band == 'yellow' %}text-amber-400
                 {% else %}text-red-400{% endif %}">
                 {{ result.similarity_score|floatformat:0 }}%
               </span>
               <div class="score-bar-track flex-1">
-                <div class="score-bar-fill
-                  {% if result.similarity_score >= 75 %}score-green
-                  {% elif result.similarity_score >= 50 %}score-yellow
-                  {% else %}score-red{% endif %}"
+                <div class="score-bar-fill score-{{ result.score_band }}"
                      style="width: {{ result.similarity_score }}%;">
                 </div>
               </div>
             </div>
             <p class="text-xs mt-1
-              {% if result.similarity_score >= 75 %}text-emerald-500
-              {% elif result.similarity_score >= 50 %}text-amber-500
+              {% if result.score_band == 'green' %}text-emerald-500
+              {% elif result.score_band == 'yellow' %}text-amber-500
               {% else %}text-red-500{% endif %}">
               {{ result.score_label }}
             </p>

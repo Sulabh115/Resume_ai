@@ -1,9 +1,10 @@
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth.models import User
 
+
 class EmailBackend(ModelBackend):
     """
-    Custom Authentication Backend that allows users to log in using 
+    Custom Authentication Backend that allows users to log in using
     their email address instead of their username.
     """
     def authenticate(self, request, email=None, username=None, password=None, **kwargs):
@@ -11,18 +12,20 @@ class EmailBackend(ModelBackend):
         identifier = email or username
         if not identifier:
             return None
+
         try:
-            # Check if there's a user with this email
             user = User.objects.get(email__iexact=identifier)
         except User.DoesNotExist:
             return None
         except User.MultipleObjectsReturned:
-            # If multiple users have the same email, we'll try to log into the first one.
-            # This is a fallback measure; ideal databases have unique emails.
-            user = User.objects.filter(email__iexact=username).order_by('id').first()
+            # FIX: was filtering by `username` (None when email login is used),
+            # which returned no results and caused AttributeError on check_password.
+            # Must filter by `identifier` instead.
+            user = User.objects.filter(email__iexact=identifier).order_by('id').first()
+            if user is None:
+                return None
 
-        # If we found a user and the password matches
         if user.check_password(password) and self.user_can_authenticate(user):
             return user
-            
+
         return None

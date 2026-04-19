@@ -80,18 +80,18 @@ class ScreeningResult(models.Model):
 
     @property
     def score_band(self):
-        """Returns 'green', 'yellow', or 'red' based on score."""
-        if self.similarity_score >= 75:
+        """Returns 'green', 'yellow', or 'red' for screening UI CSS (score-* classes)."""
+        if self.similarity_score >= 70:
             return "green"
-        elif self.similarity_score >= 50:
+        elif self.similarity_score >= 45:
             return "yellow"
         return "red"
 
     @property
     def score_label(self):
-        if self.similarity_score >= 75:
+        if self.similarity_score >= 70:
             return "Strong Match"
-        elif self.similarity_score >= 50:
+        elif self.similarity_score >= 45:
             return "Moderate Match"
         return "Weak Match"
 

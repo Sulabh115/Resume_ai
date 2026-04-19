@@ -85,13 +85,13 @@ class Application(models.Model):
     @property
     def score_color(self):
         """
-        Returns 'green', 'yellow', or 'red' for use in template badge/bar classes.
-        Was missing — caused AttributeError on company dashboard.
+        Returns 'green', 'blue', or 'red' for template badge/bar classes.
+        Thresholds match the product UI: ≥70 strong, ≥45 moderate, else weak.
         """
-        if self.match_score >= 75:
+        if self.match_score >= 70:
             return "green"
         elif self.match_score >= 45:
-            return "yellow"
+            return "blue"
         return "red"
 
     @property

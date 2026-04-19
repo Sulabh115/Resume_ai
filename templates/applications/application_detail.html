@@ -140,7 +140,7 @@
               <circle cx="40" cy="40" r="34" fill="none"
                       stroke="rgba(255,255,255,0.12)" stroke-width="7"/>
               <circle cx="40" cy="40" r="34" fill="none"
-                      stroke="{% if score >= 75 %}#22c55e{% elif score >= 50 %}#eab308{% else %}#ef4444{% endif %}"
+                      stroke="{% if score >= 70 %}#22c55e{% elif score >= 45 %}#60a5fa{% else %}#ef4444{% endif %}"
                       stroke-width="7"
                       style="stroke-dasharray: calc({{ score }} * 2.136) 213.6;"/>
             </svg>
@@ -150,11 +150,11 @@
             {% endwith %}
           </div>
           <div>
-            {% if application.match_score >= 75 %}
+            {% if application.match_score >= 70 %}
             <p class="text-emerald-400 font-semibold text-sm">Strong Match</p>
             <p class="text-white/40 text-xs mt-0.5">High skill alignment</p>
-            {% elif application.match_score >= 50 %}
-            <p class="text-amber-400 font-semibold text-sm">Moderate Match</p>
+            {% elif application.match_score >= 45 %}
+            <p class="text-blue-400 font-semibold text-sm">Moderate Match</p>
             <p class="text-white/40 text-xs mt-0.5">Partial alignment</p>
             {% elif application.match_score > 0 %}
             <p class="text-red-400 font-semibold text-sm">Weak Match</p>

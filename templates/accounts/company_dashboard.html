@@ -183,14 +183,14 @@
                   <div class="flex items-center gap-2 min-w-[80px]">
                     <span class="text-xs font-bold w-9
                       {% if app.score_color == 'green' %}text-emerald-400
-                      {% elif app.score_color == 'yellow' %}text-amber-400
+                      {% elif app.score_color == 'blue' %}text-blue-400
                       {% else %}text-red-400{% endif %}">
                       {{ app.match_score|floatformat:0 }}%
                     </span>
                     <div class="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
                       <div class="h-full rounded-full
                         {% if app.score_color == 'green' %}bg-emerald-400
-                        {% elif app.score_color == 'yellow' %}bg-amber-400
+                        {% elif app.score_color == 'blue' %}bg-blue-400
                         {% else %}bg-red-400{% endif %}"
                            style="width: {{ app.match_score }}%"></div>
                     </div>

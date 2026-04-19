@@ -11,6 +11,7 @@
   }
   .score-bar-fill { height: 100%; border-radius: 99px; }
   .score-green  { background: linear-gradient(90deg,#22c55e,#4ade80); }
+  .score-blue   { background: linear-gradient(90deg,#60a5fa,#3b82f6); }
   .score-yellow { background: linear-gradient(90deg,#eab308,#facc15); }
   .score-red    { background: linear-gradient(90deg,#ef4444,#f87171); }
 
@@ -341,7 +342,7 @@
                 {% if result and result.status == "done" %}
                 <div class="sub-bars">
                   <div class="sub-bar-row" title="Skills: {{ result.skill_score|floatformat:0 }}%">
-                    <span class="sub-bar-label">Skl</span>
+                    <span class="sub-bar-label">Ski</span>
                     <div class="sub-bar-track">
                       <div class="sub-bar-fill sub-cyan" style="width:{{ result.skill_score }}%"></div>
                     </div>
@@ -361,8 +362,8 @@
                     </div>
                     <span class="text-[9px] text-white/30 w-7 text-right">{{ result.qualification_score|floatformat:0 }}%</span>
                   </div>
-                  <div class="sub-bar-row" title="Cosine similarity: {{ result.cosine_score|floatformat:0 }}%">
-                    <span class="sub-bar-label">Cos</span>
+                  <div class="sub-bar-row" title="Content relevance: {{ result.cosine_score|floatformat:0 }}%">
+                    <span class="sub-bar-label">Rel</span>
                     <div class="sub-bar-track">
                       <div class="sub-bar-fill sub-emerald" style="width:{{ result.cosine_score }}%"></div>
                     </div>

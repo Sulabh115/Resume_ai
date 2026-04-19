@@ -99,6 +99,9 @@
       </button>
     </div>
 
+    {# Your result — populated by openModal (#9) #}
+    <div id="modal-your-banner" class="hidden px-6 pt-4 pb-2 border-b border-white/8 flex-shrink-0"></div>
+
     {# Summary strip #}
     <div id="modal-summary" class="grid grid-cols-3 gap-3 px-6 py-4 border-b border-white/10 flex-shrink-0"></div>
 
@@ -237,9 +240,24 @@
           </div>
         </div>
 
-        {# Score ring #}
+        {# Score ring — numeric score only after HR publishes results (#1) #}
         <div class="score-ring-wrap">
-          {% if app.match_score and app.status != 'withdrawn' %}
+          {% if app.status == 'withdrawn' or not item.results_published or not app.match_score %}
+          {# Neutral — withdrawn, pending publication, or not screened #}
+          <svg viewBox="0 0 48 48" width="48" height="48">
+            <circle cx="24" cy="24" r="15"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.10)"
+                    stroke-width="5"/>
+            <circle cx="24" cy="24" r="15"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.14)"
+                    stroke-width="5"
+                    stroke-dasharray="94.25"
+                    stroke-dashoffset="94.25"/>
+          </svg>
+          <div class="score-ring-text" style="color:rgba(255,255,255,0.22);font-size:9px;">—</div>
+          {% else %}
           <svg viewBox="0 0 48 48" width="48" height="48">
             <circle cx="24" cy="24" r="15"
                     fill="none"
@@ -256,21 +274,6 @@
                     data-score="{{ app.match_score|floatformat:1 }}"/>
           </svg>
           <div class="score-ring-text">{{ app.match_score|floatformat:0 }}%</div>
-          {% else %}
-          {# Neutral ring — withdrawn or not screened #}
-          <svg viewBox="0 0 48 48" width="48" height="48">
-            <circle cx="24" cy="24" r="15"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.10)"
-                    stroke-width="5"/>
-            <circle cx="24" cy="24" r="15"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.14)"
-                    stroke-width="5"
-                    stroke-dasharray="94.25"
-                    stroke-dashoffset="94.25"/>
-          </svg>
-          <div class="score-ring-text" style="color:rgba(255,255,255,0.22);font-size:9px;">—</div>
           {% endif %}
         </div>
 
@@ -300,7 +303,7 @@
 
         {# View Results button — only when published #}
         {% if item.results_published %}
-        <button onclick="openModal({{ item.ranked_list_json|safe }}, '{{ app.job.title|escapejs }}', {{ item.total }}, {{ item.shortlisted_count }}, {{ item.rank|default:0 }})"
+        <button onclick="openModal({{ item.ranked_list_json|safe }}, '{{ app.job.title|escapejs }}', {{ item.total }}, {{ item.shortlisted_count }}, {{ item.rank|default:0 }}, {{ app.match_score|default_if_none:0|floatformat:0 }}, {% if app.status == 'shortlisted' or app.status == 'hired' %}true{% else %}false{% endif %})"
                 class="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs
                        bg-indigo-500/12 border-indigo-400/22 text-indigo-300
                        hover:bg-indigo-500/22 hover:opacity-100 opacity-90">
@@ -354,12 +357,34 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 /* ── Results modal (unchanged from original) ── */
-function openModal(ranked, title, total, shortlisted, selfRank) {
+function openModal(ranked, title, total, shortlisted, selfRank, selfScore, selfShortlisted) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-stats').textContent =
     total + ' applicant' + (total !== 1 ? 's' : '') + ' · ' +
     shortlisted + ' shortlisted · ' +
     (selfRank ? 'You ranked #' + selfRank : 'Your rank unavailable');
+
+  var banner = document.getElementById('modal-your-banner');
+  if (banner) {
+    var r = parseInt(selfRank, 10) || 0;
+    var sc = parseFloat(selfScore) || 0;
+    if (r > 0) {
+      banner.classList.remove('hidden');
+      if (selfShortlisted === true || selfShortlisted === 'true') {
+        banner.innerHTML =
+          '<div class="rounded-2xl px-4 py-3 bg-emerald-500/15 border border-emerald-400/28 text-emerald-100 text-sm leading-relaxed">' +
+          '✓ Congratulations! You were shortlisted — Rank #' + r +
+          ' with a score of ' + Math.round(sc) + '%</div>';
+      } else {
+        banner.innerHTML =
+          '<div class="rounded-2xl px-4 py-3 bg-red-500/12 border border-red-400/25 text-red-200 text-sm leading-relaxed">' +
+          '✗ You were not selected — Rank #' + r + '</div>';
+      }
+    } else {
+      banner.innerHTML = '';
+      banner.classList.add('hidden');
+    }
+  }
 
   document.getElementById('modal-summary').innerHTML = `
     <div style="text-align:center;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:12px 8px;">
