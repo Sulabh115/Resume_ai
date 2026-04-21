@@ -1,26 +1,23 @@
-from accounts.models import CandidateProfile, CompanyProfile
+from accounts.models import CandidateProfile
 from .models import Application
 from datetime import date
 
 def active_applications_count(request):
-    """
-    Returns the count of active applications for the logged-in candidate
-    and provides the candidate/company profile objects globally.
-    """
     context = {}
     if not request.user.is_authenticated:
         return context
-    
-    # ── Profiles ──────────────────────────────────────────────────────────
-    # Provision 'candidate' and 'company' globally for the navbar avatars
-    candidate = CandidateProfile.objects.filter(user=request.user).first()
-    company = CompanyProfile.objects.filter(user=request.user).first()
-    
-    context['candidate'] = candidate
-    context['company'] = company
 
-    # ── Active Application Count (for bubble) ─────────────────────────────
+    from django.db.models import Q as _Q
+
+    # Single query to get candidate profile (most common case to check)
+    candidate = CandidateProfile.objects.filter(user=request.user).first()
+    context['candidate'] = candidate
+
     if candidate:
+        # Only fetch company if the user is also a candidate (edge case: skip it,
+        # a user has exactly one role). No need to query CompanyProfile for candidates.
+        context['company'] = None
+
         today = date.today()
         count = (
             Application.objects
@@ -33,5 +30,11 @@ def active_applications_count(request):
             .count()
         )
         context['active_app_count'] = count
-    
+    else:
+        # User has no candidate profile — check if company
+        from accounts.models import CompanyProfile
+        company = CompanyProfile.objects.filter(user=request.user).first()
+        context['company'] = company
+        # active_app_count not needed for companies
+
     return context

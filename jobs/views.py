@@ -247,7 +247,10 @@ def create_job(request):
         messages.error(request, "Only company accounts can post jobs.")
         return redirect("candidate_dashboard")
 
+    repost_job = None
+
     if request.method == "POST":
+        repost_id = request.POST.get("repost") or request.GET.get("repost")
         form = JobForm(request.POST)
         if form.is_valid():
             job         = form.save(commit=False)
@@ -266,10 +269,15 @@ def create_job(request):
 
             messages.success(request, f'"{job.title}" posted successfully.')
             return redirect("job_detail", job_id=job.id)
+        return render(request, "jobs/create_job.html", {
+            "form":      form,
+            "editing":   False,
+            "company":   company,
+            "is_repost": repost_id is not None,
+        })
     else:
         # ── Repost: pre-populate form from an existing job ────────────────
         repost_id  = request.GET.get("repost")
-        repost_job = None
 
         if repost_id:
             try:
@@ -309,7 +317,7 @@ def create_job(request):
         "form":       form,
         "editing":    False,
         "company":    company,
-        "is_repost":  repost_job is not None if request.method == "GET" else False,
+        "is_repost":  repost_job is not None,
     })
 
 

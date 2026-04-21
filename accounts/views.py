@@ -557,6 +557,16 @@ def company_edit_profile(request):
         website_raw  = request.POST.get('website',      '').strip()
         website      = website_raw if website_raw else None
 
+        # ── Logo upload handling ─────────────────────────────────────────────
+        if 'logo' in request.FILES:
+            if company.logo:
+                company.logo.delete(save=False)
+            company.logo = request.FILES['logo']
+        elif request.POST.get('logo_clear') == 'on':
+            if company.logo:
+                company.logo.delete(save=False)
+            company.logo = None
+
         # ── FIX #6: read both phone field names from the template ────────
         hr_phone      = request.POST.get('hr_phone', '').strip()
         company_phone = request.POST.get('phone',    '').strip()

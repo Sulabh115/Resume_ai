@@ -18,7 +18,7 @@ class ApplyJobForm(forms.Form):
     new_resume = forms.FileField(
         required=False,
         label="Upload new resume",
-        widget=forms.ClearableFileInput(attrs={"accept": ".pdf,.doc,.docx"})
+        widget=forms.ClearableFileInput(attrs={"accept": ".pdf"})
     )
     resume_label = forms.CharField(
         max_length=100,
@@ -50,7 +50,7 @@ class ResumeUploadForm(forms.ModelForm):
         model = Resume
         fields = ["file", "label", "is_default"]
         widgets = {
-            "file": forms.ClearableFileInput(attrs={"accept": ".pdf,.doc,.docx"}),
+            "file": forms.ClearableFileInput(attrs={"accept": ".pdf"}),
             "label": forms.TextInput(attrs={"placeholder": "e.g. Backend Developer Resume"}),
         }
         labels = {

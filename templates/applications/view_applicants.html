@@ -585,7 +585,7 @@
                     </span>
                     {% if app.match_score %}
                     <div class="score-bar-track flex-1">
-                      <div class="score-bar-fill score-{{ app.score_color }}" style="width: { app.match_score }%;">
+                      <div class="score-bar-fill score-{{ app.score_color }}" style="width: {{ app.match_score }}%;">
                       </div>
                     </div>
                     {% else %}
@@ -860,37 +860,37 @@
           <div>
             <div class="flex justify-between text-[11px] mb-1">
               <span class="text-white/50">Skills Matching</span>
-              <span class="text-cyan-400 font-bold">35%</span>
+              <span class="text-cyan-400 font-bold">20%</span>
             </div>
             <div class="h-1 bg-white/10 rounded-full overflow-hidden">
-              <div class="h-full bg-cyan-400/60" style="width:35%"></div>
+              <div class="h-full bg-cyan-400/60" style="width:20%"></div>
             </div>
           </div>
           <div>
             <div class="flex justify-between text-[11px] mb-1">
               <span class="text-white/50">Work Experience</span>
-              <span class="text-teal-400 font-bold">25%</span>
+              <span class="text-teal-400 font-bold">10%</span>
             </div>
             <div class="h-1 bg-white/10 rounded-full overflow-hidden">
-              <div class="h-full bg-teal-400/60" style="width:25%"></div>
+              <div class="h-full bg-teal-400/60" style="width:10%"></div>
             </div>
           </div>
           <div>
             <div class="flex justify-between text-[11px] mb-1">
               <span class="text-white/50">Qualifications</span>
-              <span class="text-emerald-400 font-bold">20%</span>
+              <span class="text-emerald-400 font-bold">10%</span>
             </div>
             <div class="h-1 bg-white/10 rounded-full overflow-hidden">
-              <div class="h-full bg-emerald-400/60" style="width:20%"></div>
+              <div class="h-full bg-emerald-400/60" style="width:10%"></div>
             </div>
           </div>
           <div>
             <div class="flex justify-between text-[11px] mb-1">
               <span class="text-white/50">Semantic Context</span>
-              <span class="text-emerald-300 font-bold">20%</span>
+              <span class="text-emerald-300 font-bold">60%</span>
             </div>
             <div class="h-1 bg-white/10 rounded-full overflow-hidden">
-              <div class="h-full bg-emerald-300/60" style="width:20%"></div>
+              <div class="h-full bg-emerald-300/60" style="width:60%"></div>
             </div>
           </div>
         </div>

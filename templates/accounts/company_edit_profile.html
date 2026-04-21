@@ -11,6 +11,22 @@
     background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);
     border-radius: 16px; padding: 14px 18px; text-align: center; flex: 1;
   }
+
+  .avatar-zone {
+    position: relative; cursor: pointer;
+    border: 1.5px dashed rgba(255,255,255,0.30);
+    background: rgba(255,255,255,0.08);
+    transition: all 0.2s ease;
+    overflow: hidden;
+  }
+  .avatar-zone:hover { border-color: rgba(255,255,255,0.60); background: rgba(255,255,255,0.16); }
+  .avatar-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.18s ease;
+  }
+  .avatar-zone:hover .avatar-overlay { opacity: 1; }
 </style>
 {% endblock %}
 
@@ -76,11 +92,57 @@
   </div>
 
   <form id="company-form" method="post" action="{% url 'company_edit_profile' %}"
+        enctype="multipart/form-data"
         novalidate class="flex flex-col gap-5">
     {% csrf_token %}
 
     {# ── COMPANY DETAILS ── #}
     <div class="glass rounded-3xl p-6">
+      <div class="flex items-center gap-5 mb-6">
+        <div>
+          <div class="avatar-zone" style="border-radius:16px;width:80px;height:80px;"
+               id="logo-zone" onclick="document.getElementById('logo-input').click()">
+            <input type="file" id="logo-input" name="logo"
+                   accept="image/jpeg,image/png,image/webp"
+                   class="hidden" onchange="previewLogo(this)"/>
+            {% if company.logo %}
+              <img id="logo-img" src="{{ company.logo.url }}" alt="Company logo"
+                   class="w-full h-full object-cover" style="border-radius:14px;"/>
+            {% else %}
+              <img id="logo-img" src="" alt="" class="w-full h-full object-cover hidden" style="border-radius:14px;"/>
+              <div id="logo-placeholder" class="flex flex-col items-center gap-1">
+                <svg class="w-6 h-6 text-white/35" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5
+                       M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                <span class="text-[11px] text-white/30 text-center leading-tight">Upload<br/>logo</span>
+              </div>
+            {% endif %}
+            <div class="avatar-overlay" style="border-radius:14px;">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86
+                     a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5
+                     a2 2 0 01-2-2V9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-white mb-1">Company Logo</p>
+          <p class="text-xs text-white/70 leading-relaxed">Click to upload a new logo.<br/>JPG, PNG, or WebP — max 2 MB.</p>
+          {% if company.logo %}
+          <button type="button" onclick="removeLogo()"
+                  class="hidden mt-2 text-[11px] text-white/70 hover:text-white/70 transition-colors underline underline-offset-2"
+                  id="logo-remove-btn">
+            Remove
+          </button>
+          <input type="checkbox" name="logo_clear" id="logo-clear" class="hidden"/>
+          {% endif %}
+        </div>
+      </div>
       <p class="section-title">Company Details</p>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -245,6 +307,37 @@
   function togglePwd(id) {
     const el = document.getElementById(id);
     el.type = el.type === 'password' ? 'text' : 'password';
+  }
+
+  function previewLogo(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2 MB.'); input.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.getElementById('logo-img');
+      const ph  = document.getElementById('logo-placeholder');
+      img.src = e.target.result;
+      img.classList.remove('hidden');
+      if (ph) ph.classList.add('hidden');
+      const rm = document.getElementById('logo-remove-btn');
+      if (rm) rm.classList.remove('hidden');
+      markDirty();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeLogo() {
+    document.getElementById('logo-input').value = '';
+    const img = document.getElementById('logo-img');
+    const ph  = document.getElementById('logo-placeholder');
+    img.src = ''; img.classList.add('hidden');
+    if (ph) ph.classList.remove('hidden');
+    const cb = document.getElementById('logo-clear');
+    if (cb) cb.checked = true;
+    const rm = document.getElementById('logo-remove-btn');
+    if (rm) rm.classList.add('hidden');
+    markDirty();
   }
 
   /* ── Password strength ── */

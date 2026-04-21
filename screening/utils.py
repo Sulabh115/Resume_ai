@@ -122,6 +122,10 @@ def compute_match_score(resume_file, job) -> Dict:
     qual_score_pct   = round(min(qual_sc    * 100, 100.0), 1)
     cosine_score_pct = round(min(cosine_sc  * 100, 100.0), 1)
 
+    matched_count = len(extracted)
+    total_required = len(job_skill_names)
+    skill_match_pct = round((matched_count / total_required * 100), 1) if total_required else 100.0
+
     # ── 11. Human-readable summary ─────────────────────────────────────────
     summary = _build_summary(
         score_pct,
@@ -144,6 +148,7 @@ def compute_match_score(resume_file, job) -> Dict:
         "extracted_skills":    ", ".join(extracted),
         "matched_skills":      ", ".join(extracted),
         "missing_skills":      ", ".join(missing),
+        "skill_match_pct":     skill_match_pct,
         "summary":             summary,
     }
 

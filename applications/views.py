@@ -66,13 +66,32 @@ from django.conf import settings
 from django.http import Http404, JsonResponse
 from django.template.loader import render_to_string
 from datetime import date
+import json as _json
 
 from .models import Application, Resume
 from .forms import ApplyJobForm, ResumeUploadForm, ApplicationStatusForm
 from jobs.models import Job
+from jobs.models import Job as _JobModel
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
+
+def _parse_prescreen_score(value):
+    """
+    Parse a candidate-supplied pre-screen score safely.
+    Returns the float value ONLY if it is within [0.0, 100.0].
+    Returns None if the value is absent, non-numeric, or out of range,
+    forcing the real AI screening path to run.
+    """
+    if not value or not str(value).strip():
+        return None
+    try:
+        score = float(value)
+    except (ValueError, TypeError):
+        return None
+    if not (0.0 <= score <= 100.0):
+        return None
+    return score
 
 def _get_candidate(request):
     return getattr(request.user, "candidateprofile", None)
@@ -80,6 +99,69 @@ def _get_candidate(request):
 
 def _get_company(request):
     return getattr(request.user, "companyprofile", None)
+
+def _build_job_data_map(candidate, job_ids):
+    """
+    For each job_id, compute ranking context for the given candidate.
+    Returns a dict keyed by job_id. Each value is a dict with:
+        rank, total, shortlisted_count, results_published, ranked_list_json
+    """
+    jobs_map = _JobModel.objects.in_bulk(job_ids)
+    result = {}
+
+    for job_id in job_ids:
+        ranked_qs = (
+            Application.objects
+            .filter(job_id=job_id)
+            .exclude(status=Application.Status.WITHDRAWN)
+            .select_related("candidate__user")
+            .order_by("-match_score", "applied_at")
+        )
+
+        all_apps = list(ranked_qs)
+        total = len(all_apps)
+
+        # Count both SHORTLISTED and HIRED (consistent in both active + old lists)
+        shortlisted_statuses = {Application.Status.SHORTLISTED, Application.Status.HIRED}
+        shortlisted_count = sum(1 for a in all_apps if a.status in shortlisted_statuses)
+
+        rank = None
+        for idx, a in enumerate(all_apps, start=1):
+            if a.candidate_id == candidate.pk:
+                rank = idx
+                break
+
+        job_obj = jobs_map.get(job_id)
+        results_published = job_obj.results_published if job_obj else False
+
+        if results_published:
+            ranked_list = []
+            for idx, a in enumerate(all_apps, start=1):
+                is_self = (a.candidate_id == candidate.pk)
+                name = (
+                    a.candidate.user.get_full_name() or a.candidate.user.username
+                    if is_self else f"Candidate #{idx}"
+                )
+                ranked_list.append({
+                    "rank":        idx,
+                    "name":        name,
+                    "score":       round(a.match_score or 0),
+                    "status":      a.status,
+                    "shortlisted": a.status in shortlisted_statuses,
+                    "is_self":     is_self,
+                })
+        else:
+            ranked_list = []
+
+        result[job_id] = {
+            "rank":              rank,
+            "total":             total,
+            "shortlisted_count": shortlisted_count,
+            "results_published": results_published,
+            "ranked_list_json":  _json.dumps(ranked_list),
+        }
+
+    return result
 
 
 # ─── E3: Status notification email helper ───────────────────────────────────
@@ -262,14 +344,14 @@ def apply_job(request, job_id):
             sr = None
             try:
                 # Bypass backend re-calculation if frontend provided pre-screened score
-                hs_score = request.POST.get("prescreen_score")
+                hs_score = _parse_prescreen_score(request.POST.get("prescreen_score"))
                 
                 sr = ScreeningResult.objects.create(
                     application=app,
                     status=ScreeningResult.Status.PROCESSING,
                 )
                 
-                if hs_score and hs_score.strip():
+                if hs_score is not None:
                     sr.similarity_score    = float(hs_score)
                     sr.skill_score         = float(request.POST.get("prescreen_skill") or 0)
                     sr.experience_score    = float(request.POST.get("prescreen_exp") or 0)
@@ -367,14 +449,14 @@ def edit_application(request, application_id):
 
             sr = None
             try:
-                hs_score = request.POST.get("prescreen_score")
+                hs_score = _parse_prescreen_score(request.POST.get("prescreen_score"))
                 
                 sr = ScreeningResult.objects.create(
                     application=app,
                     status=ScreeningResult.Status.PROCESSING,
                 )
                 
-                if hs_score and hs_score.strip():
+                if hs_score is not None:
                     sr.similarity_score    = float(hs_score)
                     sr.skill_score         = float(request.POST.get("prescreen_skill") or 0)
                     sr.experience_score    = float(request.POST.get("prescreen_exp") or 0)
@@ -489,8 +571,8 @@ def score_preview(request, job_id):
         return JsonResponse({"error": "No resume file provided"}, status=400)
 
     name_lower = resume_file.name.lower()
-    if not (name_lower.endswith(".pdf") or name_lower.endswith(".doc") or name_lower.endswith(".docx")):
-        return JsonResponse({"error": "Only PDF, DOC, and DOCX files are supported."}, status=400)
+    if not name_lower.endswith(".pdf"):
+        return JsonResponse({"error": "Only PDF files are supported."}, status=400)
 
     import tempfile, os
 
@@ -835,63 +917,8 @@ def application_list(request):
         else:
             days_remaining[app.id] = None
 
-    import json as _json
     job_ids = list(applications.values_list("job_id", flat=True).distinct())
-    job_data_map = {}
-    from jobs.models import Job as JobModel
-    jobs_map = JobModel.objects.in_bulk(job_ids)
-
-    for job_id in job_ids:
-        ranked_qs = (
-            Application.objects
-            .filter(job_id=job_id)
-            .exclude(status=Application.Status.WITHDRAWN)
-            .select_related("candidate__user")
-            .order_by("-match_score", "applied_at")
-        )
-
-        all_apps       = list(ranked_qs)
-        total          = len(all_apps)
-        shortlisted_count = sum(
-            1 for a in all_apps if a.status == Application.Status.SHORTLISTED or a.status == Application.Status.HIRED
-        )
-
-        rank = None
-        for idx, a in enumerate(all_apps, start=1):
-            if a.candidate_id == candidate.pk:
-                rank = idx
-                break
-
-        job_obj = jobs_map.get(job_id)
-        results_published = job_obj.results_published if job_obj else False
-
-        if results_published:
-            ranked_list = []
-            for idx, a in enumerate(all_apps, start=1):
-                is_self = (a.candidate_id == candidate.pk)
-                name = (
-                    a.candidate.user.get_full_name() or a.candidate.user.username
-                    if is_self
-                    else f"Candidate #{idx}"
-                )
-                ranked_list.append({
-                    "rank":        idx,
-                    "name":        name,
-                    "score":       round(a.match_score or 0),
-                    "status":      a.status,
-                    "shortlisted": a.status == Application.Status.SHORTLISTED or a.status == Application.Status.HIRED,
-                    "is_self":     is_self,
-                })
-        else:
-            ranked_list = []
-
-        job_data_map[job_id] = {
-            "rank":              rank,
-            "total":             total,
-            "shortlisted_count": shortlisted_count,
-            "results_published": results_published,
-            "ranked_list_json":  _json.dumps(ranked_list),
-        }
+    job_data_map = _build_job_data_map(candidate, job_ids)
 
     app_data = []
     for app in applications:
@@ -924,7 +951,6 @@ def old_application_list(request):
     results_published, and ranked_list_json.  All per-job data is fetched
     in a single pass grouped by job_id to avoid N+1 queries.
     """
-    import json as _json
     candidate = _get_candidate(request)
     if not candidate:
         return redirect("company_dashboard")
@@ -947,63 +973,7 @@ def old_application_list(request):
     )
 
     job_ids = list(applications.values_list("job_id", flat=True).distinct())
-
-    job_data_map = {}
-
-    from jobs.models import Job as JobModel
-    jobs_map = JobModel.objects.in_bulk(job_ids)
-
-    for job_id in job_ids:
-        ranked_qs = (
-            Application.objects
-            .filter(job_id=job_id)
-            .exclude(status=Application.Status.WITHDRAWN)
-            .select_related("candidate__user")
-            .order_by("-match_score", "applied_at")
-        )
-
-        all_apps       = list(ranked_qs)
-        total          = len(all_apps)
-        shortlisted_count = sum(
-            1 for a in all_apps if a.status == Application.Status.SHORTLISTED
-        )
-
-        rank = None
-        for idx, a in enumerate(all_apps, start=1):
-            if a.candidate_id == candidate.pk:
-                rank = idx
-                break
-
-        job_obj = jobs_map.get(job_id)
-        results_published = job_obj.results_published if job_obj else False
-
-        if results_published:
-            ranked_list = []
-            for idx, a in enumerate(all_apps, start=1):
-                is_self = (a.candidate_id == candidate.pk)
-                name = (
-                    a.candidate.user.get_full_name() or a.candidate.user.username
-                    if is_self
-                    else f"Candidate #{idx}"
-                )
-                ranked_list.append({
-                    "rank":        idx,
-                    "name":        name,
-                    "score":       round(a.match_score or 0),
-                    "status":      a.status,
-                    "shortlisted": a.status == Application.Status.SHORTLISTED,
-                    "is_self":     is_self,
-                })
-        else:
-            ranked_list = []
-
-        job_data_map[job_id] = {
-            "rank":              rank,
-            "total":             total,
-            "shortlisted_count": shortlisted_count,
-            "results_published": results_published,
-            "ranked_list_json":  _json.dumps(ranked_list),
-        }
+    job_data_map = _build_job_data_map(candidate, job_ids)
 
     app_data = []
     for app in applications:

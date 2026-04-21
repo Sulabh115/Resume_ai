@@ -99,7 +99,8 @@ class ScreeningResult(models.Model):
     def match_percentage(self):
         """What % of required skills were matched."""
         matched = len(self.matched_skills_list())
-        extracted = len(self.extracted_skills_list())
-        if extracted == 0:
-            return 0
-        return round((matched / extracted) * 100)
+        missing = len(self.missing_skills_list())
+        total = matched + missing
+        if total == 0:
+            return 100
+        return round((matched / total) * 100)
