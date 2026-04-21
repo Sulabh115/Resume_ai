@@ -4,19 +4,6 @@
 {# ── Mark Jobs active in navbar ── #}
 {% block nav_jobs %}active{% endblock %}
 
-{# ── Avatar: initials for logged-in users, Register button for guests ── #}
-{% block nav_avatar %}
-{% if request.user.is_authenticated %}
-  <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-    {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
-  </div>
-{% else %}
-  <a href="{% url 'register' %}"
-     class="hidden md:block bg-white/18 border border-white/30 text-white text-sm font-medium px-5 py-2 rounded-full hover:bg-white/88 hover:text-indigo-700 transition-all">
-    Register
-  </a>
-{% endif %}
-{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -88,7 +75,7 @@
 
     {# Search #}
     <div class="relative flex-1 min-w-[180px]">
-      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
       </svg>
       <input type="text" name="q" value="{{ filter_form.q.value|default:'' }}"
@@ -141,7 +128,7 @@
   {# Active filter pills #}
   {% if filter_form.q.value or filter_form.job_type.value or filter_form.experience.value or filter_form.location.value %}
   <div class="flex flex-wrap gap-2 mb-4 -mt-2">
-    <span class="text-white/40 text-xs self-center">Filtering by:</span>
+    <span class="text-white/70 text-xs self-center">Filtering by:</span>
     {% if filter_form.q.value %}
     <span class="text-xs bg-violet-500/20 text-violet-200 border border-violet-400/25 px-3 py-1 rounded-full">"{{ filter_form.q.value }}"</span>
     {% endif %}
@@ -200,7 +187,7 @@
           <span class="job-tag bg-white/8 text-white/35 border border-white/12">+{{ job.skills.count|add:"-3" }}</span>
           {% endif %}
           {% if job.deadline %}
-          <span class="job-tag bg-white/8 text-white/40 border border-white/12">Closes {{ job.deadline|date:"M j" }}</span>
+          <span class="job-tag bg-white/8 text-white/70 border border-white/12">Closes {{ job.deadline|date:"M j" }}</span>
           {% endif %}
           <span class="job-tag bg-white/6 text-white/30 border border-white/10">{{ job.created_at|timesince }} ago</span>
         </div>
@@ -265,7 +252,7 @@
     </div>
     <div>
       <p class="text-white/65 font-semibold">No jobs found</p>
-      <p class="text-white/40 text-sm mt-1 leading-relaxed">
+      <p class="text-white/70 text-sm mt-1 leading-relaxed">
         {% if filter_form.q.value or filter_form.job_type.value or filter_form.experience.value or filter_form.location.value %}
           Try adjusting your filters or
           <a href="{% url 'job_list' %}" class="text-violet-300 hover:text-white underline underline-offset-2 transition-colors">clear all filters</a>.

@@ -3,11 +3,6 @@
 
 {% block nav_screening %}active{% endblock %}
 
-{% comment %} {% block nav_avatar %}
-<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-  {{ request.user.companyprofile.company_name|first|upper }}
-</div>
-{% endblock %} {% endcomment %}
 
 {% block extra_head %}
 <style>
@@ -42,7 +37,7 @@
         All Applicants
       </a>
       <h1 class="font-serif-display text-2xl text-white">AI Screening Results</h1>
-      <p class="text-white/45 text-sm mt-0.5">{{ job.title }} · {{ job.company.company_name }}</p>
+      <p class="text-white/70 text-sm mt-0.5">{{ job.title }} · {{ job.company.company_name }}</p>
     </div>
 
     <div class="flex items-center gap-3 flex-wrap">
@@ -86,19 +81,19 @@
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-7">
     <div class="glass-card rounded-3xl p-5 text-center">
       <p class="text-3xl font-bold text-white">{{ total }}</p>
-      <p class="text-white/45 text-xs mt-1">Total</p>
+      <p class="text-white/70 text-xs mt-1">Total</p>
     </div>
     <div class="glass-card rounded-3xl p-5 text-center">
       <p class="text-3xl font-bold text-teal-300">{{ screened }}</p>
-      <p class="text-white/45 text-xs mt-1">Screened</p>
+      <p class="text-white/70 text-xs mt-1">Screened</p>
     </div>
     <div class="glass-card rounded-3xl p-5 text-center">
       <p class="text-3xl font-bold text-emerald-300">{{ strong }}</p>
-      <p class="text-white/45 text-xs mt-1">Strong Match</p>
+      <p class="text-white/70 text-xs mt-1">Strong Match</p>
     </div>
     <div class="glass-card rounded-3xl p-5 text-center">
       <p class="text-3xl font-bold {% if pending > 0 %}text-amber-300{% else %}text-white/30{% endif %}">{{ pending }}</p>
-      <p class="text-white/45 text-xs mt-1">Awaiting Screen</p>
+      <p class="text-white/70 text-xs mt-1">Awaiting Screen</p>
     </div>
   </div>
 
@@ -107,12 +102,12 @@
     <table class="w-full">
       <thead>
         <tr class="border-b border-white/15">
-          <th class="text-left px-6 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider">Candidate</th>
-          <th class="text-left px-4 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider">AI Score</th>
-          <th class="text-left px-4 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider hidden lg:table-cell">Matched Skills</th>
-          <th class="text-left px-4 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider hidden xl:table-cell">Missing</th>
-          <th class="text-left px-4 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider hidden md:table-cell">Status</th>
-          <th class="text-right px-6 py-4 text-white/40 text-[10px] font-medium uppercase tracking-wider">Detail</th>
+          <th class="text-left px-6 py-4 text-white/70 text-[11px] font-medium uppercase tracking-wider">Candidate</th>
+          <th class="text-left px-4 py-4 text-white/70 text-[11px] font-medium uppercase tracking-wider">AI Score</th>
+          <th class="text-left px-4 py-4 text-white/70 text-[11px] font-medium uppercase tracking-wider hidden lg:table-cell">Matched Skills</th>
+          <th class="text-left px-4 py-4 text-white/70 text-[11px] font-medium uppercase tracking-wider hidden xl:table-cell">Missing</th>
+          <th class="text-left px-4 py-4 text-white/70 text-[11px] font-medium uppercase tracking-wider hidden md:table-cell">Status</th>
+          <th class="text-right px-6 py-4 text-white/70 text-[11px] font-medium uppercase tracking-wider">Detail</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-white/8">

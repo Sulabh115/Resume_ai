@@ -58,3 +58,12 @@ coverage.xml
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+# Frontend Part
+Resume_ai_Frontend/
+node_modules/
+dist/
+build/
+.cache/
+.parcel-cache/
+.eslintcache/

@@ -635,17 +635,22 @@ def send_shortlist_email(request, job_id):
         notes_line = f"\nNotes: {interview_notes}" if interview_notes.strip() else ""
         text_body = (
             f"Dear {name},\n\n"
-            f"Congratulations! You have been shortlisted for {job.title} "
-            f"at {company.company_name}.\n\n"
+            f"We are writing to inform you that you have been shortlisted for an interview "
+            f"for the {job.title} position at {company.company_name}.\n\n"
+            f"Your application has successfully passed our initial screening phase, and we "
+            f"would like to invite you to discuss your qualifications further.\n\n"
             f"Interview Details:\n"
             f"Date:     {interview_date}\n"
             f"Time:     {interview_time}\n"
             f"Duration: {interview_duration}\n"
             f"Location: {interview_location}"
             f"{notes_line}\n\n"
-            f"Please reply to this email to confirm your attendance.\n\n"
+            f"Please reply directly to this email at your earliest convenience to confirm "
+            f"whether this schedule works for you.\n\n"
+            f"Please note: Being shortlisted for an interview means you are moving forward "
+            f"in our process, but is not an offer of employment.\n\n"
             f"Best regards,\n"
-            f"HR Team — {company.company_name}"
+            f"The Hiring Team at {company.company_name}"
         )
 
         html_body = render_to_string(

@@ -44,9 +44,9 @@
   {# Welcome row #}
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
     <div>
-      <p class="text-[10px] text-white/45 uppercase tracking-widest mb-1">Overview</p>
+      <p class="text-[11px] text-white/70 uppercase tracking-widest mb-1">Overview</p>
       <h1 class="text-2xl text-white font-bold">Good to see you, {{ company.company_name }} 👋</h1>
-      <p class="text-white/45 text-sm mt-1">Here's what's happening with your hiring pipeline.</p>
+      <p class="text-white/70 text-sm mt-1">Here's what's happening with your hiring pipeline.</p>
     </div>
 
     <a href="{% url 'create_job' %}"
@@ -69,7 +69,7 @@
                   d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
         </div>
-        <span class="text-[10px] text-emerald-400 bg-emerald-500/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">Active</span>
+        <span class="text-[11px] text-emerald-400 bg-emerald-500/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">Active</span>
       </div>
       <p class="text-3xl font-bold text-white">{{ open_jobs }}</p>
       <p class="text-xs text-white/50 mt-1">Open Job Posts</p>
@@ -87,7 +87,7 @@
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
         </div>
-        <span class="text-[10px] text-cyan-400 bg-cyan-500/15 border border-cyan-400/25 px-2 py-0.5 rounded-full">Total</span>
+        <span class="text-[11px] text-cyan-400 bg-cyan-500/15 border border-cyan-400/25 px-2 py-0.5 rounded-full">Total</span>
       </div>
       <p class="text-3xl font-bold text-white">{{ total_applicants }}</p>
       <p class="text-xs text-white/50 mt-1">Total Applications</p>
@@ -102,7 +102,7 @@
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
         </div>
-        <span class="text-[10px] text-emerald-400 bg-emerald-500/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">Reviewed</span>
+        <span class="text-[11px] text-emerald-400 bg-emerald-500/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">Reviewed</span>
       </div>
       <p class="text-3xl font-bold text-white">{{ total_jobs }}</p>
       <p class="text-xs text-white/50 mt-1">Total Jobs Posted</p>
@@ -118,7 +118,7 @@
           </svg>
         </div>
         {% if pending_review > 0 %}
-        <span class="text-[10px] text-amber-400 bg-amber-500/15 border border-amber-400/25 px-2 py-0.5 rounded-full">Action needed</span>
+        <span class="text-[11px] text-amber-400 bg-amber-500/15 border border-amber-400/25 px-2 py-0.5 rounded-full">Action needed</span>
         {% endif %}
       </div>
       <p class="text-3xl font-bold {% if pending_review > 0 %}text-amber-300{% else %}text-white{% endif %}">
@@ -140,7 +140,7 @@
       <div class="glass rounded-3xl p-6">
         <div class="flex items-center justify-between mb-5">
           <div>
-            <p class="text-[10px] text-white/45 uppercase tracking-widest mb-0.5">Applicants</p>
+            <p class="text-[11px] text-white/70 uppercase tracking-widest mb-0.5">Applicants</p>
             <p class="text-white font-semibold">Recent submissions</p>
           </div>
         </div>
@@ -150,10 +150,10 @@
           <table class="w-full min-w-[500px]">
             <thead>
               <tr class="border-b border-white/15">
-                <th class="text-left px-3 py-3 text-white/40 text-[10px] font-medium uppercase tracking-wider">Candidate</th>
-                <th class="text-left px-3 py-3 text-white/40 text-[10px] font-medium uppercase tracking-wider hidden md:table-cell">Job</th>
-                <th class="text-left px-3 py-3 text-white/40 text-[10px] font-medium uppercase tracking-wider hidden lg:table-cell">AI Score</th>
-                <th class="text-right px-3 py-3 text-white/40 text-[10px] font-medium uppercase tracking-wider">Status</th>
+                <th class="text-left px-3 py-3 text-white/70 text-[11px] font-medium uppercase tracking-wider">Candidate</th>
+                <th class="text-left px-3 py-3 text-white/70 text-[11px] font-medium uppercase tracking-wider hidden md:table-cell">Job</th>
+                <th class="text-left px-3 py-3 text-white/70 text-[11px] font-medium uppercase tracking-wider hidden lg:table-cell">AI Score</th>
+                <th class="text-right px-3 py-3 text-white/70 text-[11px] font-medium uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -168,7 +168,7 @@
                       <p class="text-white text-sm font-medium leading-tight">
                         {{ app.candidate.user.get_full_name|default:app.candidate.user.username }}
                       </p>
-                      <p class="text-white/40 text-xs">{{ app.applied_at|timesince }} ago</p>
+                      <p class="text-white/70 text-xs">{{ app.applied_at|timesince }} ago</p>
                     </div>
                   </div>
                 </td>
@@ -213,7 +213,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
-          <p class="text-white/40 text-sm font-medium">No applicants yet</p>
+          <p class="text-white/70 text-sm font-medium">No applicants yet</p>
           <p class="text-white/30 text-xs mt-1 mb-4">Post a job to start receiving applications.</p>
           <a href="{% url 'create_job' %}" class="btn-teal px-5 py-2.5 text-sm rounded-2xl inline-block">Post a Job</a>
         </div>
@@ -227,8 +227,8 @@
       {# Active job listings #}
       <div class="glass rounded-3xl p-5">
         <div class="flex items-center justify-between mb-4">
-          <p class="text-[10px] text-white/45 uppercase tracking-widest">Active Jobs</p>
-          <a href="{% url 'company_job_list' %}" class="text-white/45 hover:text-white transition-colors text-xs">View all →</a>
+          <p class="text-[11px] text-white/70 uppercase tracking-widest">Active Jobs</p>
+          <a href="{% url 'company_job_list' %}" class="text-white/70 hover:text-white transition-colors text-xs">View all →</a>
         </div>
 
         {% if active_jobs %}
@@ -237,9 +237,9 @@
           <a href="{% url 'view_applicants' job.id %}" class="job-row flex items-center justify-between">
             <div class="flex-1 min-w-0">
               <p class="text-white text-xs font-medium truncate">{{ job.title }}</p>
-              <p class="text-white/45 text-xs mt-0.5">{{ job.app_count }} applicant{{ job.app_count|pluralize }}</p>
+              <p class="text-white/70 text-xs mt-0.5">{{ job.app_count }} applicant{{ job.app_count|pluralize }}</p>
             </div>
-            <svg class="w-3.5 h-3.5 text-white/40 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-3.5 h-3.5 text-white/70 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
           </a>
@@ -254,7 +254,7 @@
 
       {# Quick actions #}
       <div class="glass rounded-3xl p-5">
-        <p class="text-[10px] text-white/45 uppercase tracking-widest mb-3">Quick Actions</p>
+        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-3">Quick Actions</p>
         <div class="flex flex-col gap-1">
 
           <a href="{% url 'create_job' %}"
@@ -296,17 +296,17 @@
 
       {# Company info #}
       <div class="glass rounded-3xl p-5">
-        <p class="text-[10px] text-white/45 uppercase tracking-widest mb-3">Company Info</p>
+        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-3">Company Info</p>
         <div class="space-y-2.5 text-xs">
           {% if company.location %}
           <div class="flex items-center justify-between gap-2">
-            <span class="text-white/45">Location</span>
+            <span class="text-white/70">Location</span>
             <span class="text-white/75">{{ company.location }}</span>
           </div>
           {% endif %}
           {% if company.website %}
           <div class="flex items-center justify-between gap-2">
-            <span class="text-white/45">Website</span>
+            <span class="text-white/70">Website</span>
             <a href="{{ company.website }}" target="_blank"
                class="text-teal-300 hover:text-white transition-colors truncate max-w-[140px]">
               {{ company.website|truncatechars:22 }}
@@ -314,11 +314,11 @@
           </div>
           {% endif %}
           <div class="flex items-center justify-between gap-2">
-            <span class="text-white/45">Draft Jobs</span>
+            <span class="text-white/70">Draft Jobs</span>
             <span class="text-white/75">{{ draft_jobs }}</span>
           </div>
           <div class="flex items-center justify-between gap-2">
-            <span class="text-white/45">Closed Jobs</span>
+            <span class="text-white/70">Closed Jobs</span>
             <span class="text-white/75">{{ closed_jobs }}</span>
           </div>
         </div>

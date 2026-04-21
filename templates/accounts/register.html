@@ -34,8 +34,8 @@
   select.form-input { color-scheme: dark; cursor: pointer; }
   select.form-input option { background: #3730a3; }
 
-  .form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.45); font-weight: 500; display: block; margin-bottom: 6px; }
-  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.35); font-weight: 500; padding: 4px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 16px; }
+  .form-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.45); font-weight: 500; display: block; margin-bottom: 6px; }
+  .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.35); font-weight: 500; padding: 4px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 16px; }
 
   /* ── Avatar upload zone (candidate) ── */
   .avatar-zone {
@@ -84,7 +84,7 @@
     <a href="{% url 'index' %}" class="flex items-center gap-2 backdrop-blur-sm bg-white/15 border border-white/25 rounded-full px-4 py-2">
       <span class="text-xl md:text-2xl text-white tracking-tight font-bold">ResumeAI</span>
     </a>
-    <p class="text-sm text-white/45 hidden sm:block">
+    <p class="text-sm text-white/70 hidden sm:block">
       Already have an account?
       <a href="{% url 'login' %}" class="text-white font-medium underline underline-offset-2 hover:text-white/80 transition-colors ml-1">Sign in</a>
     </p>
@@ -96,7 +96,7 @@
   <div class="w-full max-w-2xl">
 
     <div class="text-center mb-7">
-      <p class="text-[10px] uppercase tracking-widest text-white/40 mb-2">Create your account</p>
+      <p class="text-[11px] uppercase tracking-widest text-white/70 mb-2">Create your account</p>
       <h1 class="text-2xl md:text-3xl text-white font-bold">Join ResumeAI</h1>
     </div>
 
@@ -150,7 +150,7 @@
                 <svg class="w-6 h-6 text-white/35" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                 </svg>
-                <span class="text-[10px] text-white/30 text-center leading-tight">Upload<br/>photo</span>
+                <span class="text-[11px] text-white/30 text-center leading-tight">Upload<br/>photo</span>
               </div>
             </div>
           </div>
@@ -159,10 +159,10 @@
               Profile Picture
               <span class="text-red-400 text-xs font-normal ml-1">*</span>
             </p>
-            <p class="text-xs text-white/40 leading-relaxed">Upload a clear photo. JPG, PNG, or WebP — max 2 MB.</p>
+            <p class="text-xs text-white/70 leading-relaxed">Upload a clear photo. JPG, PNG, or WebP — max 2 MB.</p>
             <button type="button" id="c_avatar_remove"
                     onclick="removeImage('c_avatar_input','c_avatar_img','c_avatar_placeholder','c_avatar_remove')"
-                    class="hidden mt-2 text-[11px] text-white/40 hover:text-white/70 transition-colors underline underline-offset-2">
+                    class="hidden mt-2 text-[11px] text-white/70 hover:text-white/70 transition-colors underline underline-offset-2">
               Remove
             </button>
           </div>
@@ -225,14 +225,14 @@
                      placeholder="Min. 8 characters" required
                      oninput="checkStrength('c_password','c_strength','c_strength_label')"/>
               <button type="button" onclick="togglePwd('c_password')"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white/80 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                 </svg>
               </button>
             </div>
             <div class="strength-bar"><div id="c_strength" class="strength-fill"></div></div>
-            <p id="c_strength_label" class="text-[10px] text-white/35 mt-1 h-4"></p>
+            <p id="c_strength_label" class="text-[11px] text-white/35 mt-1 h-4"></p>
             {% if candidate_form.password1.errors %}
               <p class="text-xs text-red-300 mt-1">{{ candidate_form.password1.errors.0 }}</p>
             {% endif %}
@@ -244,7 +244,7 @@
                      class="form-input {% if candidate_form.password2.errors %}field-error{% endif %} pr-10"
                      placeholder="Repeat password" required/>
               <button type="button" onclick="togglePwd('c_password2')"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white/80 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                 </svg>
@@ -259,7 +259,7 @@
         {% comment %} ── Profile Details ── {% endcomment %}
         <p class="section-title">
           Profile Details
-          <span class="normal-case tracking-normal text-white/25 text-[10px] font-normal ml-2">— optional, can be added later</span>
+          <span class="normal-case tracking-normal text-white/25 text-[11px] font-normal ml-2">— optional, can be added later</span>
         </p>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -282,7 +282,7 @@
           <input type="text" name="skills"
                  value="{{ candidate_form.skills.value|default:'' }}"
                  class="form-input" placeholder="Python, Django, React..."/>
-          <p class="text-[10px] text-white/30 mt-1">Comma-separated</p>
+          <p class="text-[11px] text-white/30 mt-1">Comma-separated</p>
         </div>
 
         <div class="mb-6">
@@ -339,7 +339,7 @@
                 <svg class="w-6 h-6 text-white/35" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                 </svg>
-                <span class="text-[10px] text-white/30 text-center leading-tight">Company<br/>logo</span>
+                <span class="text-[11px] text-white/30 text-center leading-tight">Company<br/>logo</span>
               </div>
             </div>
           </div>
@@ -348,10 +348,10 @@
               Company Logo
               <span class="text-red-400 text-xs font-normal ml-1">*</span>
             </p>
-            <p class="text-xs text-white/40 leading-relaxed">Your company's logo. JPG, PNG, or WebP — max 2 MB.</p>
+            <p class="text-xs text-white/70 leading-relaxed">Your company's logo. JPG, PNG, or WebP — max 2 MB.</p>
             <button type="button" id="h_logo_remove"
                     onclick="removeImage('h_logo_input','h_logo_img','h_logo_placeholder','h_logo_remove')"
-                    class="hidden mt-2 text-[11px] text-white/40 hover:text-white/70 transition-colors underline underline-offset-2">
+                    class="hidden mt-2 text-[11px] text-white/70 hover:text-white/70 transition-colors underline underline-offset-2">
               Remove
             </button>
           </div>
@@ -391,14 +391,14 @@
                      placeholder="Min. 8 characters" required
                      oninput="checkStrength('h_password','h_strength','h_strength_label')"/>
               <button type="button" onclick="togglePwd('h_password')"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white/80 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                 </svg>
               </button>
             </div>
             <div class="strength-bar"><div id="h_strength" class="strength-fill"></div></div>
-            <p id="h_strength_label" class="text-[10px] text-white/35 mt-1 h-4"></p>
+            <p id="h_strength_label" class="text-[11px] text-white/35 mt-1 h-4"></p>
             {% if company_form.password1.errors %}
               <p class="text-xs text-red-300 mt-1">{{ company_form.password1.errors.0 }}</p>
             {% endif %}
@@ -410,7 +410,7 @@
                      class="form-input {% if company_form.password2.errors %}field-error{% endif %} pr-10"
                      placeholder="Repeat password" required/>
               <button type="button" onclick="togglePwd('h_password2')"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white/80 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                 </svg>
@@ -490,7 +490,7 @@
         </button>
       </form>
 
-      <p class="text-center text-xs text-white/40 mt-5 sm:hidden">
+      <p class="text-center text-xs text-white/70 mt-5 sm:hidden">
         Already have an account?
         <a href="{% url 'login' %}" class="text-white font-medium underline underline-offset-2 hover:text-white/80 transition-colors ml-1">Sign in</a>
       </p>

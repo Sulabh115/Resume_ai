@@ -94,7 +94,7 @@
 
     {# Left: headline #}
     <div class="flex-1 text-center lg:text-left">
-      <p class="text-[10px] uppercase tracking-widest text-white/50 mb-4">AI-Powered Resume Screening</p>
+      <p class="text-[11px] uppercase tracking-widest text-white/50 mb-4">AI-Powered Resume Screening</p>
       <h1 class="text-4xl md:text-5xl text-white font-bold leading-tight mb-6">
         Hire smarter.<br/>
         <em class="opacity-75 not-italic" style="font-family:'DM Serif Display',serif;">Rank faster.</em>
@@ -108,15 +108,15 @@
       <div class="flex gap-4 mb-8 justify-center lg:justify-start">
         <div class="stat-card flex-1">
           <p class="text-2xl font-bold text-white">94%</p>
-          <p class="text-xs text-white/45 mt-1">Screening accuracy</p>
+          <p class="text-xs text-white/70 mt-1">Screening accuracy</p>
         </div>
         <div class="stat-card flex-1">
           <p class="text-2xl font-bold text-white">10×</p>
-          <p class="text-xs text-white/45 mt-1">Faster shortlisting</p>
+          <p class="text-xs text-white/70 mt-1">Faster shortlisting</p>
         </div>
         <div class="stat-card flex-1">
           <p class="text-2xl font-bold text-emerald-300">100%</p>
-          <p class="text-xs text-white/45 mt-1">Bias-free ranking</p>
+          <p class="text-xs text-white/70 mt-1">Bias-free ranking</p>
         </div>
       </div>
 
@@ -130,7 +130,7 @@
     <div id="login" class="w-full max-w-sm lg:w-96 shrink-0">
       <div class="glass-strong rounded-3xl p-7">
 
-        <p class="text-[10px] uppercase tracking-widest text-white/50 mb-4 text-center">Sign in to ResumeAI</p>
+        <p class="text-[11px] uppercase tracking-widest text-white/50 mb-4 text-center">Sign in to ResumeAI</p>
 
         {# Role toggle — synced to hidden input via setRole() #}
         <div class="role-toggle mb-2">
@@ -147,7 +147,7 @@
             HR / Recruiter
           </div>
         </div>
-        <p id="role-hint" class="text-xs text-white/40 text-center mb-5">
+        <p id="role-hint" class="text-xs text-white/70 text-center mb-5">
           Sign in to browse jobs and track your applications
         </p>
 
@@ -181,7 +181,7 @@
           <input type="hidden" name="role" id="home-role-input" value="candidate"/>
 
           <div>
-            <label class="text-[10px] uppercase tracking-widest text-white/45 block mb-1.5">Email Address</label>
+            <label class="text-[11px] uppercase tracking-widest text-white/70 block mb-1.5">Email Address</label>
             <input type="email" name="email"
                    value="{{ request.POST.email|default:'' }}"
                    class="form-input" placeholder="you@email.com"
@@ -189,13 +189,13 @@
           </div>
 
           <div>
-            <label class="text-[10px] uppercase tracking-widest text-white/45 block mb-1.5">Password</label>
+            <label class="text-[11px] uppercase tracking-widest text-white/70 block mb-1.5">Password</label>
             <div class="relative">
               <input type="password" name="password" id="home-pwd"
                      class="form-input pr-10" placeholder="••••••••"
                      autocomplete="current-password" required/>
               <button type="button" onclick="togglePwd()"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white/80 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                 </svg>
@@ -222,7 +222,7 @@
           <div class="flex-1 h-px bg-white/15"></div>
         </div>
 
-        <p class="text-center text-xs text-white/45">
+        <p class="text-center text-xs text-white/70">
           Don't have an account?
           <a href="{% url 'register' %}" class="text-white font-medium underline underline-offset-2 hover:text-white/80 transition-colors ml-1">
             Register
@@ -247,7 +247,7 @@
   <div class="max-w-5xl mx-auto">
 
     <div class="text-center mb-14">
-      <p class="text-[10px] uppercase tracking-widest text-white/50 mb-3">Process</p>
+      <p class="text-[11px] uppercase tracking-widest text-white/50 mb-3">Process</p>
       <h2 class="text-3xl text-white font-bold">How ResumeAI works</h2>
       <p class="text-white/50 mt-3 max-w-lg mx-auto text-sm">
         Three steps from job post to shortlist — fully automated, no manual screening.
@@ -256,7 +256,7 @@
 
     {# Candidate flow #}
     <div class="mb-12">
-      <p class="text-xs text-white/40 uppercase tracking-widest mb-6 text-center">For Candidates</p>
+      <p class="text-xs text-white/70 uppercase tracking-widest mb-6 text-center">For Candidates</p>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
 
         <div class="feature-card p-6">
@@ -288,7 +288,7 @@
 
     {# HR flow #}
     <div>
-      <p class="text-xs text-white/40 uppercase tracking-widest mb-6 text-center">For HR / Recruiters</p>
+      <p class="text-xs text-white/70 uppercase tracking-widest mb-6 text-center">For HR / Recruiters</p>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
 
         <div class="feature-card p-6">
@@ -326,7 +326,7 @@
   <div class="max-w-5xl mx-auto">
 
     <div class="text-center mb-14">
-      <p class="text-[10px] uppercase tracking-widest text-white/50 mb-3">Features</p>
+      <p class="text-[11px] uppercase tracking-widest text-white/50 mb-3">Features</p>
       <h2 class="text-3xl text-white font-bold">Built for precision hiring</h2>
       <p class="text-white/50 mt-3 max-w-lg mx-auto text-sm">
         Every feature is designed around one goal — the right candidate in front of the right employer, faster.

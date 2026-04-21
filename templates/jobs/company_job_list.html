@@ -68,7 +68,7 @@
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7">
     <div>
       <h1 class="font-serif-display text-2xl text-white">Manage Jobs</h1>
-      <p class="text-white/45 text-sm mt-0.5">{{ company.company_name }} · All job postings</p>
+      <p class="text-white/70 text-sm mt-0.5">{{ company.company_name }} · All job postings</p>
     </div>
     <a href="{% url 'create_job' %}"
        class="bg-white/88 text-teal-700 font-semibold text-sm px-5 py-2.5 rounded-full hover:bg-white transition-all shadow-sm flex items-center gap-2 self-start sm:self-auto">
@@ -109,7 +109,7 @@
               </p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <span class="badge-{{ job.status }} text-[10px] px-2.5 py-0.5 rounded-full font-medium">
+              <span class="badge-{{ job.status }} text-[11px] px-2.5 py-0.5 rounded-full font-medium">
                 {% if job.status == 'open' %}Open{% elif job.status == 'draft' %}Draft{% else %}Closed{% endif %}
               </span>
               <span class="text-xs text-white/55 bg-white/10 border border-white/18 px-2.5 py-0.5 rounded-full">
@@ -131,7 +131,7 @@
             </span>
             {% endif %}
             {% for skill in job.skills.all|slice:":4" %}
-            <span class="text-xs bg-white/8 text-white/40 border border-white/12 px-2.5 py-0.5 rounded-full">
+            <span class="text-xs bg-white/8 text-white/70 border border-white/12 px-2.5 py-0.5 rounded-full">
               {{ skill.name }}
             </span>
             {% endfor %}
@@ -270,7 +270,7 @@
     </div>
     <div>
       <p class="text-white/70 font-semibold">No jobs posted yet</p>
-      <p class="text-white/40 text-sm mt-1">Create your first job posting to start receiving applications.</p>
+      <p class="text-white/70 text-sm mt-1">Create your first job posting to start receiving applications.</p>
     </div>
     <a href="{% url 'create_job' %}"
        class="bg-white/88 text-teal-700 font-semibold text-sm px-6 py-3 rounded-full hover:bg-white transition-all">

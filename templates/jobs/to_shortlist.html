@@ -69,7 +69,7 @@
   }
   .ph { color: #5eead4; font-style: italic; }
 
-  .section_label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.40); font-weight: 500; }
+  .section_label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.40); font-weight: 500; }
 
   @keyframes fadeSlide { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
   .fade-slide { animation: fadeSlide 0.25s ease; }
@@ -85,9 +85,9 @@
     <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/12 flex-shrink-0">
       <div>
         <p class="text-white font-semibold text-base">Send Shortlist Email</p>
-        <p id="modal-subtitle" class="text-xs text-white/45 mt-0.5"></p>
+        <p id="modal-subtitle" class="text-xs text-white/70 mt-0.5"></p>
       </div>
-      <button onclick="closeEmailModal()" class="text-white/40 hover:text-white transition-colors">
+      <button onclick="closeEmailModal()" class="text-white/70 hover:text-white transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>
@@ -216,11 +216,11 @@
   <div class="flex items-center justify-between mb-6">
     <div>
       <h1 class="font-serif-display text-2xl text-white">To Shortlist</h1>
-      <p class="text-white/45 text-sm mt-0.5">
+      <p class="text-white/70 text-sm mt-0.5">
         Results published — send interview emails to shortlisted candidates
       </p>
     </div>
-    <span class="text-xs text-white/45 bg-white/10 border border-white/18 px-3 py-1.5 rounded-full">
+    <span class="text-xs text-white/70 bg-white/10 border border-white/18 px-3 py-1.5 rounded-full">
       {{ total }} pending
     </span>
   </div>
@@ -278,7 +278,7 @@
                 {{ job.get_job_type_display }}{% if job.location %} · {{ job.location }}{% endif %}
               </p>
             </div>
-            <span class="text-[10px] text-amber-300 bg-amber-500/15 border border-amber-400/28 px-2.5 py-0.5 rounded-full font-medium flex-shrink-0">
+            <span class="text-[11px] text-amber-300 bg-amber-500/15 border border-amber-400/28 px-2.5 py-0.5 rounded-full font-medium flex-shrink-0">
               Email Pending
             </span>
           </div>
@@ -294,7 +294,7 @@
 
           {% if item.shortlisted %}
           <div class="mt-4">
-            <p class="text-[10px] text-white/35 uppercase tracking-wider mb-2">Shortlisted for interview</p>
+            <p class="text-[11px] text-white/35 uppercase tracking-wider mb-2">Shortlisted for interview</p>
             <div class="flex flex-col gap-2">
               {% for app in item.shortlisted %}
               <div class="candidate-chip">
@@ -304,7 +304,7 @@
                 <span class="text-xs text-white font-medium flex-1 truncate">
                   {{ app.candidate.user.get_full_name|default:app.candidate.user.username }}
                 </span>
-                <span class="text-[10px] text-emerald-400 font-semibold flex-shrink-0">
+                <span class="text-[11px] text-emerald-400 font-semibold flex-shrink-0">
                   Score {{ app.match_score|floatformat:0 }}%
                 </span>
               </div>
@@ -357,7 +357,7 @@
     </div>
     <div>
       <p class="text-white/65 font-semibold">All shortlist emails sent!</p>
-      <p class="text-white/40 text-sm mt-1">No pending notifications. Jobs with published results will appear here once emails are due.</p>
+      <p class="text-white/70 text-sm mt-1">No pending notifications. Jobs with published results will appear here once emails are due.</p>
     </div>
     <a href="{% url 'old_jobs' %}"
        class="bg-white/88 text-teal-700 font-semibold text-sm px-6 py-3 rounded-full hover:bg-white transition-all">

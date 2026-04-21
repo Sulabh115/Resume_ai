@@ -41,7 +41,7 @@
   .preview-tag { font-size: 11px; padding: 2px 10px; border-radius: 999px; font-weight: 500; }
 
   /* Char counter */
-  .char-count { font-size: 10px; color: rgba(255,255,255,0.28); text-align: right; margin-top: 4px; }
+  .char-count { font-size: 11px; color: rgba(255,255,255,0.28); text-align: right; margin-top: 4px; }
   .char-count.warn { color: #fcd34d; }
   .char-count.over { color: #f87171; }
 
@@ -67,7 +67,7 @@
     <h1 class="font-serif-display text-2xl text-white">
       {% if editing %}Update Job Posting{% else %}Post a New Job{% endif %}
     </h1>
-    <p class="text-white/45 text-sm mt-1">
+    <p class="text-white/70 text-sm mt-1">
       {% if editing %}Changes go live immediately.{% else %}Your listing will be visible to all candidates once published.{% endif %}
     </p>
   </div>
@@ -193,7 +193,7 @@
               <div>
                 <label class="form-label block mb-1.5">
                   Application Deadline
-                  {% if is_repost %}<span class="text-amber-400 text-[10px] normal-case tracking-normal font-normal ml-1">— required for repost</span>{% endif %}
+                  {% if is_repost %}<span class="text-amber-400 text-[11px] normal-case tracking-normal font-normal ml-1">— required for repost</span>{% endif %}
                 </label>
                 <input type="date" name="deadline"
                        value="{{ form.deadline.value|default:'' }}"
@@ -207,7 +207,7 @@
           <div class="glass-card rounded-3xl p-6">
             <p class="section-title">
               Compensation
-              <span class="normal-case tracking-normal text-white/25 text-[10px] font-normal ml-2">— optional</span>
+              <span class="normal-case tracking-normal text-white/25 text-[11px] font-normal ml-2">— optional</span>
             </p>
             <div class="grid grid-cols-3 gap-4">
               <div>
@@ -267,7 +267,7 @@
           {# ── SKILLS ── #}
           <div class="glass-card rounded-3xl p-6">
             <p class="section-title">Skills & Technologies</p>
-            <p class="text-white/40 text-xs mb-3">Type a skill and press Enter or comma — these are used by the AI screening engine.</p>
+            <p class="text-white/70 text-xs mb-3">Type a skill and press Enter or comma — these are used by the AI screening engine.</p>
 
             <input type="hidden" name="skills_input" id="skills-hidden"
                    value="{{ form.skills_input.value|default:'' }}"/>
@@ -315,23 +315,23 @@
 
       {# Live preview card #}
       <div class="glass-card rounded-3xl p-5">
-        <p class="text-[10px] text-white/40 uppercase tracking-widest mb-4">Live Preview</p>
+        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-4">Live Preview</p>
         <p id="prev-title" class="text-sm font-semibold text-white mb-1 truncate">Job Title</p>
         <p class="text-xs text-white/50 mb-3">{{ company.company_name }}</p>
         <div id="prev-tags" class="flex flex-wrap gap-1.5 mb-3">
-          <span class="preview-tag bg-white/10 text-white/45 border border-white/15">Type</span>
+          <span class="preview-tag bg-white/10 text-white/70 border border-white/15">Type</span>
         </div>
         <div class="border-t border-white/12 pt-3 space-y-1.5 text-xs">
           <div class="flex justify-between">
-            <span class="text-white/40">Deadline</span>
+            <span class="text-white/70">Deadline</span>
             <span id="prev-deadline" class="text-white/65">—</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-white/40">Location</span>
+            <span class="text-white/70">Location</span>
             <span id="prev-location" class="text-white/65 text-right max-w-[100px] truncate">—</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-white/40">Positions</span>
+            <span class="text-white/70">Positions</span>
             <span id="prev-positions" class="text-white/65">—</span>
           </div>
         </div>
@@ -339,7 +339,7 @@
 
       {# AI Scoring weights guide #}
       <div class="glass-card rounded-3xl p-5">
-        <p class="text-[10px] text-white/40 uppercase tracking-widest mb-3">AI Scoring Weights</p>
+        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-3">AI Scoring Weights</p>
         <div class="space-y-2.5">
           <div>
             <div class="flex justify-between text-xs mb-1"><span class="text-white/55">Skills</span><span class="text-white/70 font-medium">35%</span></div>
@@ -358,12 +358,12 @@
             <div class="h-1.5 bg-white/10 rounded-full overflow-hidden"><div class="h-full bg-emerald-300 rounded-full" style="width:20%"></div></div>
           </div>
         </div>
-        <p class="text-white/28 text-[10px] mt-3 leading-relaxed">A detailed description improves cosine similarity accuracy. Be specific about skills and qualifications.</p>
+        <p class="text-white/28 text-[11px] mt-3 leading-relaxed">A detailed description improves cosine similarity accuracy. Be specific about skills and qualifications.</p>
       </div>
 
       {# Tips #}
       <div class="glass-card rounded-3xl p-5">
-        <p class="text-[10px] text-white/40 uppercase tracking-widest mb-3">Tips for Better Ranking</p>
+        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-3">Tips for Better Ranking</p>
         <ul class="space-y-2">
           <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> List all required skills individually — each is matched against resumes</li>
           <li class="flex gap-2 text-xs text-white/50 leading-relaxed"><span class="text-teal-400 shrink-0">✓</span> Be explicit about minimum years of experience</li>
@@ -460,7 +460,7 @@ function updatePreview() {
     tagsEl.innerHTML += `<span class="preview-tag bg-white/10 text-white/55 border border-white/15">📍 ${location}</span>`;
   }
   if (!jobType?.value && !location) {
-    tagsEl.innerHTML = `<span class="preview-tag bg-white/10 text-white/40 border border-white/12">Type / Location</span>`;
+    tagsEl.innerHTML = `<span class="preview-tag bg-white/10 text-white/70 border border-white/12">Type / Location</span>`;
   }
 
   document.getElementById('prev-deadline').textContent = deadline

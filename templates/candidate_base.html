@@ -69,11 +69,11 @@
 
     /* ══════════════════════════════FORM ELEMENT══════════════════════════════ */
     .form-label, .section-label, .section_label {
-      font-size: 10px; text-transform: uppercase;
+      font-size: 12px; text-transform: uppercase;
       letter-spacing: 0.12em; color: rgba(255,255,255,0.75); font-weight: 500;
     }
     .section-title, .form_section_title {
-      font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;
       color: rgba(255,255,255,0.60); font-weight: 500;
       padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); margin-bottom: 18px;
     }
@@ -249,6 +249,11 @@
         <a href="{% url 'application_list' %}"
            class="nav-link {% block nav_applications %}{% endblock %} px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all flex items-center gap-2">
           Applications
+          {% if active_app_count > 0 %}
+          <span class="bg-white text-indigo-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none min-w-[18px] text-center shadow-sm">
+            {{ active_app_count }}
+          </span>
+          {% endif %}
         </a>
 
         {# Old Applications — applications app not built yet. Add url 'old_application_list' when ready #}
@@ -282,9 +287,15 @@
            title="Edit Profile"
            class="flex-shrink-0">
           {% block nav_avatar %}
-          <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-            {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
-          </div>
+          {% if candidate and candidate.profile_picture %}
+            <img src="{{ candidate.profile_picture.url }}" 
+                 alt="Profile" 
+                 class="h-10 w-10 rounded-full border border-white/30 object-cover hover:opacity-90 transition-all"/>
+          {% else %}
+            <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
+              {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
+            </div>
+          {% endif %}
           {% endblock %}
         </a>
 

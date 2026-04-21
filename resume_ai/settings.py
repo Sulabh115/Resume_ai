@@ -62,6 +62,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'jobs.context_processors.to_shortlist_count',
+                'applications.context_processors.active_applications_count',
             ],
         },
     },

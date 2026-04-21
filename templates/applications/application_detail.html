@@ -3,11 +3,6 @@
 
 {% block nav_applicants %}active{% endblock %}
 
-{% comment %} {% block nav_avatar %}
-<div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-  {{ request.user.companyprofile.company_name|first|upper }}
-</div>
-{% endblock %} {% endcomment %}
 
 {% block extra_head %}
 <style>
@@ -62,7 +57,7 @@
               </div>
               <span class="badge badge-{{ application.status }} shrink-0">{{ application.get_status_display }}</span>
             </div>
-            <div class="flex flex-wrap gap-3 text-xs text-white/45">
+            <div class="flex flex-wrap gap-3 text-xs text-white/70">
               {% if application.candidate.phone %}
               <span class="flex items-center gap-1.5">
                 <svg class="w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,7 +86,7 @@
       {# Skills — FIX: was invalid split syntax, now uses context var #}
       {% if skills_list %}
       <div class="glass-card rounded-3xl p-6">
-        <p class="text-white/40 text-[10px] uppercase tracking-widest mb-3">Candidate Skills</p>
+        <p class="text-white/70 text-[11px] uppercase tracking-widest mb-3">Candidate Skills</p>
         <div class="flex flex-wrap gap-2">
           {% for skill in skills_list %}
           <span class="text-xs px-3 py-1.5 rounded-xl bg-white/12 border border-white/22 text-white/75">
@@ -111,7 +106,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
-          <p class="text-teal-300 text-[10px] font-medium uppercase tracking-widest">AI Screening Notes</p>
+          <p class="text-teal-300 text-[11px] font-medium uppercase tracking-widest">AI Screening Notes</p>
         </div>
         <p class="text-white/70 text-sm leading-relaxed">{{ application.score_notes }}</p>
       </div>
@@ -120,7 +115,7 @@
       {# Education #}
       {% if application.candidate.education %}
       <div class="glass-card rounded-3xl p-6">
-        <p class="text-white/40 text-[10px] uppercase tracking-widest mb-3">Education</p>
+        <p class="text-white/70 text-[11px] uppercase tracking-widest mb-3">Education</p>
         <p class="text-white/70 text-sm leading-relaxed whitespace-pre-line">{{ application.candidate.education }}</p>
       </div>
       {% endif %}
@@ -132,7 +127,7 @@
 
       {# AI match score #}
       <div class="glass-card rounded-3xl p-6">
-        <p class="text-white/40 text-[10px] uppercase tracking-widest mb-4">AI Match Score</p>
+        <p class="text-white/70 text-[11px] uppercase tracking-widest mb-4">AI Match Score</p>
         <div class="flex items-center gap-4">
           <div class="score-ring shrink-0">
             {% with score=application.match_score %}
@@ -152,15 +147,15 @@
           <div>
             {% if application.match_score >= 70 %}
             <p class="text-emerald-400 font-semibold text-sm">Strong Match</p>
-            <p class="text-white/40 text-xs mt-0.5">High skill alignment</p>
+            <p class="text-white/70 text-xs mt-0.5">High skill alignment</p>
             {% elif application.match_score >= 45 %}
             <p class="text-blue-400 font-semibold text-sm">Moderate Match</p>
-            <p class="text-white/40 text-xs mt-0.5">Partial alignment</p>
+            <p class="text-white/70 text-xs mt-0.5">Partial alignment</p>
             {% elif application.match_score > 0 %}
             <p class="text-red-400 font-semibold text-sm">Weak Match</p>
-            <p class="text-white/40 text-xs mt-0.5">Low alignment</p>
+            <p class="text-white/70 text-xs mt-0.5">Low alignment</p>
             {% else %}
-            <p class="text-white/40 font-semibold text-sm">Not Screened</p>
+            <p class="text-white/70 font-semibold text-sm">Not Screened</p>
             <p class="text-white/30 text-xs mt-0.5">Run AI screening</p>
             {% endif %}
           </div>
@@ -177,7 +172,7 @@
       {# Resume download #}
       {% if application.resume %}
       <div class="glass-card rounded-3xl p-5">
-        <p class="text-white/40 text-[10px] uppercase tracking-widest mb-3">Resume</p>
+        <p class="text-white/70 text-[11px] uppercase tracking-widest mb-3">Resume</p>
         <div class="flex items-center gap-3 mb-3">
           <div class="w-9 h-9 rounded-xl bg-white/12 border border-white/22 flex items-center justify-center shrink-0">
             <svg class="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +182,7 @@
           </div>
           <div class="min-w-0">
             <p class="text-white text-sm font-medium truncate">{{ application.resume.label|default:application.resume.filename }}</p>
-            <p class="text-white/40 text-xs">{{ application.resume.uploaded_at|date:"M d, Y" }}</p>
+            <p class="text-white/70 text-xs">{{ application.resume.uploaded_at|date:"M d, Y" }}</p>
           </div>
         </div>
         <a href="{{ application.resume.file.url }}" target="_blank"
@@ -199,7 +194,7 @@
 
       {# Update status #}
       <div class="glass-card rounded-3xl p-6">
-        <p class="text-white/40 text-[10px] uppercase tracking-widest mb-4">Update Status</p>
+        <p class="text-white/70 text-[11px] uppercase tracking-widest mb-4">Update Status</p>
         <form method="post">
           {% csrf_token %}
           <div class="mb-4">
@@ -213,7 +208,7 @@
           <div class="mb-4">
             <label class="form-label block mb-1.5">
               Internal Note
-              <span class="normal-case tracking-normal text-white/25 text-[10px] font-normal ml-1">private</span>
+              <span class="normal-case tracking-normal text-white/25 text-[11px] font-normal ml-1">private</span>
             </label>
             <textarea name="company_note" class="form-input" rows="3"
                       placeholder="Notes only your team can see…">{{ form.company_note.value|default:'' }}</textarea>

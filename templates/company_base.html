@@ -69,11 +69,11 @@
 
     /* ══════════════════════════════FORM ELEMENTS ══════════════════════════════ */
     .form-label, .section-label, .section_label {
-      font-size: 10px; text-transform: uppercase;
+      font-size: 12px; text-transform: uppercase;
       letter-spacing: 0.12em; color: rgba(255,255,255,0.75); font-weight: 500;
     }
     .section-title, .form_section_title {
-      font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;
       color: rgba(255,255,255,0.60); font-weight: 500;
       padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); margin-bottom: 18px;
     }
@@ -260,17 +260,16 @@
         {# Company logo or initials change the block name to nav_avatar #}
 
         {% block nav_avatar %}
-        <a href="{% url 'company_edit_profile' %}" title="Edit Profile" class="h-10 w-10 rounded-full overflow-hidden backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm flex items-center justify-center text-white text-sm font-bold">
-
+        <a href="{% url 'company_edit_profile' %}" title="Edit Profile" class="h-10 w-10 flex-shrink-0">
           {% if company and company.logo %}
             <img src="{{ company.logo.url }}"
-                alt="Company Logo"
-                class="w-full h-full object-cover">
+                 alt="Company Logo"
+                 class="h-10 w-10 rounded-full border border-white/30 object-cover hover:opacity-90 transition-all">
           {% else %}
-            {{ request.user.first_name|first|default:request.user.username|first|upper }}
-            {{ request.user.last_name|first|upper }}
+            <div class="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm bg-white/20 border border-white/30 text-white">
+              {{ company.company_name|first|default:request.user.username|first|upper }}
+            </div>
           {% endif %}
-
         </a>
         {% endblock %}
 

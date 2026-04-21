@@ -261,21 +261,38 @@ def apply_job(request, job_id):
 
             sr = None
             try:
+                # Bypass backend re-calculation if frontend provided pre-screened score
+                hs_score = request.POST.get("prescreen_score")
+                
                 sr = ScreeningResult.objects.create(
                     application=app,
                     status=ScreeningResult.Status.PROCESSING,
                 )
-                score_data = compute_match_score(resume_obj.file, job)
+                
+                if hs_score and hs_score.strip():
+                    sr.similarity_score    = float(hs_score)
+                    sr.skill_score         = float(request.POST.get("prescreen_skill") or 0)
+                    sr.experience_score    = float(request.POST.get("prescreen_exp") or 0)
+                    sr.qualification_score = float(request.POST.get("prescreen_qual") or 0)
+                    sr.cosine_score        = float(request.POST.get("prescreen_cos") or 0)
+                    # We don't have matched/missing arrays encoded yet, but the numeric values bypass HR overhead
+                    sr.extracted_skills    = ""
+                    sr.matched_skills      = ""
+                    sr.missing_skills      = ""
+                    sr.summary             = "Pre-screened score provided by candidate submission."
+                else:
+                    score_data = compute_match_score(resume_obj.file, job)
 
-                sr.similarity_score    = score_data["score"]
-                sr.skill_score         = score_data.get("skill_score", 0)
-                sr.experience_score    = score_data.get("experience_score", 0)
-                sr.qualification_score = score_data.get("qualification_score", 0)
-                sr.cosine_score        = score_data.get("cosine_score", 0)
-                sr.extracted_skills    = score_data.get("extracted_skills", "")
-                sr.matched_skills      = score_data.get("matched_skills", "")
-                sr.missing_skills      = score_data.get("missing_skills", "")
-                sr.summary             = score_data.get("summary", "")
+                    sr.similarity_score    = score_data["score"]
+                    sr.skill_score         = score_data.get("skill_score", 0)
+                    sr.experience_score    = score_data.get("experience_score", 0)
+                    sr.qualification_score = score_data.get("qualification_score", 0)
+                    sr.cosine_score        = score_data.get("cosine_score", 0)
+                    sr.extracted_skills    = score_data.get("extracted_skills", "")
+                    sr.matched_skills      = score_data.get("matched_skills", "")
+                    sr.missing_skills      = score_data.get("missing_skills", "")
+                    sr.summary             = score_data.get("summary", "")
+                    
                 sr.status              = ScreeningResult.Status.DONE
                 sr.error_message       = ""
                 sr.save()
@@ -305,6 +322,109 @@ def apply_job(request, job_id):
         "form":        form,
         "job":         job,
         "has_resumes": Resume.objects.filter(candidate=candidate).exists(),
+        "is_edit": False,
+    })
+
+
+@login_required
+def edit_application(request, application_id):
+    candidate = _get_candidate(request)
+    if not candidate:
+        messages.error(request, "Only candidate accounts can edit applications.")
+        return redirect("company_dashboard")
+
+    app = get_object_or_404(Application, id=application_id, candidate=candidate)
+    
+    allowed_statuses = [Application.Status.PENDING, Application.Status.REVIEWED, Application.Status.SHORTLISTED]
+    if app.status not in allowed_statuses and app.resume is not None:
+        messages.error(request, "Cannot edit this application at its current stage.")
+        return redirect("application_list")
+
+    job = app.job
+
+    if request.method == "POST":
+        form = ApplyJobForm(candidate, request.POST, request.FILES)
+        if form.is_valid():
+            existing = form.cleaned_data.get("existing_resume")
+            new_file = form.cleaned_data.get("new_resume")
+
+            if new_file:
+                resume_obj = Resume.objects.create(
+                    candidate=candidate,
+                    file=new_file,
+                    label=form.cleaned_data.get("resume_label") or "",
+                )
+            else:
+                resume_obj = existing
+
+            app.resume = resume_obj
+            app.save(update_fields=['resume'])
+
+            from screening.models import ScreeningResult
+            from screening.utils import compute_match_score
+
+            ScreeningResult.objects.filter(application=app).delete()
+
+            sr = None
+            try:
+                hs_score = request.POST.get("prescreen_score")
+                
+                sr = ScreeningResult.objects.create(
+                    application=app,
+                    status=ScreeningResult.Status.PROCESSING,
+                )
+                
+                if hs_score and hs_score.strip():
+                    sr.similarity_score    = float(hs_score)
+                    sr.skill_score         = float(request.POST.get("prescreen_skill") or 0)
+                    sr.experience_score    = float(request.POST.get("prescreen_exp") or 0)
+                    sr.qualification_score = float(request.POST.get("prescreen_qual") or 0)
+                    sr.cosine_score        = float(request.POST.get("prescreen_cos") or 0)
+                    sr.extracted_skills    = ""
+                    sr.matched_skills      = ""
+                    sr.missing_skills      = ""
+                    sr.summary             = "Pre-screened score updated via Edit."
+                else:
+                    score_data = compute_match_score(resume_obj.file, job)
+                    sr.similarity_score    = score_data["score"]
+                    sr.skill_score         = score_data.get("skill_score", 0)
+                    sr.experience_score    = score_data.get("experience_score", 0)
+                    sr.qualification_score = score_data.get("qualification_score", 0)
+                    sr.cosine_score        = score_data.get("cosine_score", 0)
+                    sr.extracted_skills    = score_data.get("extracted_skills", "")
+                    sr.matched_skills      = score_data.get("matched_skills", "")
+                    sr.missing_skills      = score_data.get("missing_skills", "")
+                    sr.summary             = score_data.get("summary", "")
+                    
+                sr.status              = ScreeningResult.Status.DONE
+                sr.error_message       = ""
+                sr.save()
+
+                app.match_score = sr.similarity_score
+                app.score_notes = sr.summary
+                app.save(update_fields=["match_score", "score_notes"])
+
+            except Exception as exc:
+                if sr is not None:
+                    try:
+                        sr.status        = ScreeningResult.Status.FAILED
+                        sr.error_message = str(exc)
+                        sr.save(update_fields=["status", "error_message"])
+                    except Exception:
+                        pass
+
+            messages.success(request, f'Application to "{job.title}" updated successfully!')
+            return redirect("candidate_dashboard")
+    else:
+        init_data = {"existing_resume": app.resume.id} if app.resume else {}
+        form = ApplyJobForm(candidate, initial=init_data)
+
+    return render(request, "applications/apply_job.html", {
+        "form":        form,
+        "job":         job,
+        "has_resumes": Resume.objects.filter(candidate=candidate).exists(),
+        "is_edit": True,
+        "application": app,
     })
 
 
@@ -715,7 +835,78 @@ def application_list(request):
         else:
             days_remaining[app.id] = None
 
+    import json as _json
+    job_ids = list(applications.values_list("job_id", flat=True).distinct())
+    job_data_map = {}
+    from jobs.models import Job as JobModel
+    jobs_map = JobModel.objects.in_bulk(job_ids)
+
+    for job_id in job_ids:
+        ranked_qs = (
+            Application.objects
+            .filter(job_id=job_id)
+            .exclude(status=Application.Status.WITHDRAWN)
+            .select_related("candidate__user")
+            .order_by("-match_score", "applied_at")
+        )
+
+        all_apps       = list(ranked_qs)
+        total          = len(all_apps)
+        shortlisted_count = sum(
+            1 for a in all_apps if a.status == Application.Status.SHORTLISTED or a.status == Application.Status.HIRED
+        )
+
+        rank = None
+        for idx, a in enumerate(all_apps, start=1):
+            if a.candidate_id == candidate.pk:
+                rank = idx
+                break
+
+        job_obj = jobs_map.get(job_id)
+        results_published = job_obj.results_published if job_obj else False
+
+        if results_published:
+            ranked_list = []
+            for idx, a in enumerate(all_apps, start=1):
+                is_self = (a.candidate_id == candidate.pk)
+                name = (
+                    a.candidate.user.get_full_name() or a.candidate.user.username
+                    if is_self
+                    else f"Candidate #{idx}"
+                )
+                ranked_list.append({
+                    "rank":        idx,
+                    "name":        name,
+                    "score":       round(a.match_score or 0),
+                    "status":      a.status,
+                    "shortlisted": a.status == Application.Status.SHORTLISTED or a.status == Application.Status.HIRED,
+                    "is_self":     is_self,
+                })
+        else:
+            ranked_list = []
+
+        job_data_map[job_id] = {
+            "rank":              rank,
+            "total":             total,
+            "shortlisted_count": shortlisted_count,
+            "results_published": results_published,
+            "ranked_list_json":  _json.dumps(ranked_list),
+        }
+
+    app_data = []
+    for app in applications:
+        jd = job_data_map.get(app.job_id, {})
+        app_data.append({
+            "app":              app,
+            "rank":             jd.get("rank"),
+            "total":            jd.get("total", 0),
+            "shortlisted_count": jd.get("shortlisted_count", 0),
+            "results_published": jd.get("results_published", False),
+            "ranked_list_json": jd.get("ranked_list_json", "[]"),
+        })
+
     return render(request, "applications/application_list.html", {
+        "app_data":       app_data,
         "applications":   applications,
         "today":          today,
         "days_remaining": days_remaining,

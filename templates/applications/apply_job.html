@@ -101,7 +101,7 @@
 
   <div class="mb-6">
     <h1 class="font-serif-display text-2xl text-white">Submit Application</h1>
-    <p class="text-white/45 text-sm mt-1">Choose a resume or upload a new one to submit your application.</p>
+    <p class="text-white/70 text-sm mt-1">Choose a resume or upload a new one to submit your application.</p>
   </div>
 
   {# Non-field errors #}
@@ -113,6 +113,11 @@
 
   <form method="post" enctype="multipart/form-data" novalidate id="apply-form">
     {% csrf_token %}
+    <input type="hidden" name="prescreen_score" id="hs-score" value=""/>
+    <input type="hidden" name="prescreen_skill" id="hs-skill" value=""/>
+    <input type="hidden" name="prescreen_exp" id="hs-exp" value=""/>
+    <input type="hidden" name="prescreen_qual" id="hs-qual" value=""/>
+    <input type="hidden" name="prescreen_cos" id="hs-cos" value=""/>
 
     <div class="flex flex-col gap-5">
 
@@ -139,7 +144,7 @@
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-white text-sm font-medium truncate">{{ resume.label|default:resume.filename }}</p>
-              <p class="text-white/40 text-xs">Uploaded {{ resume.uploaded_at|timesince }} ago{% if resume.is_default %} · Default{% endif %}</p>
+              <p class="text-white/70 text-xs">Uploaded {{ resume.uploaded_at|timesince }} ago{% if resume.is_default %} · Default{% endif %}</p>
             </div>
             <div id="check-{{ resume.pk }}"
                  class="w-5 h-5 rounded-full border border-white/30 flex items-center justify-center shrink-0
@@ -183,7 +188,7 @@
         {# Label for new resume #}
         <div id="new-resume-label-wrap" class="hidden">
           <label class="form-label block mb-1.5">Label for new resume
-            <span class="normal-case text-white/25 text-[10px] tracking-normal font-normal ml-1">optional</span>
+            <span class="normal-case text-white/25 text-[11px] tracking-normal font-normal ml-1">optional</span>
           </label>
           <input type="text" name="resume_label" class="form-input"
                  placeholder="e.g. Software Engineer Resume"/>
@@ -208,7 +213,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
-          <p class="text-teal-300 text-[10px] font-medium uppercase tracking-widest">Analyse Resume</p>
+          <p class="text-teal-300 text-[11px] font-medium uppercase tracking-widest">Analyse Resume</p>
         </div>
 
         {# ── Idle state ── #}
@@ -273,28 +278,28 @@
                 <div class="sub-bar-track">
                   <div class="sub-bar-fill bar-cyan" id="bar-skill"></div>
                 </div>
-                <span class="text-[10px] text-white/35 w-8 text-right" id="lbl-skill">0%</span>
+                <span class="text-[11px] text-white/35 w-8 text-right" id="lbl-skill">0%</span>
               </div>
               <div class="sub-bar-row" title="Experience match">
                 <span class="sub-bar-label">Exp</span>
                 <div class="sub-bar-track">
                   <div class="sub-bar-fill bar-amber" id="bar-exp"></div>
                 </div>
-                <span class="text-[10px] text-white/35 w-8 text-right" id="lbl-exp">0%</span>
+                <span class="text-[11px] text-white/35 w-8 text-right" id="lbl-exp">0%</span>
               </div>
               <div class="sub-bar-row" title="Qualification match">
                 <span class="sub-bar-label">Qua</span>
                 <div class="sub-bar-track">
                   <div class="sub-bar-fill bar-violet" id="bar-qual"></div>
                 </div>
-                <span class="text-[10px] text-white/35 w-8 text-right" id="lbl-qual">0%</span>
+                <span class="text-[11px] text-white/35 w-8 text-right" id="lbl-qual">0%</span>
               </div>
               <div class="sub-bar-row" title="Content relevance">
                 <span class="sub-bar-label">Rel</span>
                 <div class="sub-bar-track">
                   <div class="sub-bar-fill bar-emerald" id="bar-cosine"></div>
                 </div>
-                <span class="text-[10px] text-white/35 w-8 text-right" id="lbl-cosine">0%</span>
+                <span class="text-[11px] text-white/35 w-8 text-right" id="lbl-cosine">0%</span>
               </div>
             </div>
           </div>
@@ -304,7 +309,7 @@
 
           {# Matched skills #}
           <div id="matched-block" class="hidden mb-3">
-            <p class="text-[10px] text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <p class="text-[11px] text-white/70 uppercase tracking-widest mb-2 flex items-center gap-1.5">
               <svg class="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
@@ -315,7 +320,7 @@
 
           {# Missing skills #}
           <div id="missing-block" class="hidden mb-4">
-            <p class="text-[10px] text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <p class="text-[11px] text-white/70 uppercase tracking-widest mb-2 flex items-center gap-1.5">
               <svg class="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -326,7 +331,7 @@
 
           {# Re-analyse button #}
           <button type="button" onclick="resetAnalysis()"
-                  class="text-white/40 hover:text-white text-xs underline underline-offset-2 transition-colors">
+                  class="text-white/70 hover:text-white text-xs underline underline-offset-2 transition-colors">
             Analyse again
           </button>
 
@@ -341,7 +346,7 @@
             <span id="analyse-error-text"></span>
           </div>
           <button type="button" onclick="resetAnalysis()"
-                  class="text-white/40 hover:text-white text-xs underline underline-offset-2 transition-colors mt-2 block">
+                  class="text-white/70 hover:text-white text-xs underline underline-offset-2 transition-colors mt-2 block">
             Try again
           </button>
         </div>
@@ -351,8 +356,8 @@
 
       {# ── Submit ── #}
       <div class="flex gap-3">
-        <button type="submit"
-                class="btn-white flex-1 py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2">
+        <button type="submit" id="submit-app-btn" disabled
+                class="btn-white flex-1 py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
@@ -413,6 +418,7 @@ function selectSavedResume(radio) {
   document.getElementById('resume-file-input').value = '';
   document.getElementById('file-chosen').classList.add('hidden');
   document.getElementById('new-resume-label-wrap').classList.add('hidden');
+  resetAnalysisLock();
   refreshAnalyseUx();
 }
 
@@ -434,6 +440,7 @@ function handleFileSelect(input) {
   nameEl.textContent = '✓ ' + file.name;
   nameEl.classList.remove('hidden');
   document.getElementById('new-resume-label-wrap').classList.remove('hidden');
+  resetAnalysisLock();
   refreshAnalyseUx();
 }
 
@@ -477,6 +484,8 @@ function refreshAnalyseUx() {
     if (hint) hint.textContent = 'Click to check your match score before submitting.';
   } else if (savedOn) {
     btn.disabled = true;
+    const submitBtn = document.getElementById('submit-app-btn');
+    if (submitBtn) submitBtn.disabled = false;
     if (hint) {
       hint.textContent =
         'Upload a new resume above to preview your score. ' +
@@ -566,11 +575,20 @@ function renderResult(data) {
 
   document.getElementById('ring-score').textContent = score + '%';
 
-  /* Sub-bars */
   setBar('bar-skill',   'lbl-skill',   skillScore);
   setBar('bar-exp',     'lbl-exp',     expScore);
   setBar('bar-qual',    'lbl-qual',    qualScore);
   setBar('bar-cosine',  'lbl-cosine',  cosineScore);
+
+  /* Populate hidden fields for DB optimization */
+  document.getElementById('hs-score').value = score;
+  document.getElementById('hs-skill').value = skillScore;
+  document.getElementById('hs-exp').value = expScore;
+  document.getElementById('hs-qual').value = qualScore;
+  document.getElementById('hs-cos').value = cosineScore;
+
+  /* Unlock submit button */
+  document.getElementById('submit-app-btn').disabled = false;
 
   /* Verdict */
   const verdictEl = document.getElementById('verdict-label');
@@ -637,7 +655,17 @@ function setState(state) {
 
 function resetAnalysis() {
   setState('idle');
+  resetAnalysisLock();
   refreshAnalyseUx();
+}
+
+function resetAnalysisLock() {
+  document.getElementById('submit-app-btn').disabled = true;
+  document.getElementById('hs-score').value = '';
+  document.getElementById('hs-skill').value = '';
+  document.getElementById('hs-exp').value = '';
+  document.getElementById('hs-qual').value = '';
+  document.getElementById('hs-cos').value = '';
 }
 
 function showError(msg) {

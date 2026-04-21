@@ -3,14 +3,6 @@
 
 {% block nav_applications %}active{% endblock %}
 
-{% block nav_avatar %}
-{% if request.user.is_authenticated %}
-<div
-  class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-  {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
-</div>
-{% endif %}
-{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -68,23 +60,85 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     color: #fff;
     line-height: 1;
     pointer-events: none;
   }
+
+  /* Rank badge */
+  .rank-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  .rank-1 { background: rgba(251,191,36,0.25); border: 1px solid rgba(251,191,36,0.45); color: #fcd34d; }
+  .rank-2 { background: rgba(148,163,184,0.20); border: 1px solid rgba(148,163,184,0.38); color: #cbd5e1; }
+  .rank-3 { background: rgba(180,120,60,0.22);  border: 1px solid rgba(180,120,60,0.38); color: #d4956a; }
+  .rank-n { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: rgba(255,255,255,0.45); }
+
+  /* Results modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.65); backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-box {
+    background: rgba(20,10,60,0.94);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.22);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.50);
+    border-radius: 24px;
+    width: 100%; max-width: 520px; max-height: 84vh;
+    display: flex; flex-direction: column;
+  }
 </style>
 {% endblock %}
 
 {% block main_content %}
+
+{# Results modal #}
+<div id="results-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+
+    <div class="flex items-start justify-between px-6 pt-5 pb-4 border-b border-white/12 flex-shrink-0">
+      <div>
+        <p id="modal-title" class="font-serif-display text-lg text-white"></p>
+        <p id="modal-stats" class="text-xs text-white/70 mt-0.5"></p>
+      </div>
+      <button onclick="closeModal()" class="text-white/70 hover:text-white transition-colors mt-0.5 ml-4 flex-shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    {# Your result — populated by openModal (#9) #}
+    <div id="modal-your-banner" class="hidden px-6 pt-4 pb-2 border-b border-white/8 flex-shrink-0"></div>
+
+    {# Summary strip #}
+    <div id="modal-summary" class="grid grid-cols-3 gap-3 px-6 py-4 border-b border-white/10 flex-shrink-0"></div>
+
+    {# Ranked list header #}
+    <div class="px-6 pt-3 pb-1 flex-shrink-0">
+      <p class="text-[11px] text-white/70 uppercase tracking-widest">Ranked Applicants</p>
+      <p class="text-[11px] text-white/25 mt-0.5">Other candidates are anonymized for privacy</p>
+    </div>
+
+    {# Scrollable ranked list #}
+    <div id="modal-list" class="px-6 pb-6 overflow-y-auto flex flex-col gap-1"></div>
+
+  </div>
+</div>
+
 <main class="max-w-4xl mx-auto px-4 md:px-6 pt-[12vh] pb-12 relative z-10">
 
   {# Header #}
   <div class="flex items-center justify-between mb-7">
     <div>
       <h1 class="font-serif-display text-2xl text-white">My Applications</h1>
-      <p class="text-white/45 text-sm mt-1">
+      <p class="text-white/70 text-sm mt-1">
         Active and in-progress applications ·
         <span class="text-white/70 font-medium">{{ applications.count }}</span>
       </p>
@@ -116,7 +170,8 @@
 
   {% if applications %}
   <div class="flex flex-col gap-3">
-    {% for app in applications %}
+    {% for item in app_data %}
+    {% with app=item.app %}
 
 
 
@@ -151,6 +206,21 @@
             </div>
             <span class="badge badge-{{ app.status }} flex-shrink-0">{{ app.get_status_display }}</span>
           </div>
+
+          {# Resume Missing Warning #}
+          {% if not app.resume %}
+          <div class="mt-3 p-3 rounded-2xl bg-amber-500/15 border border-amber-400/28 flex items-start gap-2.5">
+            <svg class="w-4 h-4 text-amber-300 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p class="text-amber-200 text-xs font-bold uppercase tracking-tight">Action Required</p>
+              <p class="text-white/70 text-[11px] leading-relaxed mt-0.5">
+                Your resume was deleted. Please update your application to remain eligible for ranking and selection.
+              </p>
+            </div>
+          </div>
+          {% endif %}
 
           {# Meta row #}
           <div class="flex flex-wrap items-center gap-2 mt-3">
@@ -240,7 +310,7 @@
 
         {% if app.resume %}
         <a href="{{ app.resume.file.url }}" target="_blank"
-          class="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs">
+          class="btn-ghost bg-white/10 border border-white/20 text-white/90 hover:bg-white/20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -250,7 +320,7 @@
         {% endif %}
 
         <a href="{% url 'job_detail' app.job.id %}"
-          class="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs">
+          class="btn-ghost bg-white/10 border border-white/20 text-white/90 hover:bg-white/20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -260,7 +330,35 @@
           View Job
         </a>
 
+        {% if app.status == 'pending' or app.status == 'reviewed' or app.status == 'shortlisted' or not app.resume %}
+        <a href="{% url 'edit_application' app.id %}"
+          class="btn-ghost bg-white/10 border border-white/20 text-white/90 hover:bg-white/20 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Edit Application
+        </a>
+        {% endif %}
+
         <div class="flex-1"></div>
+
+        {# View Results button — only when published #}
+        {% if item.results_published %}
+        <button onclick="openModal(JSON.parse('{{ item.ranked_list_json|escapejs }}'), '{{ app.job.title|escapejs }}', {{ item.total }}, {{ item.shortlisted_count }}, {{ item.rank|default:0 }}, {{ app.match_score|default_if_none:0|floatformat:0 }}, {% if app.status == 'shortlisted' or app.status == 'hired' %}true{% else %}false{% endif %})"
+                class="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs
+                       bg-indigo-500/12 border border-indigo-400/22 text-indigo-300
+                       hover:bg-indigo-500/22 hover:opacity-100 opacity-90 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+          View Results
+        </button>
+        {% elif app.status != 'withdrawn' %}
+        <span class="text-xs text-white/20 px-3 py-2 flex items-center">
+          Results pending
+        </span>
+        {% endif %}
 
         {# Withdraw — only if still pending or reviewed #}
         {% if app.status == 'pending' or app.status == 'reviewed' %}
@@ -275,6 +373,7 @@
 
       </div>
     </div>
+    {% endwith %}
     {% endfor %}
   </div>
 
@@ -317,5 +416,118 @@
       arc.style.strokeDashoffset = offset.toFixed(2);
     });
   });
+
+/* ── Results modal ── */
+function openModal(ranked, title, total, shortlisted, selfRank, selfScore, selfShortlisted) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-stats').textContent =
+    total + ' applicant' + (total !== 1 ? 's' : '') + ' · ' +
+    shortlisted + ' shortlisted · ' +
+    (selfRank ? 'You ranked #' + selfRank : 'Your rank unavailable');
+
+  var banner = document.getElementById('modal-your-banner');
+  if (banner) {
+    var r = parseInt(selfRank, 10) || 0;
+    var sc = parseFloat(selfScore) || 0;
+    if (r > 0) {
+      banner.classList.remove('hidden');
+      if (selfShortlisted === true || selfShortlisted === 'true') {
+        banner.innerHTML =
+          '<div class="rounded-2xl px-4 py-3 bg-emerald-500/15 border border-emerald-400/28 text-emerald-100 text-sm leading-relaxed">' +
+          '✓ Congratulations! You were shortlisted — Rank #' + r +
+          ' with a score of ' + Math.round(sc) + '%</div>';
+      } else {
+        banner.innerHTML =
+          '<div class="rounded-2xl px-4 py-3 bg-red-500/12 border border-red-400/25 text-red-200 text-sm leading-relaxed">' +
+          '✗ You were not selected — Rank #' + r + '</div>';
+      }
+    } else {
+      banner.innerHTML = '';
+      banner.classList.add('hidden');
+    }
+  }
+
+  document.getElementById('modal-summary').innerHTML = `
+    <div style="text-align:center;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:12px 8px;">
+      <p style="font-size:20px;font-weight:700;color:#fff;">${total}</p>
+      <p style="font-size:9px;text-transform:uppercase;letter-spacing:0.10em;color:rgba(255,255,255,0.40);margin-top:3px;">Total</p>
+    </div>
+    <div style="text-align:center;background:rgba(52,211,153,0.10);border:1px solid rgba(52,211,153,0.22);border-radius:14px;padding:12px 8px;">
+      <p style="font-size:20px;font-weight:700;color:#6ee7b7;">${shortlisted}</p>
+      <p style="font-size:9px;text-transform:uppercase;letter-spacing:0.10em;color:rgba(255,255,255,0.40);margin-top:3px;">Shortlisted</p>
+    </div>
+    <div style="text-align:center;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.22);border-radius:14px;padding:12px 8px;">
+      <p style="font-size:20px;font-weight:700;color:#a5b4fc;">${selfRank || '—'}</p>
+      <p style="font-size:9px;text-transform:uppercase;letter-spacing:0.10em;color:rgba(255,255,255,0.40);margin-top:3px;">Your Rank</p>
+    </div>`;
+
+  var list = document.getElementById('modal-list');
+  list.innerHTML = '';
+
+  if (!ranked || ranked.length === 0) {
+    list.innerHTML = '<p style="color:rgba(255,255,255,0.30);font-size:13px;padding:16px 0;text-align:center;">No applicants to display.</p>';
+    document.getElementById('results-modal').classList.remove('hidden');
+    return;
+  }
+
+  ranked.forEach(function (entry) {
+    var rank = entry.rank;
+    var medalMap = { 1: '🥇', 2: '🥈', 3: '🥉' };
+    var rankLabel = medalMap[rank] || ('#' + rank);
+    var rankStyle = rank === 1
+      ? 'background:rgba(251,191,36,0.22);border:1px solid rgba(251,191,36,0.40);color:#fcd34d;'
+      : rank === 2
+      ? 'background:rgba(148,163,184,0.18);border:1px solid rgba(148,163,184,0.35);color:#cbd5e1;'
+      : rank === 3
+      ? 'background:rgba(180,120,60,0.18);border:1px solid rgba(180,120,60,0.35);color:#d4956a;'
+      : 'background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.40);';
+
+    var barColor   = entry.score >= 70 ? '#34d399' : entry.score >= 45 ? '#60a5fa' : '#f87171';
+    var scoreColor = entry.score >= 70 ? '#34d399' : entry.score >= 45 ? '#60a5fa' : '#f87171';
+
+    var badge = entry.shortlisted
+      ? '<span style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.35);color:#6ee7b7;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500;flex-shrink:0;">Shortlisted</span>'
+      : '<span style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.28);color:#fca5a5;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500;flex-shrink:0;">Not selected</span>';
+
+    var rowStyle = entry.is_self
+      ? 'background:rgba(99,102,241,0.14);border:1px solid rgba(99,102,241,0.25);border-radius:12px;'
+      : '';
+    var selfTag = entry.is_self
+      ? '<span style="background:rgba(99,102,241,0.22);border:1px solid rgba(99,102,241,0.38);color:#a5b4fc;font-size:9px;padding:1px 7px;border-radius:999px;font-weight:600;flex-shrink:0;">You</span>'
+      : '';
+
+    list.innerHTML += `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;${rowStyle}">
+        <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${rank <= 3 ? '14' : '10'}px;font-weight:700;flex-shrink:0;${rankStyle}">
+          ${rankLabel}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+            <span style="font-size:13px;font-weight:500;color:rgba(255,255,255,${entry.is_self ? '1' : '0.40'});white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${entry.is_self ? entry.name : 'Anonymized Candidate'}
+            </span>
+            ${selfTag}
+          </div>
+          <div style="height:4px;border-radius:999px;background:rgba(255,255,255,0.08);overflow:hidden;">
+            <div style="height:100%;border-radius:999px;width:${entry.score}%;background:${barColor};"></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+          <span style="font-size:12px;font-weight:700;color:${scoreColor};">${entry.score}%</span>
+          ${badge}
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('results-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('results-modal').classList.add('hidden');
+}
+
+document.getElementById('results-modal').addEventListener('click', function (e) {
+  if (e.target === this) closeModal();
+});
 </script>
 {% endblock %}

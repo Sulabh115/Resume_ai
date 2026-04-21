@@ -33,7 +33,7 @@
         </svg>
       </div>
 
-      <p class="text-[10px] text-red-400/80 uppercase tracking-widest mb-2">Withdraw Application</p>
+      <p class="text-[11px] text-red-400/80 uppercase tracking-widest mb-2">Withdraw Application</p>
       <h1 class="font-serif-display text-2xl text-white mb-3">Are you sure?</h1>
 
       {# Application summary #}
@@ -56,11 +56,11 @@
         <div class="grid grid-cols-2 gap-3 text-center text-xs">
           <div class="bg-white/8 rounded-xl py-2">
             <p class="text-white font-semibold">{{ application.applied_at|date:"M j, Y" }}</p>
-            <p class="text-white/40 mt-0.5">Applied on</p>
+            <p class="text-white/70 mt-0.5">Applied on</p>
           </div>
           <div class="bg-white/8 rounded-xl py-2">
             <p class="text-white font-semibold">{{ application.get_status_display }}</p>
-            <p class="text-white/40 mt-0.5">Current status</p>
+            <p class="text-white/70 mt-0.5">Current status</p>
           </div>
         </div>
       </div>
@@ -72,7 +72,7 @@
 
       {# Action buttons #}
       <div class="flex gap-3">
-        <a href="{% url 'candidate_dashboard' %}"
+        <a href="javascript:history.back()"
            class="btn-ghost flex-1 py-3.5 rounded-2xl text-sm text-center">
           Keep Application
         </a>

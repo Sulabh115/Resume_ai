@@ -62,7 +62,7 @@
         <div class="flex items-center justify-between mb-5">
           <h2 class="text-white font-semibold">Skill Analysis</h2>
           {% if result.extracted_skills_list %}
-          <span class="text-white/40 text-xs">
+          <span class="text-white/70 text-xs">
             {{ result.matched_skills_list|length }} of {{ result.extracted_skills_list|length }} matched
           </span>
           {% endif %}
@@ -71,7 +71,7 @@
         {% if result.extracted_skills_list %}
         <div class="mb-6">
           <div class="flex items-center justify-between text-xs mb-2">
-            <span class="text-white/45">Skill match ratio</span>
+            <span class="text-white/70">Skill match ratio</span>
             <span class="text-white font-semibold">{{ result.match_percentage }}%</span>
           </div>
           <div class="match-bar-track">
@@ -86,7 +86,7 @@
 
         {% if result.matched_skills_list %}
         <div class="mb-5">
-          <p class="text-white/40 text-[10px] uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <p class="text-white/70 text-[11px] uppercase tracking-widest mb-3 flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
@@ -102,7 +102,7 @@
 
         {% if result.missing_skills_list %}
         <div class="mb-5">
-          <p class="text-white/40 text-[10px] uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <p class="text-white/70 text-[11px] uppercase tracking-widest mb-3 flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -118,7 +118,7 @@
 
         {% if result.extracted_skills_list %}
         <div>
-          <p class="text-white/40 text-[10px] uppercase tracking-widest mb-3">All Extracted Skills</p>
+          <p class="text-white/70 text-[11px] uppercase tracking-widest mb-3">All Extracted Skills</p>
           <div class="flex flex-wrap gap-2">
             {% for skill in result.extracted_skills_list %}
             {% if skill in result.matched_skills %}
@@ -141,7 +141,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
-          <p class="text-teal-300 text-[10px] font-medium uppercase tracking-widest">AI Summary</p>
+          <p class="text-teal-300 text-[11px] font-medium uppercase tracking-widest">AI Summary</p>
         </div>
         <p class="text-white/70 text-sm leading-relaxed">{{ result.summary }}</p>
       </div>
@@ -169,7 +169,7 @@
       {% elif result and result.status == "processing" %}
       <div class="glass-card rounded-3xl p-8 text-center">
         <p class="text-white font-semibold mb-1">Processing…</p>
-        <p class="text-white/45 text-sm">AI is analysing this resume. Refresh in a moment.</p>
+        <p class="text-white/70 text-sm">AI is analysing this resume. Refresh in a moment.</p>
       </div>
 
       {% else %}
@@ -204,7 +204,7 @@
 
       {# Score ring #}
       <div class="glass-card rounded-3xl p-6 text-center">
-        <p class="text-white/40 text-[10px] uppercase tracking-widest mb-5">Match Score</p>
+        <p class="text-white/70 text-[11px] uppercase tracking-widest mb-5">Match Score</p>
 
         {% if result and result.status == "done" %}
         <div class="relative w-32 h-32 mx-auto mb-4">
@@ -232,11 +232,11 @@
         <div class="grid grid-cols-2 gap-3 mt-4">
           <div class="glass-card rounded-2xl p-3">
             <p class="text-white font-bold">{{ result.matched_skills_list|length }}</p>
-            <p class="text-white/40 text-xs">Matched</p>
+            <p class="text-white/70 text-xs">Matched</p>
           </div>
           <div class="glass-card rounded-2xl p-3">
             <p class="text-white font-bold">{{ result.missing_skills_list|length }}</p>
-            <p class="text-white/40 text-xs">Missing</p>
+            <p class="text-white/70 text-xs">Missing</p>
           </div>
         </div>
         <p class="text-white/30 text-xs mt-4">Screened {{ result.screened_at|timesince }} ago</p>
@@ -251,7 +251,7 @@
 
       {# Actions #}
       <div class="glass-card rounded-3xl p-5">
-        <p class="text-white/40 text-[10px] uppercase tracking-widest mb-3">Actions</p>
+        <p class="text-white/70 text-[11px] uppercase tracking-widest mb-3">Actions</p>
         <div class="flex flex-col gap-2">
           <a href="{% url 'application_detail' application.id %}"
              class="btn-outline w-full py-2.5 rounded-2xl text-sm text-center">
@@ -272,18 +272,18 @@
 
       {% if result %}
       <div class="glass-card rounded-3xl p-5">
-        <p class="text-white/40 text-[10px] uppercase tracking-widest mb-3">Screening Info</p>
+        <p class="text-white/70 text-[11px] uppercase tracking-widest mb-3">Screening Info</p>
         <div class="space-y-2 text-xs">
           <div class="flex items-center justify-between">
-            <span class="text-white/40">Status</span>
+            <span class="text-white/70">Status</span>
             <span class="text-white/70 font-medium">{{ result.get_status_display }}</span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-white/40">Screened</span>
+            <span class="text-white/70">Screened</span>
             <span class="text-white/70">{{ result.screened_at|date:"M d, Y" }}</span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-white/40">Updated</span>
+            <span class="text-white/70">Updated</span>
             <span class="text-white/70">{{ result.updated_at|timesince }} ago</span>
           </div>
         </div>

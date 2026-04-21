@@ -3,17 +3,6 @@
 
 {# ── No nav item is "active" on the edit profile page ── #}
 
-{# ── Show profile picture in navbar avatar ── #}
-{% block nav_avatar %}
-{% if candidate.profile_picture %}
-  <img src="{{ candidate.profile_picture.url }}" alt="Profile"
-       class="h-10 w-10 rounded-full border-2 border-white/30 object-cover hover:opacity-90 transition-all"/>
-{% else %}
-  <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-    {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
-  </div>
-{% endif %}
-{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -59,7 +48,7 @@
 
   <div class="mb-7">
     <h1 class="text-2xl text-white font-bold">Edit Profile</h1>
-    <p class="text-white/45 text-sm mt-1">Your profile info is used to pre-fill job applications.</p>
+    <p class="text-white/70 text-sm mt-1">Your profile info is used to pre-fill job applications.</p>
   </div>
 
   {# Flash messages — inline (base handles global toasts) #}
@@ -114,7 +103,7 @@
           <p class="text-sm font-medium text-white mb-1">
             {{ request.user.get_full_name|default:request.user.username }}
           </p>
-          <p class="text-xs text-white/45 mb-3 leading-relaxed">
+          <p class="text-xs text-white/70 mb-3 leading-relaxed">
             Click the photo to upload a new one.<br/>JPG, PNG, or WebP — max 2 MB.
           </p>
           <div class="flex flex-wrap gap-2">
@@ -219,7 +208,7 @@
     <div class="glass-card rounded-3xl p-6">
       <p class="section-title">
         Change Password
-        <span class="normal-case tracking-normal text-white/25 text-[10px] font-normal ml-2">— leave blank to keep current</span>
+        <span class="normal-case tracking-normal text-white/25 text-[11px] font-normal ml-2">— leave blank to keep current</span>
       </p>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -229,7 +218,7 @@
             <input type="password" name="current_password" id="curr-pw"
                    class="form-input pr-10" placeholder="Enter current password" oninput="markDirty()"/>
             <button type="button" onclick="togglePwd('curr-pw')"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white/80 transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
               </svg>
@@ -249,14 +238,14 @@
                    class="form-input pr-10" placeholder="Min. 8 characters"
                    oninput="checkStrength(); markDirty()"/>
             <button type="button" onclick="togglePwd('new-pw')"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white/80 transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
               </svg>
             </button>
           </div>
           <div class="strength-bar"><div id="strength-fill" class="strength-fill"></div></div>
-          <p id="strength-label" class="text-[10px] text-white/35 mt-1 h-4"></p>
+          <p id="strength-label" class="text-[11px] text-white/35 mt-1 h-4"></p>
         </div>
         <div>
           <label class="form-label block mb-1.5">Confirm New Password</label>
@@ -264,7 +253,7 @@
             <input type="password" name="confirm_password" id="confirm-pw"
                    class="form-input pr-10" placeholder="Repeat new password" oninput="markDirty()"/>
             <button type="button" onclick="togglePwd('confirm-pw')"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white/80 transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
               </svg>

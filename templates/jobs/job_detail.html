@@ -4,14 +4,6 @@
 {# ── Mark Jobs active in navbar ── #}
 {% block nav_jobs %}active{% endblock %}
 
-{# ── Avatar ── #}
-{% block nav_avatar %}
-{% if request.user.is_authenticated %}
-  <div class="h-10 w-10 flex items-center justify-center rounded-full backdrop-blur-md bg-white/20 border border-white/30 hover:bg-white/35 transition-all shadow-sm font-bold text-white text-sm select-none">
-    {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
-  </div>
-{% endif %}
-{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -109,20 +101,20 @@
             Deadline: {{ job.deadline|date:"M j, Y" }}
           </span>
           {% endif %}
-          <span class="detail-tag bg-white/8 text-white/40 border border-white/12">Posted {{ job.created_at|timesince }} ago</span>
+          <span class="detail-tag bg-white/8 text-white/70 border border-white/12">Posted {{ job.created_at|timesince }} ago</span>
         </div>
       </div>
 
       {# About the role #}
       <div class="section-card rounded-3xl p-6">
-        <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">About the Role</p>
+        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-4">About the Role</p>
         <p class="text-sm text-white/70 leading-relaxed whitespace-pre-line">{{ job.description }}</p>
       </div>
 
       {# Responsibilities #}
       {% if responsibilities_list %}
       <div class="section-card rounded-3xl p-6">
-        <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Responsibilities</p>
+        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-4">Responsibilities</p>
         <ul class="bullet-list space-y-1">
           {% for line in responsibilities_list %}
           <li>{{ line }}</li>
@@ -134,7 +126,7 @@
       {# Requirements #}
       {% if requirements_list %}
       <div class="section-card rounded-3xl p-6">
-        <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Requirements</p>
+        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-4">Requirements</p>
         <ul class="bullet-list space-y-1">
           {% for line in requirements_list %}
           <li>{{ line }}</li>
@@ -146,7 +138,7 @@
       {# Required skills #}
       {% if job.skills.all %}
       <div class="section-card rounded-3xl p-6">
-        <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">Required Skills</p>
+        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-4">Required Skills</p>
         <div class="flex flex-wrap gap-2">
           {% for skill in job.skills.all %}
           <span class="skill-chip text-sm px-4 py-1.5 rounded-full cursor-default">{{ skill.name }}</span>
@@ -165,18 +157,18 @@
 
         {# Salary #}
         <div class="mb-4">
-          <p class="text-[10px] text-white/45 uppercase tracking-widest mb-1">Compensation</p>
+          <p class="text-[11px] text-white/70 uppercase tracking-widest mb-1">Compensation</p>
           <p class="text-white font-semibold text-lg">{{ job.salary_display }}</p>
         </div>
 
         {# Deadline #}
         {% if job.deadline %}
         <div class="flex items-center gap-3 bg-white/10 border border-white/18 rounded-2xl px-4 py-3 mb-4">
-          <svg class="w-4 h-4 text-white/45 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 text-white/70 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
           <div>
-            <p class="text-[10px] text-white/40 uppercase tracking-widest">Application Deadline</p>
+            <p class="text-[11px] text-white/70 uppercase tracking-widest">Application Deadline</p>
             <p class="text-sm text-white font-medium mt-0.5">{{ job.deadline|date:"M j, Y" }}</p>
           </div>
         </div>
@@ -217,7 +209,7 @@
           <p class="text-xs text-white/35 text-center mt-2">You've already applied for this role.</p>
 
           {% elif not job.is_open %}
-          <div class="w-full bg-white/8 border border-white/15 text-white/45 text-sm py-3 rounded-2xl text-center">
+          <div class="w-full bg-white/8 border border-white/15 text-white/70 text-sm py-3 rounded-2xl text-center">
             Applications Closed
           </div>
 
@@ -262,18 +254,18 @@
         <div class="mt-5 grid grid-cols-2 gap-3">
           <div class="bg-white/8 border border-white/12 rounded-2xl p-3 text-center">
             <p class="text-white font-bold text-lg">{{ job.application_count }}</p>
-            <p class="text-white/40 text-xs mt-0.5">Applicants</p>
+            <p class="text-white/70 text-xs mt-0.5">Applicants</p>
           </div>
           <div class="bg-white/8 border border-white/12 rounded-2xl p-3 text-center">
             <p class="text-white font-bold text-lg">{{ job.created_at|timesince|truncatechars:8 }}</p>
-            <p class="text-white/40 text-xs mt-0.5">Posted ago</p>
+            <p class="text-white/70 text-xs mt-0.5">Posted ago</p>
           </div>
         </div>
       </div>
 
       {# Company info card #}
       <div class="glass-card rounded-3xl p-5">
-        <p class="text-[10px] text-white/45 uppercase tracking-widest mb-4">About the Company</p>
+        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-4">About the Company</p>
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/28 overflow-hidden flex items-center justify-center shrink-0">
             {% if job.company.logo %}
@@ -286,7 +278,7 @@
           <div class="min-w-0">
             <p class="text-white text-sm font-semibold truncate">{{ job.company.company_name }}</p>
             {% if job.company.location %}
-            <p class="text-white/45 text-xs mt-0.5">📍 {{ job.company.location }}</p>
+            <p class="text-white/70 text-xs mt-0.5">📍 {{ job.company.location }}</p>
             {% endif %}
           </div>
         </div>

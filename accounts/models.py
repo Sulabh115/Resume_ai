@@ -38,3 +38,11 @@ class CompanyProfile(models.Model):
 
     def __str__(self):
         return self.company_name
+
+    @property
+    def avatar_url(self):
+        """Returns the company logo URL, or a DiceBear initials fallback."""
+        if self.logo:
+            return self.logo.url
+        seed = self.company_name or self.user.username
+        return f"https://api.dicebear.com/7.x/initials/svg?seed={seed}&backgroundColor=0f766e&textColor=ccfbf1"
