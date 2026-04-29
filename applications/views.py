@@ -418,7 +418,7 @@ def edit_application(request, application_id):
     app = get_object_or_404(Application, id=application_id, candidate=candidate)
     
     allowed_statuses = [Application.Status.PENDING, Application.Status.REVIEWED, Application.Status.SHORTLISTED]
-    if app.status not in allowed_statuses and app.resume is not None:
+    if app.status not in allowed_statuses:
         messages.error(request, "Cannot edit this application at its current stage.")
         return redirect("application_list")
 
@@ -812,7 +812,10 @@ def update_application_status(request, application_id):
                 )
                 _send_status_notification(application)
 
-    return redirect(request.META.get("HTTP_REFERER", "view_applicants"))
+    referer = request.META.get("HTTP_REFERER")
+    if referer:
+        return redirect(referer)
+    return redirect("view_applicants", job_id=application.job_id)
 
 
 # ─── Resume Manager (candidate) ─────────────────────────────────────────────
@@ -905,7 +908,10 @@ def application_list(request):
             Application.Status.WITHDRAWN,
             Application.Status.REJECTED,
         ])
-        .exclude(job__deadline__lt=today)
+        .exclude(
+            ~Q(status=Application.Status.HIRED),
+            job__deadline__lt=today,
+        )
         .select_related("job__company", "resume")
         .order_by("-applied_at")
     )

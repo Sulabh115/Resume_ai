@@ -455,7 +455,10 @@ def old_jobs(request):
     jobs = (
         Job.objects
         .filter(company=company)
-        .filter(Q(status=Job.Status.CLOSED) | Q(deadline__lt=today))
+        .filter(
+            Q(status=Job.Status.CLOSED) |
+            Q(deadline__lt=today, status=Job.Status.OPEN)
+        )
         .annotate(
             applicant_count=Count('applications', distinct=True),
             shortlisted_count=Count(

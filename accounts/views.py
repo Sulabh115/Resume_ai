@@ -423,6 +423,10 @@ def company_dashboard(request):
         status=Application.Status.PENDING
     ).count()
 
+    shortlisted_count = all_apps.filter(
+        status=Application.Status.SHORTLISTED
+    ).count()
+
     recent_applicants = (
         all_apps
         .exclude(status=Application.Status.WITHDRAWN)
@@ -431,23 +435,48 @@ def company_dashboard(request):
     )
 
     today = timezone.now().date()
+    from django.db.models import Avg
     active_jobs = (
         jobs
         .filter(status=Job.Status.OPEN)
         .filter(Q(deadline__gte=today) | Q(deadline__isnull=True))
+        .annotate(
+            app_count=Count('applications'),
+            avg_score=Avg('applications__match_score'),
+        )
+    )
+
+    # Jobs closing within 7 days — for the "Closing Soon" sidebar panel
+    from datetime import timedelta
+    week_from_now = today + timedelta(days=7)
+    closing_soon_jobs = (
+        jobs
+        .filter(status=Job.Status.OPEN, deadline__gte=today, deadline__lte=week_from_now)
         .annotate(app_count=Count('applications'))
+        .order_by('deadline')
+    )
+
+    # Recent activity feed — latest 5 application events
+    recent_activity = (
+        all_apps
+        .exclude(status=Application.Status.WITHDRAWN)
+        .select_related('candidate__user', 'job')
+        .order_by('-applied_at')[:5]
     )
 
     return render(request, 'accounts/company_dashboard.html', {
-        'company':           company,
-        'total_jobs':        total_jobs,
-        'open_jobs':         open_jobs,
-        'closed_jobs':       closed_jobs,
-        'draft_jobs':        draft_jobs,
-        'total_applicants':  total_applicants,
-        'pending_review':    pending_review,
-        'recent_applicants': recent_applicants,
-        'active_jobs':       active_jobs,
+        'company':            company,
+        'total_jobs':         total_jobs,
+        'open_jobs':          open_jobs,
+        'closed_jobs':        closed_jobs,
+        'draft_jobs':         draft_jobs,
+        'total_applicants':   total_applicants,
+        'pending_review':     pending_review,
+        'shortlisted_count':  shortlisted_count,
+        'recent_applicants':  recent_applicants,
+        'active_jobs':        active_jobs,
+        'closing_soon_jobs':  closing_soon_jobs,
+        'recent_activity':    recent_activity,
     })
 
 

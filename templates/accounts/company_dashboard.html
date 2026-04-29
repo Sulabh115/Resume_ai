@@ -19,7 +19,9 @@
   }
 
   .job-row {
-    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.20);
     border-radius: 16px; padding: 14px 18px; transition: all 0.2s ease; cursor: pointer;
   }
   .job-row:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.35); }
@@ -30,8 +32,21 @@
   }
   .app-row:hover { background: rgba(255,255,255,0.08); }
 
+  .mini-ring { transform: rotate(-90deg); }
+  .mini-track { fill: none; stroke: rgba(255,255,255,0.10); stroke-width: 6; }
+  .mini-fill  { fill: none; stroke-width: 6; stroke-linecap: round; }
+
   .prog-bar  { height: 4px; background: rgba(255,255,255,0.10); border-radius: 999px; overflow: hidden; }
   .prog-fill { height: 100%; border-radius: 999px; }
+
+  .btn-glass {
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.75); font-size: 12px; font-weight: 500;
+    transition: all 0.15s ease;
+  }
+  .btn-glass:hover { background: rgba(255,255,255,0.22); color: #fff; border-color: rgba(255,255,255,0.45); }
+
+  .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
   .signout-link { color: rgba(255,255,255,0.55); transition: all 0.15s ease; }
   .signout-link:hover { color: #fca5a5; }
@@ -44,9 +59,9 @@
   {# Welcome row #}
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
     <div>
-      <p class="text-[11px] text-white/70 uppercase tracking-widest mb-1">Overview</p>
-      <h1 class="text-2xl text-white font-bold">Good to see you, {{ company.company_name }} 👋</h1>
-      <p class="text-white/70 text-sm mt-1">Here's what's happening with your hiring pipeline.</p>
+      <p class="text-[10px] text-white/45 uppercase tracking-widest font-medium mb-1">Overview</p>
+      <h1 style="font-family:'DM Serif Display',serif;" class="text-2xl text-white">Good to see you, {{ company.company_name }} 👋</h1>
+      <p class="text-white/45 text-sm mt-1">Here's what's happening with your hiring pipeline.</p>
     </div>
 
     <a href="{% url 'create_job' %}"
@@ -69,10 +84,10 @@
                   d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
         </div>
-        <span class="text-[11px] text-emerald-400 bg-emerald-500/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">Active</span>
+        <span class="text-[10px] text-emerald-400 bg-emerald-500/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">Active</span>
       </div>
       <p class="text-3xl font-bold text-white">{{ open_jobs }}</p>
-      <p class="text-xs text-white/50 mt-1">Open Job Posts</p>
+      <p class="text-xs text-white/50 mt-1">Active Job Posts</p>
       <div class="prog-bar mt-3">
         <div class="prog-fill bg-teal-400"
              style="width: {% if total_jobs > 0 %}{% widthratio open_jobs total_jobs 100 %}{% else %}0{% endif %}%"></div>
@@ -87,7 +102,9 @@
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
         </div>
-        <span class="text-[11px] text-cyan-400 bg-cyan-500/15 border border-cyan-400/25 px-2 py-0.5 rounded-full">Total</span>
+        {% if total_applicants > 0 %}
+        <span class="text-[10px] text-emerald-400 bg-emerald-500/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">Total</span>
+        {% endif %}
       </div>
       <p class="text-3xl font-bold text-white">{{ total_applicants }}</p>
       <p class="text-xs text-white/50 mt-1">Total Applications</p>
@@ -102,11 +119,13 @@
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
         </div>
-        <span class="text-[11px] text-emerald-400 bg-emerald-500/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">Reviewed</span>
+        {% if shortlisted_count > 0 %}
+        <span class="text-[10px] text-emerald-400 bg-emerald-500/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">Reviewed</span>
+        {% endif %}
       </div>
-      <p class="text-3xl font-bold text-white">{{ total_jobs }}</p>
-      <p class="text-xs text-white/50 mt-1">Total Jobs Posted</p>
-      <div class="prog-bar mt-3"><div class="prog-fill bg-emerald-400" style="width:{% if total_jobs > 0 %}{% widthratio total_jobs 20 100 %}{% else %}0{% endif %}%"></div></div>
+      <p class="text-3xl font-bold text-white">{{ shortlisted_count }}</p>
+      <p class="text-xs text-white/50 mt-1">Shortlisted</p>
+      <div class="prog-bar mt-3"><div class="prog-fill bg-emerald-400" style="width:{% if total_applicants > 0 %}{% widthratio shortlisted_count total_applicants 100 %}{% else %}0{% endif %}%"></div></div>
     </div>
 
     <div class="stat-card rounded-3xl p-5">
@@ -118,7 +137,7 @@
           </svg>
         </div>
         {% if pending_review > 0 %}
-        <span class="text-[11px] text-amber-400 bg-amber-500/15 border border-amber-400/25 px-2 py-0.5 rounded-full">Action needed</span>
+        <span class="text-[10px] text-amber-400 bg-amber-500/15 border border-amber-400/25 px-2 py-0.5 rounded-full">Action needed</span>
         {% endif %}
       </div>
       <p class="text-3xl font-bold {% if pending_review > 0 %}text-amber-300{% else %}text-white{% endif %}">
@@ -135,77 +154,121 @@
   {# ── MAIN CONTENT ROW ── #}
   <div class="flex flex-col lg:flex-row gap-5">
 
-    {# ── LEFT: Recent Applicants ── #}
+    {# ── LEFT COL (wider) ── #}
     <div class="flex-1 min-w-0 flex flex-col gap-5">
+
+      {# Active Jobs #}
       <div class="glass rounded-3xl p-6">
         <div class="flex items-center justify-between mb-5">
           <div>
-            <p class="text-[11px] text-white/70 uppercase tracking-widest mb-0.5">Applicants</p>
-            <p class="text-white font-semibold">Recent submissions</p>
+            <p class="text-[10px] text-white/45 uppercase tracking-widest font-medium mb-0.5">Active Jobs</p>
+            <p class="text-white font-semibold">Current postings</p>
+          </div>
+          <a href="{% url 'company_job_list' %}" class="btn-glass px-4 py-2 rounded-xl text-xs">View all →</a>
+        </div>
+
+        {% if active_jobs %}
+        <div class="flex flex-col gap-3">
+          {% for job in active_jobs %}
+          <a href="{% url 'view_applicants' job.id %}" class="job-row block">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 rounded-xl bg-white/12 border border-white/22 overflow-hidden flex items-center justify-center shrink-0">
+                {% if company.logo %}
+                <img src="{{ company.logo.url }}" class="w-full h-full object-cover"/>
+                {% else %}
+                <span class="text-white font-bold text-sm">{{ company.company_name|first|upper }}</span>
+                {% endif %}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-3">
+                  <p class="text-sm font-semibold text-white truncate">{{ job.title }}</p>
+                  <span class="badge-open text-[10px] px-2.5 py-0.5 rounded-full font-medium shrink-0">Active</span>
+                </div>
+                <div class="flex items-center gap-3 mt-1 flex-wrap">
+                  <span class="text-xs text-white/45">{{ job.app_count }} applicant{{ job.app_count|pluralize }}</span>
+                  {% if job.deadline %}
+                  <span class="text-white/25">·</span>
+                  <span class="text-xs {% if job.is_closing_soon %}text-amber-300{% else %}text-white/45{% endif %}">Deadline: {{ job.deadline|date:"M d" }}</span>
+                  {% endif %}
+                  {% if job.location %}
+                  <span class="text-white/25">·</span>
+                  <span class="text-xs text-white/45">{{ job.location|truncatechars:20 }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="shrink-0 text-right hidden sm:block">
+                <p class="text-xs text-white/45 mb-1">Avg score</p>
+                {% if job.avg_score %}
+                <p class="text-sm font-semibold {% if job.avg_score >= 70 %}text-emerald-300{% elif job.avg_score >= 45 %}text-blue-300{% else %}text-red-300{% endif %}">{{ job.avg_score|floatformat:0 }}%</p>
+                {% else %}
+                <p class="text-sm font-semibold text-white/30">—</p>
+                {% endif %}
+              </div>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+          <p class="text-white/35 text-sm">No active jobs yet.</p>
+          <a href="{% url 'create_job' %}" class="btn-teal px-5 py-2 text-sm rounded-2xl inline-block mt-3">Post a Job</a>
+        </div>
+        {% endif %}
+      </div>
+
+      {# Recent Applications — card rows with mini score rings #}
+      <div class="glass rounded-3xl p-6">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <p class="text-[10px] text-white/45 uppercase tracking-widest font-medium mb-0.5">Recent Applications</p>
+            <p class="text-white font-semibold">Latest submissions</p>
           </div>
         </div>
 
         {% if recent_applicants %}
-        <div class="overflow-x-auto -mx-2">
-          <table class="w-full min-w-[500px]">
-            <thead>
-              <tr class="border-b border-white/15">
-                <th class="text-left px-3 py-3 text-white/70 text-[11px] font-medium uppercase tracking-wider">Candidate</th>
-                <th class="text-left px-3 py-3 text-white/70 text-[11px] font-medium uppercase tracking-wider hidden md:table-cell">Job</th>
-                <th class="text-left px-3 py-3 text-white/70 text-[11px] font-medium uppercase tracking-wider hidden lg:table-cell">AI Score</th>
-                <th class="text-right px-3 py-3 text-white/70 text-[11px] font-medium uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for app in recent_applicants %}
-              <tr class="app-row border-b border-white/8 last:border-0">
-                <td class="px-3 py-3">
-                  <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center font-bold text-xs bg-white/15 border border-white/25 text-white select-none">
-                      {{ app.candidate.user.first_name|first|default:app.candidate.user.username|first|upper }}
-                    </div>
-                    <div>
-                      <p class="text-white text-sm font-medium leading-tight">
-                        {{ app.candidate.user.get_full_name|default:app.candidate.user.username }}
-                      </p>
-                      <p class="text-white/70 text-xs">{{ app.applied_at|timesince }} ago</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-3 py-3 hidden md:table-cell">
-                  <a href="{% url 'view_applicants' app.job.id %}"
-                     class="text-white/70 text-sm hover:text-white transition-colors">
-                    {{ app.job.title|truncatechars:28 }}
-                  </a>
-                </td>
-                <td class="px-3 py-3 hidden lg:table-cell">
-                  {% if app.match_score %}
-                  <div class="flex items-center gap-2 min-w-[80px]">
-                    <span class="text-xs font-bold w-9
-                      {% if app.score_color == 'green' %}text-emerald-400
-                      {% elif app.score_color == 'blue' %}text-blue-400
-                      {% else %}text-red-400{% endif %}">
-                      {{ app.match_score|floatformat:0 }}%
-                    </span>
-                    <div class="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                      <div class="h-full rounded-full
-                        {% if app.score_color == 'green' %}bg-emerald-400
-                        {% elif app.score_color == 'blue' %}bg-blue-400
-                        {% else %}bg-red-400{% endif %}"
-                           style="width: {{ app.match_score }}%"></div>
-                    </div>
-                  </div>
-                  {% else %}
-                  <span class="text-white/25 text-xs">—</span>
-                  {% endif %}
-                </td>
-                <td class="px-3 py-3 text-right">
-                  <span class="badge badge-{{ app.status|lower }}">{{ app.get_status_display }}</span>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div class="flex flex-col gap-1">
+          {% for app in recent_applicants %}
+          <div class="app-row">
+            {# Avatar #}
+            {% if app.candidate.profile_picture %}
+            <img src="{{ app.candidate.profile_picture.url }}" class="w-8 h-8 rounded-full border border-white/20 shrink-0 object-cover"/>
+            {% else %}
+            <div class="w-8 h-8 rounded-full bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
+              <span class="text-[11px] font-bold text-white select-none">{{ app.candidate.user.first_name|first|default:app.candidate.user.username|first|upper }}</span>
+            </div>
+            {% endif %}
+
+            {# Name + job + time #}
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-white font-medium truncate">
+                {{ app.candidate.user.get_full_name|default:app.candidate.user.username }}
+              </p>
+              <p class="text-xs text-white/45">{{ app.job.title|truncatechars:30 }} · {{ app.applied_at|timesince }} ago</p>
+            </div>
+
+            {# Mini score ring #}
+            <div class="flex flex-col items-center shrink-0 hidden sm:flex">
+              <div class="relative w-9 h-9">
+                {% with score=app.match_score|floatformat:0 %}
+                <svg viewBox="0 0 40 40" width="36" height="36" class="mini-ring">
+                  <circle class="mini-track" cx="20" cy="20" r="15"/>
+                  <circle class="mini-fill" cx="20" cy="20" r="15"
+                          stroke="{% if app.match_score >= 70 %}#34d399{% elif app.match_score >= 45 %}#60a5fa{% else %}#f87171{% endif %}"
+                          stroke-dasharray="94.2"
+                          stroke-dashoffset="94.2"
+                          data-score="{{ app.match_score|default:0 }}"/>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <span class="text-[10px] font-bold text-white">{% if app.match_score %}{{ score }}%{% else %}—{% endif %}</span>
+                </div>
+                {% endwith %}
+              </div>
+            </div>
+
+            {# Status badge #}
+            <span class="badge badge-{{ app.status|lower }} shrink-0">{{ app.get_status_display }}</span>
+          </div>
+          {% endfor %}
         </div>
         {% else %}
         <div class="text-center py-10">
@@ -213,118 +276,124 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
-          <p class="text-white/70 text-sm font-medium">No applicants yet</p>
+          <p class="text-white/45 text-sm font-medium">No applicants yet</p>
           <p class="text-white/30 text-xs mt-1 mb-4">Post a job to start receiving applications.</p>
           <a href="{% url 'create_job' %}" class="btn-teal px-5 py-2.5 text-sm rounded-2xl inline-block">Post a Job</a>
         </div>
         {% endif %}
       </div>
+
     </div>
 
-    {# ── RIGHT: Sidebar ── #}
-    <div class="w-full lg:w-72 flex-shrink-0 flex flex-col gap-4">
+    {# ── RIGHT COL (sidebar) ── #}
+    <div class="w-full lg:w-72 flex-shrink-0 flex flex-col gap-5">
 
-      {# Active job listings #}
+      {# Company Profile Card #}
       <div class="glass rounded-3xl p-5">
-        <div class="flex items-center justify-between mb-4">
-          <p class="text-[11px] text-white/70 uppercase tracking-widest">Active Jobs</p>
-          <a href="{% url 'company_job_list' %}" class="text-white/70 hover:text-white transition-colors text-xs">View all →</a>
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-14 h-14 rounded-2xl bg-white/15 border border-white/28 overflow-hidden flex items-center justify-center shrink-0">
+            {% if company.logo %}
+            <img src="{{ company.logo.url }}" class="w-full h-full object-cover"/>
+            {% else %}
+            <span class="text-white font-bold text-xl">{{ company.company_name|first|upper }}</span>
+            {% endif %}
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-white">{{ company.company_name }}</p>
+            {% if company.location %}
+            <p class="text-xs text-white/40 mt-0.5">{{ company.location }}</p>
+            {% endif %}
+          </div>
         </div>
+        <div class="border-t border-white/12 pt-3 space-y-2">
+          <div class="flex justify-between text-xs">
+            <span class="text-white/45">Total jobs posted</span>
+            <span class="text-white font-medium">{{ total_jobs }}</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-white/45">Active jobs</span>
+            <span class="text-emerald-300 font-medium">{{ open_jobs }}</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-white/45">Total applicants</span>
+            <span class="text-white font-medium">{{ total_applicants }}</span>
+          </div>
+        </div>
+        <a href="{% url 'company_edit_profile' %}" class="btn-glass w-full block text-center py-2 rounded-xl text-xs mt-4">Edit Company Profile</a>
+      </div>
 
-        {% if active_jobs %}
-        <div class="flex flex-col gap-2">
-          {% for job in active_jobs %}
-          <a href="{% url 'view_applicants' job.id %}" class="job-row flex items-center justify-between">
-            <div class="flex-1 min-w-0">
-              <p class="text-white text-xs font-medium truncate">{{ job.title }}</p>
-              <p class="text-white/70 text-xs mt-0.5">{{ job.app_count }} applicant{{ job.app_count|pluralize }}</p>
+      {# Closing Soon #}
+      {% if closing_soon_jobs %}
+      <div class="glass rounded-3xl p-5">
+        <p class="text-[10px] text-white/45 uppercase tracking-widest font-medium mb-3">Closing Soon</p>
+        <div class="flex flex-col gap-3">
+          {% for job in closing_soon_jobs %}
+          <div class="bg-amber-500/12 border border-amber-400/25 rounded-2xl px-4 py-3">
+            <p class="text-sm font-medium text-white">{{ job.title }}</p>
+            <p class="text-xs text-amber-300 mt-1">⏰ Deadline: {{ job.deadline|date:"M d" }}</p>
+            <div class="flex items-center justify-between mt-2">
+              <span class="text-xs text-white/45">{{ job.app_count }} applicant{{ job.app_count|pluralize }}</span>
+              <a href="{% url 'view_applicants' job.id %}" class="text-xs text-teal-300 underline underline-offset-2 hover:text-white transition-colors">Review →</a>
             </div>
-            <svg class="w-3.5 h-3.5 text-white/70 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </a>
+          </div>
           {% endfor %}
         </div>
-        {% else %}
-        <div class="text-center py-4">
-          <p class="text-white/35 text-xs">No open jobs yet.</p>
-        </div>
-        {% endif %}
       </div>
+      {% endif %}
 
-      {# Quick actions #}
+      {# Activity Feed #}
+      {% if recent_activity %}
       <div class="glass rounded-3xl p-5">
-        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-3">Quick Actions</p>
-        <div class="flex flex-col gap-1">
+        <p class="text-[10px] text-white/45 uppercase tracking-widest font-medium mb-3">Activity Feed</p>
+        <div class="flex flex-col gap-3">
+          {% for act in recent_activity %}
+          <div class="flex gap-3">
+            <div class="activity-dot {% if act.status == 'shortlisted' %}bg-cyan-400{% elif act.status == 'pending' %}bg-emerald-400{% elif act.status == 'rejected' %}bg-red-400{% else %}bg-teal-400{% endif %} mt-1.5"></div>
+            <div>
+              <p class="text-xs text-white/75 leading-relaxed">New application from <span class="text-white font-medium">{{ act.candidate.user.get_full_name|default:act.candidate.user.username }}</span></p>
+              <p class="text-[10px] text-white/35 mt-0.5">{{ act.applied_at|timesince }} ago · {{ act.job.title|truncatechars:25 }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
 
-          <a href="{% url 'create_job' %}"
-             class="flex items-center gap-2.5 text-white/70 hover:text-white text-sm py-2.5 px-3 rounded-xl hover:bg-white/10 transition-all">
-            <svg class="w-4 h-4 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
+      {# Quick Actions #}
+      <div class="glass rounded-3xl p-5">
+        <p class="text-[10px] text-white/45 uppercase tracking-widest font-medium mb-3">Quick Actions</p>
+        <div class="flex flex-col gap-2">
+          <a href="{% url 'create_job' %}" class="btn-glass flex items-center gap-3 px-4 py-2.5 rounded-xl">
+            <svg class="w-4 h-4 text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Post a New Job
           </a>
-
-          <a href="{% url 'company_job_list' %}"
-             class="flex items-center gap-2.5 text-white/70 hover:text-white text-sm py-2.5 px-3 rounded-xl hover:bg-white/10 transition-all">
-            <svg class="w-4 h-4 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            Manage Jobs
+          <a href="{% url 'company_job_list' %}" class="btn-glass flex items-center gap-3 px-4 py-2.5 rounded-xl">
+            <svg class="w-4 h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Review Applications
           </a>
-
-          <a href="{% url 'company_edit_profile' %}"
-             class="flex items-center gap-2.5 text-white/70 hover:text-white text-sm py-2.5 px-3 rounded-xl hover:bg-white/10 transition-all">
-            <svg class="w-4 h-4 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-            </svg>
-            Edit Company Profile
+          <a href="{% url 'old_jobs' %}" class="btn-glass flex items-center gap-3 px-4 py-2.5 rounded-xl">
+            <svg class="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            View Old Jobs
           </a>
-
-          <a href="{% url 'logout' %}"
-             class="signout-link flex items-center gap-2.5 text-sm py-2.5 px-3 rounded-xl hover:bg-red-500/10 transition-all">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-            </svg>
-            Sign Out
+          <a href="{% url 'company_edit_profile' %}" class="btn-glass flex items-center gap-3 px-4 py-2.5 rounded-xl">
+            <svg class="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            Company Profile
           </a>
-        </div>
-      </div>
-
-      {# Company info #}
-      <div class="glass rounded-3xl p-5">
-        <p class="text-[11px] text-white/70 uppercase tracking-widest mb-3">Company Info</p>
-        <div class="space-y-2.5 text-xs">
-          {% if company.location %}
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-white/70">Location</span>
-            <span class="text-white/75">{{ company.location }}</span>
-          </div>
-          {% endif %}
-          {% if company.website %}
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-white/70">Website</span>
-            <a href="{{ company.website }}" target="_blank"
-               class="text-teal-300 hover:text-white transition-colors truncate max-w-[140px]">
-              {{ company.website|truncatechars:22 }}
-            </a>
-          </div>
-          {% endif %}
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-white/70">Draft Jobs</span>
-            <span class="text-white/75">{{ draft_jobs }}</span>
-          </div>
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-white/70">Closed Jobs</span>
-            <span class="text-white/75">{{ closed_jobs }}</span>
-          </div>
         </div>
       </div>
 
     </div>
   </div>
 </main>
+
+<script>
+// Animate mini-ring stroke-dashoffset from the data-score attribute.
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.mini-fill').forEach(function(el) {
+    var score = parseFloat(el.getAttribute('data-score')) || 0;
+    var offset = 94.2 * (1 - score / 100);
+    el.style.strokeDashoffset = offset.toFixed(1);
+  });
+});
+</script>
 {% endblock %}
