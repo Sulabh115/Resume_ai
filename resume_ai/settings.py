@@ -12,9 +12,15 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
-DEBUG = env.bool("DEBUG", default=True)
+# ── Local vs Production Settings ──────────────────────────────────────────
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
+# -- LOCAL DEVELOPMENT --
+DEBUG = env.bool("DEBUG", default=True)
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=['127.0.0.1', 'localhost'])
+
+# -- cPanel PRODUCTION (Uncomment when deploying) --
+# DEBUG = False
+# ALLOWED_HOSTS = ['yourdomain.com', 'www.yourdomain.com']
 
 
 # ── Application definition ────────────────────────────────────────────────
@@ -32,12 +38,22 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # Tailwind CSS integration
+    'tailwind',
+    'theme',
+    'django_browser_reload',
+
     # Custom apps
     'accounts',
     'applications',
     'jobs',
     'screening',
 ]
+
+# django-tailwind settings
+TAILWIND_APP_NAME = 'theme'
+INTERNAL_IPS = ['127.0.0.1']
+NPM_BIN_PATH = '/usr/local/bin/npm'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -47,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_browser_reload.middleware.BrowserReloadMiddleware',
 ]
 
 ROOT_URLCONF = 'resume_ai.urls'
@@ -73,12 +90,25 @@ WSGI_APPLICATION = 'resume_ai.wsgi.application'
 
 # ── Database ──────────────────────────────────────────────────────────────
 
+# -- LOCAL DEVELOPMENT (SQLite) --
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# -- cPanel PRODUCTION (MySQL - Uncomment and fill details when deploying) --
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'your_cpanel_db_name',
+#         'USER': 'your_cpanel_db_user',
+#         'PASSWORD': 'your_db_password',
+#         'HOST': 'localhost',
+#         'PORT': '3306',
+#     }
+# }
 
 
 # ── Session configuration ─────────────────────────────────────────────────
@@ -307,8 +337,14 @@ USE_TZ = True
 
 # ── Static files ──────────────────────────────────────────────────────────
 
+# -- LOCAL DEVELOPMENT --
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# -- cPanel PRODUCTION (Uncomment when deploying) --
+# STATIC_URL = '/static/'
+# Replace 'your_username' with your actual cPanel username
+# STATIC_ROOT = '/home/your_username/public_html/static'
 
 
 # ── Media files ───────────────────────────────────────────────────────────
