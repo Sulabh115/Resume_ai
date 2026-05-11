@@ -31,7 +31,13 @@
   .confirm-overlay {
     position: fixed; inset: 0; z-index: 100;
     background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
-    display: flex; align-items: center; justify-content: center; padding: 20px;
+    padding: 20px;
+    display: none;
+  }
+  .confirm-overlay.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 </style>
 {% endblock %}
@@ -39,7 +45,7 @@
 {% block main_content %}
 
 {# ── Delete confirm modal ── #}
-<div id="delete-modal" class="confirm-overlay hidden">
+<div id="delete-modal" class="confirm-overlay">
   <div class="glass-card rounded-3xl p-6 w-80 text-center">
     <div class="w-12 h-12 rounded-full bg-red-500/20 border border-red-400/28 flex items-center justify-center mx-auto mb-4">
       <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,11 +293,11 @@
   function openDeleteModal(jobTitle, deleteUrl) {
     document.getElementById('delete-job-name').textContent = '"' + jobTitle + '"';
     document.getElementById('delete-form').action = deleteUrl;
-    document.getElementById('delete-modal').classList.remove('hidden');
+    document.getElementById('delete-modal').classList.add('show');
   }
 
   function closeDeleteModal() {
-    document.getElementById('delete-modal').classList.add('hidden');
+    document.getElementById('delete-modal').classList.remove('show');
   }
 
   document.getElementById('delete-modal').addEventListener('click', function(e) {

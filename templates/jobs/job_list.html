@@ -217,9 +217,9 @@
           </a>
           {% endif %}
 
-        {# FIX C2: use user_company (passed from view) instead of
+        {% comment %} {# FIX C2: use user_company (passed from view) instead of
            request.user.companyprofile which raises RelatedObjectDoesNotExist
-           for candidates and anonymous users. #}
+           for candidates and anonymous users. #} {% endcomment %}
         {% elif user_company and user_company == job.company %}
         {# Owning company — edit shortcut #}
         <a href="{% url 'edit_job' job.id %}"

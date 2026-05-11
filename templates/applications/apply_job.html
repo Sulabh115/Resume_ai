@@ -51,9 +51,7 @@
   .bar-violet  { background: #a78bfa; }
   .bar-emerald { background: #34d399; }
 
-  /* Skill pills */
-  .pill-matched { background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.30); color: #6ee7b7; }
-  .pill-missing { background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.25);  color: #fca5a5; }
+
 
   /* Spinner */
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -219,7 +217,7 @@
         {# ── Idle state ── #}
         <div id="analyse-idle" class="analyse-idle">
           <p class="text-white/55 text-sm leading-relaxed mb-4">
-            Upload a resume above and click <strong class="text-white/75">Analyse</strong>
+            Select a saved resume or upload a new one, then click <strong class="text-white/75">Analyse</strong>
             to see how well it matches this job before you submit.
             Your score preview is private and never saved.
           </p>
@@ -232,7 +230,7 @@
             Analyse Resume
           </button>
           <p id="analyse-hint" class="text-white/30 text-xs mt-2">
-            Upload a resume first to enable analysis.
+            Select or upload a resume first to enable analysis.
           </p>
         </div>
 
@@ -307,27 +305,7 @@
           {# Verdict label #}
           <p id="verdict-label" class="text-sm font-semibold mb-4"></p>
 
-          {# Matched skills #}
-          <div id="matched-block" class="hidden mb-3">
-            <p class="text-[11px] text-white/70 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-              <svg class="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-              </svg>
-              Matched Skills
-            </p>
-            <div id="matched-skills" class="flex flex-wrap gap-1.5"></div>
-          </div>
 
-          {# Missing skills #}
-          <div id="missing-block" class="hidden mb-4">
-            <p class="text-[11px] text-white/70 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-              <svg class="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-              Missing Skills
-            </p>
-            <div id="missing-skills" class="flex flex-wrap gap-1.5"></div>
-          </div>
 
           {# Re-analyse button #}
           <button type="button" onclick="resetAnalysis()"
@@ -418,7 +396,9 @@ function selectSavedResume(radio) {
   document.getElementById('resume-file-input').value = '';
   document.getElementById('file-chosen').classList.add('hidden');
   document.getElementById('new-resume-label-wrap').classList.add('hidden');
-  resetAnalysisLock();
+  /* Reset analysis panel when switching resumes */
+  setState('idle');
+  clearPrescreenFields();
   refreshAnalyseUx();
 }
 
@@ -440,7 +420,9 @@ function handleFileSelect(input) {
   nameEl.textContent = '✓ ' + file.name;
   nameEl.classList.remove('hidden');
   document.getElementById('new-resume-label-wrap').classList.remove('hidden');
-  resetAnalysisLock();
+  /* Reset analysis panel when switching resumes */
+  setState('idle');
+  clearPrescreenFields();
   refreshAnalyseUx();
 }
 
@@ -463,45 +445,64 @@ zone.addEventListener('drop', e => {
 
 /* ═══════════════════════════════════════════════════════
    FIX #8 — Analyse Resume logic
+   Now supports both saved resumes AND newly uploaded files.
 ═══════════════════════════════════════════════════════ */
 
 const SCORE_PREVIEW_URL = "{% url 'score_preview' job.id %}";
 const CSRF_TOKEN        = "{{ csrf_token }}";
 
 /**
- * Preview only works with a freshly chosen file in the upload input (#6).
- * Saved-resume radios stay valid for the real application submit.
+ * Enable the Analyse button whenever the candidate has selected
+ * a resume — either a saved one (radio) or a freshly uploaded file.
+ * The submit button is always enabled when any resume is chosen
+ * (analysis is optional, not required for submission).
  */
 function refreshAnalyseUx() {
-  const btn  = document.getElementById('btn-analyse');
-  const hint = document.getElementById('analyse-hint');
+  const btn       = document.getElementById('btn-analyse');
+  const hint      = document.getElementById('analyse-hint');
+  const submitBtn = document.getElementById('submit-app-btn');
   if (!btn) return;
+
   const fileInput = document.getElementById('resume-file-input');
   const hasFile   = fileInput && fileInput.files && fileInput.files[0];
   const savedOn   = document.querySelector('input[name="existing_resume"]:checked');
+
   if (hasFile) {
     btn.disabled = false;
+    if (submitBtn) submitBtn.disabled = false;
     if (hint) hint.textContent = 'Click to check your match score before submitting.';
   } else if (savedOn) {
-    btn.disabled = true;
-    const submitBtn = document.getElementById('submit-app-btn');
+    btn.disabled = false;
     if (submitBtn) submitBtn.disabled = false;
-    if (hint) {
-      hint.textContent =
-        'Upload a new resume above to preview your score. ' +
-        'Your saved resume will still be used for the actual application.';
-    }
+    if (hint) hint.textContent = 'Click to check your match score before submitting.';
   } else {
     btn.disabled = true;
-    if (hint) hint.textContent = 'Upload a resume first to enable analysis.';
+    if (submitBtn) submitBtn.disabled = true;
+    if (hint) hint.textContent = 'Upload or select a resume first to enable analysis.';
   }
 }
 
-function getResumeFileForAnalysis() {
+/**
+ * Build the FormData payload for the analysis request.
+ * If a new file is uploaded, send it as resume_file.
+ * If a saved resume is selected, send its PK as existing_resume_id.
+ */
+function buildAnalysisPayload() {
+  const formData = new FormData();
+  formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
+
   const newFileInput = document.getElementById('resume-file-input');
   if (newFileInput && newFileInput.files && newFileInput.files[0]) {
-    return newFileInput.files[0];
+    formData.append('resume_file', newFileInput.files[0]);
+    return formData;
   }
+
+  const savedRadio = document.querySelector('input[name="existing_resume"]:checked');
+  if (savedRadio) {
+    formData.append('existing_resume_id', savedRadio.value);
+    return formData;
+  }
+
   return null;
 }
 
@@ -511,12 +512,10 @@ async function runAnalysis() {
 
   hideError();
 
-  const fileToSend = getResumeFileForAnalysis();
-  if (!fileToSend) {
+  const payload = buildAnalysisPayload();
+  if (!payload) {
     showError(
-      'Score preview works with newly uploaded files. Select the upload zone above and ' +
-      'add your resume file to see your match score before submitting. ' +
-      'Your saved resume will still be used for the actual application.'
+      'Please upload a resume or select a saved resume above before analysing.'
     );
     refreshAnalyseUx();
     return;
@@ -525,14 +524,10 @@ async function runAnalysis() {
   /* Switch to loading state */
   setState('loading');
 
-  const formData = new FormData();
-  formData.append('resume_file', fileToSend);
-  formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
-
   try {
     const response = await fetch(SCORE_PREVIEW_URL, {
       method:      'POST',
-      body:        formData,
+      body:        payload,
       credentials: 'same-origin',
     });
 
@@ -580,7 +575,7 @@ function renderResult(data) {
   setBar('bar-qual',    'lbl-qual',    qualScore);
   setBar('bar-cosine',  'lbl-cosine',  cosineScore);
 
-  /* Populate hidden fields for DB optimization */
+  /* Populate hidden fields so the submit path can skip re-computation */
   document.getElementById('hs-score').value = score;
   document.getElementById('hs-skill').value = skillScore;
   document.getElementById('hs-exp').value = expScore;
@@ -603,37 +598,6 @@ function renderResult(data) {
     verdictEl.className   = 'text-sm font-semibold mb-4 text-red-300';
   }
 
-  /* Skill pills */
-  const matched = data.matched_skills || [];
-  const missing = data.missing_skills || [];
-
-  const matchedBlock = document.getElementById('matched-block');
-  const missingBlock = document.getElementById('missing-block');
-  const matchedEl    = document.getElementById('matched-skills');
-  const missingEl    = document.getElementById('missing-skills');
-
-  matchedEl.innerHTML = '';
-  missingEl.innerHTML = '';
-
-  if (matched.length) {
-    matched.forEach(s => {
-      matchedEl.innerHTML +=
-        `<span class="pill-matched rounded-xl px-2.5 py-1 text-xs font-medium">${escHtml(s)}</span>`;
-    });
-    matchedBlock.classList.remove('hidden');
-  } else {
-    matchedBlock.classList.add('hidden');
-  }
-
-  if (missing.length) {
-    missing.forEach(s => {
-      missingEl.innerHTML +=
-        `<span class="pill-missing rounded-xl px-2.5 py-1 text-xs font-medium">${escHtml(s)}</span>`;
-    });
-    missingBlock.classList.remove('hidden');
-  } else {
-    missingBlock.classList.add('hidden');
-  }
 }
 
 function setBar(barId, lblId, value) {
@@ -655,12 +619,11 @@ function setState(state) {
 
 function resetAnalysis() {
   setState('idle');
-  resetAnalysisLock();
+  clearPrescreenFields();
   refreshAnalyseUx();
 }
 
-function resetAnalysisLock() {
-  document.getElementById('submit-app-btn').disabled = true;
+function clearPrescreenFields() {
   document.getElementById('hs-score').value = '';
   document.getElementById('hs-skill').value = '';
   document.getElementById('hs-exp').value = '';

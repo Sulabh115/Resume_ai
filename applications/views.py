@@ -540,8 +540,11 @@ def withdraw_application(request, application_id):
 @login_required
 def score_preview(request, job_id):
     """
-    POST only.  Accepts a resume file (multipart), runs compute_match_score
-    against the specified job, and returns JSON:
+    POST only.  Accepts either:
+        - a resume file via multipart upload  (field: resume_file)
+        - an existing saved resume ID         (field: existing_resume_id)
+
+    Runs compute_match_score against the specified job and returns JSON:
 
         {
             "score":          float  (0–100, overall weighted score),
@@ -555,7 +558,7 @@ def score_preview(request, job_id):
 
     On error returns {"error": "<message>"} with HTTP 400 or 500.
 
-    The uploaded file is NEVER saved to disk.
+    Uploaded files are NEVER persisted; saved resumes are read directly.
     """
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
@@ -566,30 +569,59 @@ def score_preview(request, job_id):
 
     job = get_object_or_404(Job, id=job_id)
 
-    resume_file = request.FILES.get("resume_file")
-    if not resume_file:
-        return JsonResponse({"error": "No resume file provided"}, status=400)
-
-    name_lower = resume_file.name.lower()
-    if not name_lower.endswith(".pdf"):
-        return JsonResponse({"error": "Only PDF files are supported."}, status=400)
-
     import tempfile, os
 
-    suffix = os.path.splitext(resume_file.name)[1] or ".pdf"
+    resume_file = request.FILES.get("resume_file")
+    existing_resume_id = request.POST.get("existing_resume_id")
+
     tmp_path = None
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            for chunk in resume_file.chunks():
-                tmp.write(chunk)
-            tmp_path = tmp.name
+        if resume_file:
+            # ── Path A: freshly uploaded file ──────────────────────────────
+            name_lower = resume_file.name.lower()
+            if not name_lower.endswith(".pdf"):
+                return JsonResponse({"error": "Only PDF files are supported."}, status=400)
 
-        class _TmpFile:
-            def __init__(self, path):
-                self.path = path
+            suffix = os.path.splitext(resume_file.name)[1] or ".pdf"
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                for chunk in resume_file.chunks():
+                    tmp.write(chunk)
+                tmp_path = tmp.name
 
-        from screening.utils import compute_match_score
-        result = compute_match_score(_TmpFile(tmp_path), job)
+            class _TmpFile:
+                def __init__(self, path):
+                    self.path = path
+
+            from screening.utils import compute_match_score
+            result = compute_match_score(_TmpFile(tmp_path), job)
+
+        elif existing_resume_id:
+            # ── Path B: saved resume from database ────────────────────────
+            try:
+                resume_obj = Resume.objects.get(
+                    pk=int(existing_resume_id),
+                    candidate=candidate,
+                )
+            except (Resume.DoesNotExist, ValueError, TypeError):
+                return JsonResponse(
+                    {"error": "Selected resume not found or does not belong to you."},
+                    status=400,
+                )
+
+            if not resume_obj.file or not os.path.exists(resume_obj.file.path):
+                return JsonResponse(
+                    {"error": "Resume PDF not found on disk. Please upload a new copy."},
+                    status=400,
+                )
+
+            from screening.utils import compute_match_score
+            result = compute_match_score(resume_obj.file, job)
+
+        else:
+            return JsonResponse(
+                {"error": "No resume provided. Upload a file or select a saved resume."},
+                status=400,
+            )
 
     except Exception as exc:
         return JsonResponse({"error": f"Screening failed: {exc}"}, status=500)
